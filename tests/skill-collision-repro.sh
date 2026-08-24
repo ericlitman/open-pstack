@@ -30,7 +30,7 @@ if [ -n "$bad_principle" ]; then
   note "$bad_principle"
   fail=1
 else
-  note "ok: all principle-* leaves are hidden and model-readable"
+  note "ok: all principle-* leaves request user-hidden and remain model-readable"
 fi
 
 verof() { { grep -m1 '"version"' "$1" || true; } | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/'; }
