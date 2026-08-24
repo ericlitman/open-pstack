@@ -123,7 +123,7 @@ That is the main workflow. The other skills are there when poteto-mode needs the
 | `babysit` | A pull request needs CI failures and review comments handled until it is ready. |
 | `reflect` | A hard task is finished and its lessons should improve the next run. |
 
-Plugin skills include `pstack:` in their name. In Claude Code, run a slash command such as `/pstack:architect`. In Codex, ask for the skill, such as `Use pstack:architect for this design.` See the [technical reference](docs/reference.md) for the full list.
+Plugin skills include `pstack:` in their name. In Claude Code, invoke a native skill such as `/pstack:architect`. In Codex, ask for the skill, such as `Use pstack:architect for this design.` See the [technical reference](docs/reference.md) for the full list.
 
 ## Models and token use
 
@@ -146,19 +146,19 @@ Grok can take part in a multi-model review. You cannot use Grok as the main app 
 
 ## Learn from the original
 
-Lauren's [pstack guide](https://github.com/cursor/plugins/tree/main/pstack/docs/guide) walks through a real task, verification, and longer unattended runs. It uses Cursor's interface, but the ideas are the same. Use the translated commands above in Claude Code or Codex.
+Lauren's [pstack guide](https://github.com/cursor/plugins/tree/main/pstack/docs/guide) walks through a real task, verification, and longer unattended runs. It uses Cursor's interface, but the ideas are the same. Use the translated skill invocations above in Claude Code or Codex.
 
 This repository also keeps:
 
 - [the original README](README-UPSTREAM.md), unchanged;
-- [the technical reference](docs/reference.md) for every command, dependency, and Claude Code or Codex detail;
+- [the technical reference](docs/reference.md) for every skill, dependency, and Claude Code or Codex detail;
 - [the upstream sync record](UPSTREAM.md) and update process;
 - [the change record](CHANGES.md) for every adaptation; and
 - [the attribution record](NOTICE.md) for pstack and the imported Cursor Team Kit skills.
 
 ## Staying close to Lauren's pstack
 
-Open Pstack 1.0.0 tracks pstack 0.14.2 at Cursor commit [`46125561306434d8a1d7745d540d8932ab0cd2a2`](https://github.com/cursor/plugins/commit/46125561306434d8a1d7745d540d8932ab0cd2a2).
+Open Pstack 1.0.1 tracks pstack 0.14.2 at Cursor commit [`46125561306434d8a1d7745d540d8932ab0cd2a2`](https://github.com/cursor/plugins/commit/46125561306434d8a1d7745d540d8932ab0cd2a2).
 
 The two projects have separate version numbers. The pstack version identifies Lauren's upstream content. The Open Pstack version identifies the Claude Code and Codex package built from it.
 
