@@ -20,6 +20,15 @@ fail=0
 
 note() { printf '%s\n' "$*"; }
 
+legacy_commands="$(find "$repo/plugins/pstack/commands" -type f -name '*.md' -print 2>/dev/null || true)"
+if [ -n "$legacy_commands" ]; then
+  note "FAIL: legacy command trampolines create duplicate Source Command skills in Codex:"
+  note "$legacy_commands"
+  fail=1
+else
+  note "ok: native skills are the only user-facing workflow surface"
+fi
+
 # Static invariant: every command trampoline carries the flag.
 missing="$(grep -L 'disable-model-invocation: true' "$repo"/plugins/pstack/commands/*.md || true)"
 if [ -n "$missing" ]; then
