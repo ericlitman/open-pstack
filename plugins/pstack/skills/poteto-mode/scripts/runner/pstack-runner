@@ -1,4 +1,10 @@
-#!/usr/bin/env bun
-const startedAt = Date.now();
-const { main } = await import("./cli.ts");
-process.exitCode = await main(process.argv.slice(2), startedAt);
+#!/bin/sh
+set -eu
+
+runner_dir=$(CDPATH= cd -P "$(dirname "$0")" && pwd)
+
+# Bun reads these before application code runs. Do not let an untrusted project
+# select an env file or preload code into the trusted runner process.
+unset BUN_OPTIONS NODE_OPTIONS
+
+exec bun --no-env-file --config=/dev/null "$runner_dir/entry.ts" "$@"
