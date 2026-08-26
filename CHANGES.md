@@ -2,6 +2,10 @@
 
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## Unreleased isolates runner startup from project-controlled Bun configuration
+
+`pstack-runner` now starts Bun through a small POSIX shell boundary that disables automatic environment-file loading, ignores the repository's `bunfig.toml`, and removes inherited Bun and Node startup options before trusted TypeScript runs. It still inherits ordinary environment variables that the parent explicitly passes, but a repository can no longer inject credentials or preload code before the runner performs its subscription preflight. A boundary regression test executes the shipped wrapper from a fixture repository and covers `.env`, `bunfig.toml`, `BUN_OPTIONS`, and `NODE_OPTIONS`.
+
 ## 1.2.0 adds verified multi-PR plans, earlier runtime diagnostics, and shared review-bot triage
 
 Plans with several stages now use one checklist instead of an overview and separate files for each stage. It has one ordered section for every pull request and keeps all ten ways of testing the real product, unit tests, live and performance proof, checks for how changes work together, merge rules, and supporting details in one place. A Node-based checker with no extra dependencies rejects missing or out-of-order sections, fake screenshots, empty definitions of success, incomplete performance proof, incorrectly written review checks, unsupported punctuation, and incorrect command use. Claude Code and Codex use the same installed skill and checker through their existing parent-controlled setup. If a provider fails, it is identified by name and treated as a dropout. No backup provider or hidden time limit was added.

@@ -158,7 +158,7 @@ function receipt(path: string): RunnerReceipt {
 
 function runnerArgs(input: RunnerOptions): string[] {
   const args = [
-    join(import.meta.dir, "pstack-runner"),
+    join(import.meta.dir, "entry.ts"),
     "--parent", input.parent,
     "--provider", input.provider,
     "--model", input.model,
@@ -668,6 +668,70 @@ describe("runLane", () => {
     expect(receipt(input.receiptPath).status).toBe("complete");
   });
 
+  it("isolates Bun startup from project configuration at the shipped executable boundary", async () => {
+    writeFileSync(
+      join(scratch, ".env"),
+      [
+        "PSTACK_PROJECT_ENV_SENTINEL=loaded-from-project-dotenv",
+        "PSTACK_INHERITED_ENV_SENTINEL=dotenv-must-not-override-parent",
+        "",
+      ].join("\n")
+    );
+    const preloadCapture = join(scratch, "preload-ran.txt");
+    writeFileSync(
+      join(scratch, "bunfig.toml"),
+      'preload = ["./preload.ts"]\n'
+    );
+    writeFileSync(
+      join(scratch, "preload.ts"),
+      'await Bun.write(process.env.PSTACK_PRELOAD_CAPTURE!, "project preload ran");\n'
+    );
+    const capturedEnv = join(scratch, "captured-env.txt");
+    const codex = join(bin, "codex");
+    writeFileSync(
+      codex,
+      `#!/bin/sh
+if [ "$1" = "login" ]; then
+  echo "Logged in using ChatGPT"
+  exit 0
+fi
+printf '%s\n%s' "\${PSTACK_PROJECT_ENV_SENTINEL-unset}" "\${PSTACK_INHERITED_ENV_SENTINEL-unset}" > "$PSTACK_ENV_CAPTURE"
+echo '{"type":"thread.started","thread_id":"o1"}'
+echo '{"type":"item.completed","item":{"type":"agent_message","text":"CODEX_OK"}}'
+echo '{"type":"turn.completed","usage":{"input_tokens":20,"cached_input_tokens":5,"output_tokens":3,"reasoning_output_tokens":1}}'
+`
+    );
+    chmodSync(codex, 0o755);
+
+    const input = options("codex", "project-env-boundary");
+    const runner = Bun.spawn([
+      join(import.meta.dir, "pstack-runner"),
+      ...runnerArgs(input).slice(1),
+    ], {
+      cwd: scratch,
+      env: {
+        ...process.env,
+        BUN_OPTIONS: "--env-file=.env",
+        NODE_OPTIONS: "--require=./missing-project-preload.cjs",
+        PSTACK_ENV_CAPTURE: capturedEnv,
+        PSTACK_INHERITED_ENV_SENTINEL: "inherited-from-parent",
+        PSTACK_PRELOAD_CAPTURE: preloadCapture,
+      },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const stdout = new Response(runner.stdout).text();
+    const stderr = new Response(runner.stderr).text();
+
+    expect(await runner.exited).toBe(0);
+    await Promise.all([stdout, stderr]);
+    expect(readFileSync(capturedEnv, "utf8")).toBe(
+      "unset\ninherited-from-parent"
+    );
+    expect(existsSync(preloadCapture)).toBe(false);
+    expect(receipt(input.receiptPath).status).toBe("complete");
+  });
+
   it("cancels a preflight with SIGINT and writes a terminal receipt", async () => {
     const input = options("claude", "preflight-cancelled");
     const started = join(scratch, "preflight-child.started");
@@ -675,7 +739,6 @@ describe("runLane", () => {
     const isolatedRunner = join(scratch, "isolated-runner");
     cpSync(import.meta.dir, isolatedRunner, { recursive: true });
     const runner = Bun.spawn([
-      process.execPath,
       join(isolatedRunner, "pstack-runner"),
       ...runnerArgs(input).slice(1),
     ], {
