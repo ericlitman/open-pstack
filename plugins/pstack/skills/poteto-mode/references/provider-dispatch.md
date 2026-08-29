@@ -23,10 +23,10 @@ The allowed effort universe is exactly `low`, `medium`, `high`, `xhigh`, `max`. 
 
 The top-level harness resolves the route once. A child receives an assigned provider, model, effort, access mode, prompt, working directory, and output path. A child never detects the harness, chooses a provider, or launches another model. Environment markers may corroborate the top-level harness before fan-out, but nested processes inherit parent markers and must not use them for routing.
 
-| Parent | `claude:*` | `codex:*` | `grok:*` |
-|---|---|---|---|
-| Claude Code | native `Agent` | external runner | external runner |
-| Codex | external runner | native `spawn_agent` | external runner |
+| Parent | `claude:*` | `codex:*` | `grok:*` | `agy:*` |
+|---|---|---|---|---|
+| Claude Code | native `Agent` | external runner | external runner | external runner |
+| Codex | external runner | native `spawn_agent` | external runner | external runner |
 
 `inherit-parent` and `auto` remain aliases. They use the parent's current model and effort through its native subagent primitive. In a panel they still consume one lane, but they reduce provider diversity; say so in the synthesis record.
 
@@ -46,7 +46,7 @@ The launcher lives at `skills/poteto-mode/scripts/runner/pstack-runner` under th
 ```text
 pstack-runner \
   --parent <claude|codex> \
-  --provider <claude|codex|grok> \
+  --provider <claude|codex|grok|agy> \
   --model <real CLI model> \
   --effort <low|medium|high|xhigh|max> \
   --mode <read-only|isolated-write> \
@@ -61,6 +61,10 @@ Pass arguments as an argv array or quote every path. Never interpolate prompt te
 
 Grok authentication preflight has one bounded retry. If the first `grok models` result would be classified as unauthenticated, the runner waits five seconds and tries the same preflight once more. A second failure is terminal. The delay and second attempt share the runner's absolute deadline and cancellation latch, and the receipt keeps evidence from both attempts. Model execution is never retried.
 
+Agy is an external provider only. It is not a parent harness and is not a first-run matrix family. The portable slug is `agy:gemini-3.1-pro-high@high`. Preflight is `agy models`. That command can exit 0 while still asking the operator to sign in, so the runner treats `Please sign in` as `unauthenticated` and requires the requested slug as a whole token in the listing. There is no Grok-style contradictory-auth retry.
+
+Agy print mode takes the prompt as the `--print` value, not stdin and not a prompt file. The runner's process cwd is the assigned worktree. `--sandbox` is boolean. Read-only maps to `--mode plan` plus `--sandbox`. Isolated-write maps to `--mode accept-edits`, `--sandbox`, and `--disable-slash-commands`. Do not combine `--mode plan` with `--disable-slash-commands`; the CLI then ignores plan mode. There is no `--no-subagents` and no tool allow or deny list. Never pass `--dangerously-skip-permissions`. Agy `--effort` is `low`, `medium`, or `high`; the runner pins `xhigh` and `max` to `high`. The CLI's default `--print-timeout` is five minutes, so the runner pins `8760h` and still lets the wrapper `--timeout` own the deadline.
+
 The parent tool sandbox still governs whether a subscribed child CLI can reach its credentials and network. Run setup's live probe from the actual parent profile. A blocked external CLI is a loud dropout, not a reason to elevate permissions or substitute a model silently.
 
 The parent invocation must itself be resumable background work:
@@ -72,7 +76,7 @@ Start the background process, continue launching the other lanes, then drain the
 
 The runner and its preflight have no implicit timeout. Do not invent a duration from role, mode, or a convenient round number; real implementation lanes can run for 90 minutes or much longer. Pass `--timeout` only when the user, an external service deadline, or a measured task contract supplies a real bound. That value starts at wrapper entry, before module loading and argument parsing, and remains one absolute deadline across setup, preflight, model execution, and output capture. It is never a fresh allowance per child, and long waits are armed in runtime-safe chunks without shortening the supplied deadline. Otherwise supervise liveness through the retained background task/session handle and cancel manually only on evidence that the run is dead. Cancel through that retained handle so the runner receives SIGINT or SIGTERM, sends it to an active child when one remains, stops waiting on inherited output pipes, removes the empty output reservation, and writes a `cancelled` receipt. Preserve that receipt; a retry is a new attempt with new unique output and receipt paths. Unchanged running state is not a dropout, and Claude's ten-minute foreground ceiling is never a reason to terminate a healthy lane.
 
-Read-only mode maps to Claude plan mode with project-only settings and an explicit tool list, Codex's read-only sandbox, and Grok plan mode plus its `read-only` sandbox and read-oriented tool list. Grok's built-in read-only profile deliberately keeps its own state and system temporary directories writable, so point a read-only Grok lane at the actual checkout rather than a worktree under `/tmp`, `/var/tmp`, or the host's temporary directory. `isolated-write` maps to Claude `acceptEdits` with project-only settings, Codex `workspace-write`, and Grok `acceptEdits` plus its `workspace` sandbox and write-capable tool list. Give every writer only a dedicated worktree or output directory. Never route a writer into the primary checkout.
+Read-only mode maps to Claude plan mode with project-only settings and an explicit tool list, Codex's read-only sandbox, Grok plan mode plus its `read-only` sandbox and read-oriented tool list, and Agy `--mode plan` plus `--sandbox`. Grok's built-in read-only profile deliberately keeps its own state and system temporary directories writable, so point a read-only Grok lane at the actual checkout rather than a worktree under `/tmp`, `/var/tmp`, or the host's temporary directory. `isolated-write` maps to Claude `acceptEdits` with project-only settings, Codex `workspace-write`, Grok `acceptEdits` plus its `workspace` sandbox and write-capable tool list, and Agy `--mode accept-edits` plus `--sandbox` and `--disable-slash-commands`. Give every writer only a dedicated worktree or output directory. Never route a writer into the primary checkout.
 
 Every concurrent external lane needs distinct prompt, output, and receipt paths. The launcher reserves output and receipt paths exclusively and refuses to overwrite them.
 
@@ -82,7 +86,7 @@ Success requires all of these:
 
 1. Exit status `0`.
 2. Receipt status `complete`.
-3. Either `modelVerified: true` with `modelEvidence: "provider-report"`, or a Codex receipt with `reportedModel: null`, `modelVerified: false`, and `modelEvidence: "pinned-argv"`. Codex 0.149.0 accepts the exact `--model` argument but does not report the served model in its JSONL stream.
+3. Either `modelVerified: true` with `modelEvidence: "provider-report"`, or a Codex or Agy receipt with `reportedModel: null`, `modelVerified: false`, and `modelEvidence: "pinned-argv"`. Codex 0.149.0 accepts the exact `--model` argument but does not report the served model in its JSONL stream. Agy `--output-format json` reports text, session, and usage, but not the served model id.
 4. A non-empty output file.
 
 The receipt also carries elapsed time, token usage when the CLI exposes it, and cost when available. Keep it with the arena or review artifacts so parent-harness comparisons are evidence-based.

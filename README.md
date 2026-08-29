@@ -32,7 +32,7 @@ pstack does not ask you to trust an agent on day one. It helps the agent leave e
 
 ## Install
 
-You need a current Claude Code or Codex installation. For the full four-model review, install and sign in to the Claude Code, Codex, and Grok command-line tools. [Bun](https://bun.sh) runs the small local tool that starts models outside the app you are using. You can still use the core workflows with fewer models.
+You need a current Claude Code or Codex installation. For the full four-model review, install and sign in to the Claude Code, Codex, and Grok command-line tools. [Bun](https://bun.sh) runs the small local tool that starts models outside the app you are using. You can still use the core workflows with fewer models. `pstack-runner` can also launch the Agy CLI as an extra external provider. Agy is not a parent harness and is not part of the default four-model panel.
 
 ### Claude Code
 
@@ -132,10 +132,10 @@ Both apps read the same pstack skills. Only the way they start those skills and 
 | --- | --- | --- |
 | Start poteto-mode | Claude loads a small startup instruction that can route non-trivial work into it. You can also run `/pstack:poteto-mode` yourself. | Ask for `pstack:poteto-mode` by name. Codex does not load the Claude startup instruction. |
 | Runs inside the app | Claude models stay inside Claude Code. | The Sol model stays inside Codex. |
-| Other models | Codex and Grok run through their signed-in command-line tools. | Claude and Grok run through their signed-in command-line tools. |
+| Other models | Codex, Grok, and Agy run through their signed-in command-line tools. | Claude, Grok, and Agy run through their signed-in command-line tools. |
 | Skills and workflows | Shared with Codex. | Shared with Claude Code. |
 
-Grok can take part in a multi-model review. You cannot use Grok as the main app running pstack.
+Grok can take part in a multi-model review. You cannot use Grok as the main app running pstack. Agy is the same kind of extra command-line provider. It is never the app that runs pstack.
 
 ## Learn from the original
 
