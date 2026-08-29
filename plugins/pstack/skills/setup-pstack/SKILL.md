@@ -1,11 +1,11 @@
 ---
 name: setup-pstack
-description: Configure pstack's provider-qualified models, per-family requested effort, and parent-owned routes per role. Verifies native and external Claude, Codex, and Grok lanes before writing the override sheet. Use for /setup-pstack, "configure pstack models", or changing pstack's model choices.
+description: Configure pstack's provider-qualified models, per-family requested effort, Architect Sol exception, and parent-owned routes per role. Verifies native and external Claude, Codex, and Grok lanes before writing the override sheet. Use for /setup-pstack, "configure pstack models", or changing pstack's model choices.
 ---
 
 # Setup pstack
 
-Configure one portable model sheet for the current parent harness. Read [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md) before probing or writing anything. Its model matrix, descriptor grammar, and route table are the contract. Choose one requested effort per matrix family. Do not add a second configuration file, a runtime resolver, or a weaker-model fallback.
+Configure one portable model sheet for the current parent harness. Read [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md) before probing or writing anything. Its model matrix, descriptor grammar, and route table are the contract. Choose one requested effort per matrix family. Keep every Sol lane in `architect runners` at `xhigh`; the requested Sol family effort applies to every other Sol lane. Do not add a second configuration file, a runtime resolver, or a weaker-model fallback.
 
 Claude Code writes `~/.claude/pstack-models.md` and loads it from `~/.claude/CLAUDE.md` with:
 
@@ -33,24 +33,25 @@ Read the current parent-specific sheet when it exists. Treat its values as curre
 
 ### 3. Parse per-family efforts
 
-Read the model matrix. Every non-alias value must match `<provider>:<model>@<effort>`. Map it to exactly one matrix family by `(provider, model)`, require its effort to appear in that row's Selectable efforts cell, and collect the effort. `inherit-parent` and `auto` rows carry no family effort.
+Read the model matrix. Every non-alias value must match `<provider>:<model>@<effort>`. Map it to exactly one matrix family by `(provider, model)`, require its effort to appear in that row's Selectable efforts cell, and collect the effort. Exclude Sol descriptors in `architect runners` from the Sol family effort collection and require each excluded descriptor to use `xhigh`. `inherit-parent` and `auto` rows carry no family effort.
 
-An unmatched provider/model, out-of-domain effort, duplicate role, or unknown role is inconsistent state. Stop, show the conflicting rows verbatim, and ask for an explicit matrix family or alias replacement. If one or more families have mixed efforts, show every conflicting family and role row, then ask for one normalized effort per family from its Selectable efforts cell. Do not invent a precedence rule. Do not probe or write while any inconsistency is unresolved.
+An unmatched provider/model, out-of-domain effort, duplicate role, unknown role, or Architect Sol descriptor outside `xhigh` is inconsistent state. Stop, show the conflicting rows verbatim, and ask for an explicit matrix family or alias replacement. If one or more families have mixed efforts after excluding the Architect Sol exception, show every conflicting family and role row, then ask for one normalized effort per family from its Selectable efforts cell. Do not invent a precedence rule. Do not probe or write while any inconsistency is unresolved.
 
-One distinct effort per family is the current value. A family with no non-alias occurrence is unassigned; use its matrix Default effort as the proposed value and label it unassigned rather than calling it current.
+One distinct effort per family outside the Architect Sol exception is the current value. A family with no non-alias occurrence is unassigned; use its matrix Default effort as the proposed value and label it unassigned rather than calling it current.
 
 ### 4. Collect one requested effort per family
 
-Ask exactly four effort questions, one each for Fable, Sol, Grok, and Opus. Name each model, its current or proposed value, and the Selectable efforts from its matrix row. Empty input keeps a current value or accepts the matrix proposal for an unassigned family. On a first run, state the four matrix defaults before asking. On a rerun, state the four parsed values without offering to reset customized role lanes.
+Ask exactly four effort questions, one each for Fable, Sol, Grok, and Opus. Name each model, its current or proposed value, and the Selectable efforts from its matrix row. State that the Sol answer applies outside `architect runners`, whose Sol lanes stay at `xhigh`. Empty input keeps a current value or accepts the matrix proposal for an unassigned family. On a first run, state the four matrix defaults and the Architect exception before asking. On a rerun, state the four parsed values and the Architect exception without offering to reset customized role lanes.
 
 ### 5. Probe the four requested pairs
 
-Probe only the four selected `provider:model@effort` pairs. Run one probe per family, even when two families share a provider. Do not enumerate or offer older models as substitutes. A failed probe writes nothing: report the failing pair and provider, stop, and keep the active sheet plus parent integration bytes unchanged. A failed first run creates neither artifact.
+Probe each distinct selected `provider:model@effort` pair. Run one probe per family, even when two families share a provider. Probe the Architect Sol `xhigh` pair separately when the selected Sol family effort differs. Do not enumerate or offer older models as substitutes. A failed probe writes nothing: report the failing pair and provider, stop, and keep the active sheet plus parent integration bytes unchanged. A failed first run creates neither artifact.
 
 | Family | Pair source | Claude parent route | Codex parent route | Availability proof |
 |---|---|---|---|---|
 | Fable | Fable matrix row + selected effort | native Agent `pstack-fable-<effort>` | Claude CLI | native one-turn probe or `claude auth status --json` plus one-turn probe |
 | Sol | Sol matrix row + selected effort | `codex exec` | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
+| Architect Sol | Sol matrix row + `xhigh` | `codex exec` | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
 | Grok | Grok matrix row + selected effort | Grok CLI | Grok CLI | `grok models` must list the requested model; one-turn probe |
 | Opus | Opus matrix row + selected effort | native Agent `pstack-opus-<effort>` | Claude CLI | native one-turn probe or `claude auth status --json` plus one-turn probe |
 
@@ -67,9 +68,9 @@ Build the new sheet in memory. Do not write it yet.
 
 After effort selection, ask whether to keep those role-to-family assignments or change named roles. Keeping them is the default. Apply only role changes the operator names; never offer a reset of a customized sheet to the first-run assignments. A changed role may use one of the four probed matrix families, `inherit-parent`, or `auto`.
 
-Require the final role map to contain at least one descriptor from each matrix family. The sheet stores effort only in role descriptors, so an unassigned family's selection cannot persist without adding a second source of truth.
+Require the final role map to contain at least one descriptor from each matrix family after excluding the Architect Sol exception. The sheet stores effort only in role descriptors, so an unassigned family's selection cannot persist without adding a second source of truth.
 
-Rewrite every matrix-family descriptor to `provider:model@<requested effort for that family>`. Leave `inherit-parent` and `auto` unchanged. An effort-only rerun cannot change a role's family. Changing Grok's effort updates every Grok occurrence and does not move a Sol role onto Grok. Refuse an unqualified slug, an unavailable route, a model other than the four matrix families, or a provider/model mismatch.
+Rewrite every matrix-family descriptor to `provider:model@<requested effort for that family>`, then rewrite every Sol descriptor in `architect runners` to `codex:gpt-5.6-sol@xhigh`. Leave `inherit-parent` and `auto` unchanged. An effort-only rerun cannot change a role's family. Changing Sol's effort updates every Sol occurrence outside `architect runners`; changing Grok's effort updates every Grok occurrence and does not move a Sol role onto Grok. Refuse an unqualified slug, an unavailable route, a model other than the four matrix families, or a provider/model mismatch.
 
 ### 7. Confirm and commit
 
@@ -100,7 +101,7 @@ reflect tooling, judgment, divergent, synthesizer: inherit-parent
 arena runners: claude:claude-fable-5@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:claude-opus-5@xhigh
 arena cross-judge pool: claude:claude-fable-5@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:claude-opus-5@xhigh
 swarm workers: grok:grok-4.6@xhigh
-architect runners: claude:claude-fable-5@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:claude-opus-5@xhigh
+architect runners: claude:claude-fable-5@max, codex:gpt-5.6-sol@xhigh, grok:grok-4.6@xhigh, claude:claude-opus-5@xhigh
 interrogate reviewers: claude:claude-fable-5@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:claude-opus-5@xhigh
 ```
 
@@ -114,6 +115,6 @@ Do not copy the model sheet between harnesses without rerunning the parent-speci
 
 ### 9. Behavioral smoke
 
-Before declaring setup complete, run one small read-only mixed panel from this parent: all four chosen descriptors, distinct output/receipt paths, and an independent cross-judge. Launch Claude-native agents and every external process in the background with retained handles, then drain them. Verify the native transcript entries and every external receipt. A structural config check or unit test is not a substitute.
+Before declaring setup complete, run one small read-only mixed panel from this parent with every distinct chosen descriptor, including the Architect Sol exception, distinct output/receipt paths, and an independent cross-judge. Launch Claude-native agents and every external process in the background with retained handles, then drain them. Verify the native transcript entries and every external receipt. A structural config check or unit test is not a substitute.
 
 Report the sheet path, parent route table, requested-effort probe results, smoke results, and external elapsed/token/cost receipts. Re-running this skill re-probes and updates the same sheet. Do not claim the provider exposed hidden applied-effort observability.

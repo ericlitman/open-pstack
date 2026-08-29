@@ -72,14 +72,11 @@ canon_quad="$(awk '
   }
   END { print out }
 ' "$dispatch")"
+architect_quad="$(printf '%s\n' "$canon_quad" | sed 's/codex:gpt-5\.6-sol@max/codex:gpt-5.6-sol@xhigh/')"
 quad_bad=""
 [ -n "$canon_quad" ] || quad_bad="could not read the canonical quad from $dispatch"$'\n'
-# Anchor on the quad's last slug rather than a hard-coded one, so a model swap in
-# setup-pstack cannot leave this check hunting for a slug nobody ships any more.
 anchor="${canon_quad##* }"
-# arena, architect, and how each state the quad on one line; interrogate lists it
-# as one slug per row of its Reviewer A/B/C/D table (upstream #167).
-for name in arena architect how; do
+for name in arena how; do
   skill="$repo/plugins/pstack/skills/$name/SKILL.md"
   n="$(grep -Fc "$anchor" "$skill" || true)"
   if [ "$n" != "1" ]; then
@@ -89,19 +86,24 @@ for name in arena architect how; do
   got="$(grep -F "$anchor" "$skill" | quad_of)"
   [ "$got" = "$canon_quad" ] || quad_bad="$quad_bad$skill: [$got] != [$canon_quad]"$'\n'
 done
+architect="$repo/plugins/pstack/skills/architect/SKILL.md"
+got="$(grep -F "$anchor" "$architect" | quad_of)"
+[ "$got" = "$architect_quad" ] || quad_bad="$quad_bad$architect: [$got] != [$architect_quad]"$'\n'
 interrogate="$repo/plugins/pstack/skills/interrogate/SKILL.md"
 got="$(grep -E '^\| Reviewer [A-Z] \|' "$interrogate" | quad_of)"
 [ "$got" = "$canon_quad" ] || quad_bad="$quad_bad$interrogate reviewer table: [$got] != [$canon_quad]"$'\n'
 while IFS= read -r line; do
   got="$(printf '%s\n' "$line" | quad_of)"
   [ "$got" = "$canon_quad" ] || quad_bad="$quad_bad$setup role row: [$got] != [$canon_quad]"$'\n'
-done < <(grep -E '^(arena runners|arena cross-judge pool|architect runners|interrogate reviewers|how critics):' "$setup")
+done < <(grep -E '^(arena runners|arena cross-judge pool|interrogate reviewers|how critics):' "$setup")
+got="$(grep -E '^architect runners:' "$setup" | quad_of)"
+[ "$got" = "$architect_quad" ] || quad_bad="$quad_bad$setup architect role row: [$got] != [$architect_quad]"$'\n'
 if [ -n "$quad_bad" ]; then
-  note "FAIL: the default model quad is not identical across provider dispatch, the panel skills, and setup-pstack:"
+  note "FAIL: the default model routes differ from the canonical and Architect-specific quads:"
   note "$quad_bad"
   fail=1
 else
-  note "ok: default model quad identical across provider dispatch + 4 panel skills + setup-pstack ($canon_quad)"
+  note "ok: default model routes match the canonical quad and Architect xhigh override"
 fi
 
 plugin="$repo/plugins/pstack"

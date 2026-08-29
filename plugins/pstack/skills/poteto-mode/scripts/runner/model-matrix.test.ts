@@ -32,6 +32,8 @@ const PANEL_ROLES = [
   "architect runners",
   "interrogate reviewers",
 ] as const;
+const ARCHITECT_ROLE = "architect runners";
+const ARCHITECT_SOL_EFFORT: Effort = "xhigh";
 const SHEET_ROLES = [
   "feature, refactoring",
   "bug-fix",
@@ -161,10 +163,14 @@ function parseModelMatrix(markdown: string): MatrixRow[] {
   });
 }
 
-function defaultDescriptors(rows: MatrixRow[]): string[] {
-  return rows.map(
-    (row) => `${row.provider}:${row.model}@${row.defaultEffort}`
-  );
+function panelDescriptors(rows: MatrixRow[], role: string): string[] {
+  return rows.map((row) => {
+    const effort =
+      role === ARCHITECT_ROLE && row.family === "sol"
+        ? ARCHITECT_SOL_EFFORT
+        : row.defaultEffort;
+    return `${row.provider}:${row.model}@${effort}`;
+  });
 }
 
 function parseFrontmatter(text: string): {
@@ -202,7 +208,6 @@ function firstRunSheet(setup: string): string {
 describe("model matrix", () => {
   const rows = parseModelMatrix(readFileSync(DISPATCH_PATH, "utf8"));
   const setup = readFileSync(SETUP_PATH, "utf8");
-  const quad = defaultDescriptors(rows);
 
   it("owns the effort universe and first-run defaults", () => {
     expect([...EFFORTS]).toEqual(["low", "medium", "high", "xhigh", "max"]);
@@ -279,17 +284,23 @@ describe("model matrix", () => {
     const byFamily = new Map<string, MatrixRow>(
       rows.map((row) => [`${row.provider}:${row.model}`, row])
     );
-    for (const descriptor of sheet.match(DESCRIPTOR_RE) ?? []) {
-      const at = descriptor.lastIndexOf("@");
-      const key = descriptor.slice(0, at);
-      const effort = descriptor.slice(at + 1);
-      const row = byFamily.get(key);
-      if (row === undefined) {
-        throw new Error(`unknown first-run descriptor: ${descriptor}`);
+    for (const line of sheet.split("\n").filter((entry) => entry.includes(": "))) {
+      const role = line.slice(0, line.indexOf(": "));
+      for (const descriptor of line.match(DESCRIPTOR_RE) ?? []) {
+        const at = descriptor.lastIndexOf("@");
+        const key = descriptor.slice(0, at);
+        const effort = descriptor.slice(at + 1);
+        const row = byFamily.get(key);
+        if (row === undefined) {
+          throw new Error(`unknown first-run descriptor: ${descriptor}`);
+        }
+        const expectedEffort =
+          role === ARCHITECT_ROLE && row.family === "sol"
+            ? ARCHITECT_SOL_EFFORT
+            : row.defaultEffort;
+        expect(effort).toBe(expectedEffort);
       }
-      expect(effort).toBe(row.defaultEffort);
     }
-    const expectedPanel = quad.join(", ");
     for (const role of PANEL_ROLES) {
       const line = sheet
         .split("\n")
@@ -297,7 +308,7 @@ describe("model matrix", () => {
       if (line === undefined) {
         throw new Error(`missing first-run panel row: ${role}`);
       }
-      expect(line).toBe(`${role}: ${expectedPanel}`);
+      expect(line).toBe(`${role}: ${panelDescriptors(rows, role).join(", ")}`);
     }
   });
 
