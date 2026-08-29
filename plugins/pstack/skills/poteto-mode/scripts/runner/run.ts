@@ -369,11 +369,18 @@ function preflightPassed(provider: Provider, model: string, result: ProcessResul
       return /logged in/i.test(combined);
     case "grok":
       return /logged in/i.test(combined) && combined.includes(model);
+    case "agy":
+      return !/please sign in/i.test(combined) && agyModelListed(combined, model);
   }
 }
 
+function agyModelListed(output: string, model: string): boolean {
+  const escaped = model.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|\\n)${escaped}(?![a-z0-9._-])`).test(output);
+}
+
 function successfulPreflightEvidence(provider: Provider, model: string): string {
-  return provider === "grok"
+  return provider === "grok" || provider === "agy"
     ? `authenticated; model ${model} available`
     : "authenticated";
 }
@@ -395,6 +402,9 @@ function preflightFailureStatus(
 ): ReceiptStatus {
   const status = unavailableStatus(value);
   if (status !== "child-failed") return status;
+  if (provider === "agy") {
+    return agyModelListed(value, model) ? "unauthenticated" : "unavailable-model";
+  }
   return provider === "grok" && !value.includes(model)
     ? "unavailable-model"
     : "unauthenticated";
@@ -449,7 +459,7 @@ function modelProof(
       modelEvidence: "provider-report",
     };
   }
-  if (provider === "codex" && reported === null) {
+  if ((provider === "codex" || provider === "agy") && reported === null) {
     return {
       reportedModel: null,
       modelVerified: false,

@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
 import type {
   AccessMode,
   Effort,
   Provider,
   RunnerOptions,
 } from "./types.ts";
+
+const AGY_PRINT_TIMEOUT = "8760h";
 
 export interface CommandSpec {
   readonly command: string;
@@ -27,6 +30,8 @@ export function preflightCommand(provider: Provider): CommandSpec {
       };
     case "grok":
       return { command: "grok", args: ["models"], stdin: "none" };
+    case "agy":
+      return { command: "agy", args: ["models"], stdin: "none" };
   }
 }
 
@@ -57,6 +62,15 @@ function grokTools(mode: AccessMode): string {
 
 function permissionMode(mode: AccessMode): string {
   return mode === "read-only" ? "plan" : "acceptEdits";
+}
+
+function agyMode(mode: AccessMode): string {
+  return mode === "read-only" ? "plan" : "accept-edits";
+}
+
+function agyEffort(effort: Effort): "low" | "medium" | "high" {
+  if (effort === "low" || effort === "medium") return effort;
+  return "high";
 }
 
 function effortOverride(effort: Effort): string {
@@ -146,5 +160,29 @@ export function invocationCommand(options: RunnerOptions): CommandSpec {
         ],
         stdin: "none",
       };
+    case "agy": {
+      const args: string[] = [
+        "--model",
+        options.model,
+        "--effort",
+        agyEffort(options.effort),
+        "--mode",
+        agyMode(options.mode),
+        "--sandbox",
+        "--output-format",
+        "json",
+        "--print-timeout",
+        AGY_PRINT_TIMEOUT,
+      ];
+      if (options.mode === "isolated-write") {
+        args.push("--disable-slash-commands");
+      }
+      args.push("--print", readFileSync(options.promptPath, "utf8"));
+      return {
+        command: "agy",
+        args,
+        stdin: "none",
+      };
+    }
   }
 }

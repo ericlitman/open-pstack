@@ -104,6 +104,39 @@ function parseGrok(stdout: string, requestedModel: string): ParsedOutput {
   };
 }
 
+function parseAgy(stdout: string): ParsedOutput {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(stdout);
+  } catch {
+    throw new Error("agy did not emit valid JSON");
+  }
+  const value = object(raw);
+  if (value === null) throw new Error("agy emitted a non-object result");
+  if (nullableString(value.status) !== "SUCCESS") {
+    throw new Error(nullableString(value.error) ?? "agy reported an error result");
+  }
+  const text = nullableString(value.response);
+  if (text === null) throw new Error("agy result did not contain final text");
+  const usage = object(value.usage);
+  return {
+    text,
+    reportedModel: null,
+    sessionId: nullableString(value.conversation_id),
+    usage: usage === null
+      ? null
+      : normalizedUsage({
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens,
+        total_tokens: usage.total_tokens,
+        cache_read_input_tokens: usage.cache_read_tokens
+          ?? usage.cache_read_input_tokens,
+        reasoning_tokens: usage.thinking_tokens ?? usage.reasoning_tokens,
+      }),
+    costUsd: null,
+  };
+}
+
 function parseCodex(stdout: string): ParsedOutput {
   let text: string | null = null;
   let usage: NormalizedUsage | null = null;
@@ -160,6 +193,8 @@ export function parseProviderOutput(
       return parseCodex(stdout);
     case "grok":
       return parseGrok(stdout, requestedModel);
+    case "agy":
+      return parseAgy(stdout);
   }
 }
 

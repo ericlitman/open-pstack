@@ -1,6 +1,13 @@
 import { describe, expect, it } from "bun:test";
+import { writeFileSync } from "node:fs";
 import { invocationCommand } from "./commands.ts";
 import type { RunnerOptions } from "./types.ts";
+
+const AGY_PROMPT = "Return the marker.\n";
+
+function writeAgyPrompt(path: string): void {
+  writeFileSync(path, AGY_PROMPT);
+}
 
 function options(overrides: Partial<RunnerOptions> = {}): RunnerOptions {
   return {
@@ -133,6 +140,23 @@ describe("invocationCommand", () => {
     );
     expect(grok.args).not.toContain("--always-approve");
 
+    const agyWrite = options({
+      provider: "agy",
+      model: "gemini-3.1-pro-high",
+      mode: "isolated-write",
+    });
+    writeAgyPrompt(agyWrite.promptPath);
+    const agy = invocationCommand(agyWrite);
+    expect(agy.args).toEqual(
+      expect.arrayContaining([
+        "--mode",
+        "accept-edits",
+        "--sandbox",
+        "--disable-slash-commands",
+      ])
+    );
+    expect(agy.args).not.toContain("--dangerously-skip-permissions");
+
     const claude = invocationCommand(
       options({ provider: "claude", model: "claude-fable-5", mode: "isolated-write" })
     );
@@ -144,6 +168,68 @@ describe("invocationCommand", () => {
         "Read,Write,Edit,Grep,Glob,Bash",
       ])
     );
+  });
+
+  it("pins Agy model, mapped effort, sandbox, and print prompt", () => {
+    const input = options({
+      provider: "agy",
+      model: "gemini-3.1-pro-high",
+      effort: "high",
+    });
+    writeAgyPrompt(input.promptPath);
+    const spec = invocationCommand(input);
+    expect(spec.command).toBe("agy");
+    expect(spec.stdin).toBe("none");
+    expect(spec.args).toEqual([
+      "--model",
+      "gemini-3.1-pro-high",
+      "--effort",
+      "high",
+      "--mode",
+      "plan",
+      "--sandbox",
+      "--output-format",
+      "json",
+      "--print-timeout",
+      "8760h",
+      "--print",
+      AGY_PROMPT,
+    ]);
+    expect(spec.args).not.toContain("--disable-slash-commands");
+    expect(spec.args).not.toContain("--dangerously-skip-permissions");
+  });
+
+  it("maps Agy xhigh and max to high and disables slash commands on write", () => {
+    const input = options({
+      provider: "agy",
+      model: "gemini-3.1-pro-high",
+      effort: "xhigh",
+      mode: "isolated-write",
+    });
+    writeAgyPrompt(input.promptPath);
+    const spec = invocationCommand(input);
+    expect(spec.args).toEqual(
+      expect.arrayContaining([
+        "--effort",
+        "high",
+        "--mode",
+        "accept-edits",
+        "--sandbox",
+        "--disable-slash-commands",
+        "--print",
+        AGY_PROMPT,
+      ])
+    );
+    expect(spec.args).not.toContain("max");
+    expect(spec.args).not.toContain("xhigh");
+    const maxSpec = invocationCommand(
+      options({
+        provider: "agy",
+        model: "gemini-3.1-pro-high",
+        effort: "max",
+      })
+    );
+    expect(maxSpec.args).toEqual(expect.arrayContaining(["--effort", "high"]));
   });
 
   it("covers low, medium, and high for every external provider", () => {
@@ -169,10 +255,17 @@ describe("invocationCommand", () => {
           effort,
         ],
       },
+      {
+        provider: "agy" as const,
+        model: "gemini-3.1-pro-high",
+        flag: (effort: "low" | "medium" | "high") => ["--effort", effort],
+      },
     ];
     for (const { provider, model, flag } of cases) {
       for (const effort of ["low", "medium", "high"] as const) {
-        const spec = invocationCommand(options({ provider, model, effort }));
+        const input = options({ provider, model, effort });
+        if (provider === "agy") writeAgyPrompt(input.promptPath);
+        const spec = invocationCommand(input);
         expect(spec.args).toEqual(expect.arrayContaining(flag(effort)));
       }
     }
