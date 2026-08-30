@@ -40,4 +40,10 @@ describe("runner CLI parsing", () => {
       "greater than zero"
     );
   });
+
+  it("accepts agy as an external provider", () => {
+    const args = argv();
+    args[args.indexOf("--provider") + 1] = "agy";
+    expect(parseArgs(args)?.provider).toBe("agy");
+  });
 });

@@ -27,7 +27,8 @@ const name = process.argv[1].split("/").at(-1);
 const isPreflight =
   (name === "claude" && args[0] === "auth") ||
   (name === "codex" && args[0] === "login") ||
-  (name === "grok" && args[0] === "models");
+  (name === "grok" && args[0] === "models") ||
+  (name === "agy" && args[0] === "models");
 const stage = isPreflight ? "preflight" : "model";
 const startedPath = isPreflight
   ? process.env.FAKE_PREFLIGHT_STARTED_PATH
@@ -87,6 +88,19 @@ if (name === "grok" && args[0] === "models") {
   console.log("You are logged in with grok.com.\\nAvailable models:\\n  * grok-4.6 (default)");
   process.exit(0);
 }
+if (name === "agy" && args[0] === "models") {
+  if (process.env.FAKE_AGY_UNAUTH === "1") {
+    console.log("Fetching available models...");
+    console.error("Error: Please sign in to view available models. Launch the CLI without arguments to sign in.");
+    process.exit(0);
+  }
+  if (process.env.FAKE_AGY_MISSING_MODEL === "1") {
+    console.log("Fetching available models...\\ngemini-3.7-flash-lowGemini 3.7 Flash (Low)");
+    process.exit(0);
+  }
+  console.log("Fetching available models...\\ngemini-3.1-pro-highGemini 3.1 Pro (High)");
+  process.exit(0);
+}
 const modelIndex = args.findIndex((value) => value === "--model");
 const model = modelIndex >= 0 ? args[modelIndex + 1] : "unknown";
 if (process.env.FAKE_INVALID_MODEL === "1") {
@@ -115,6 +129,8 @@ if (name === "claude") {
   console.log(JSON.stringify({type:"thread.started",thread_id:"o1"}));
   console.log(JSON.stringify({type:"item.completed",item:{type:"agent_message",text:"CODEX_OK"}}));
   console.log(JSON.stringify({type:"turn.completed",usage:{input_tokens:20,cached_input_tokens:5,output_tokens:3,reasoning_output_tokens:1}}));
+} else if (name === "agy") {
+  console.log(JSON.stringify({conversation_id:"a1",status:"SUCCESS",response:"AGY_OK\\n",usage:{input_tokens:11,output_tokens:2,thinking_tokens:0,cache_read_tokens:3,total_tokens:13}}));
 } else {
   console.log(JSON.stringify({type:"assistant",message:{content:[{type:"text",text:"progress"}]}}));
   console.log(JSON.stringify({type:"result",subtype:"success",is_error:false,result:"GROK_OK",session_id:"g1",usage:{input_tokens:30,output_tokens:4,total_tokens:34},total_cost_usd:0.02,modelUsage:{[model + "-build"]:{}}}));
@@ -137,12 +153,14 @@ function options(provider: Provider, suffix: string = provider): RunnerOptions {
       ? "claude-fable-5"
       : provider === "codex"
         ? "gpt-5.6-sol"
-        : "grok-4.6";
+        : provider === "agy"
+          ? "gemini-3.1-pro-high"
+          : "grok-4.6";
   return {
     parent,
     provider,
     model,
-    effort: provider === "grok" ? "xhigh" : "max",
+    effort: provider === "grok" ? "xhigh" : provider === "agy" ? "high" : "max",
     mode: "read-only",
     promptPath: join(scratch, "prompt.md"),
     cwd: scratch,
@@ -216,7 +234,7 @@ beforeEach(() => {
   bin = join(scratch, "bin");
   mkdirSync(bin);
   writeFileSync(join(scratch, "prompt.md"), "Return the marker.");
-  for (const name of ["claude", "codex", "grok"]) makeExecutable(name);
+  for (const name of ["claude", "codex", "grok", "agy"]) makeExecutable(name);
   previousPath = process.env.PATH;
   process.env.PATH = `${bin}:${dirname(process.execPath)}:${previousPath ?? ""}`;
   delete process.env.FAKE_TIMEOUT;
@@ -236,6 +254,8 @@ beforeEach(() => {
   delete process.env.FAKE_GROK_TRANSIENT_UNAUTH_PATH;
   delete process.env.FAKE_GROK_PREFLIGHT_LOG_PATH;
   delete process.env.FAKE_GROK_MISSING_MODEL;
+  delete process.env.FAKE_AGY_UNAUTH;
+  delete process.env.FAKE_AGY_MISSING_MODEL;
   delete process.env.FAKE_DESCENDANT_HOLDS_PIPES_MS;
   delete process.env.FAKE_DESCENDANT_PID_PATH;
   delete process.env.FAKE_SELF_SIGNAL;
@@ -260,6 +280,8 @@ afterEach(() => {
   delete process.env.FAKE_GROK_TRANSIENT_UNAUTH_PATH;
   delete process.env.FAKE_GROK_PREFLIGHT_LOG_PATH;
   delete process.env.FAKE_GROK_MISSING_MODEL;
+  delete process.env.FAKE_AGY_UNAUTH;
+  delete process.env.FAKE_AGY_MISSING_MODEL;
   delete process.env.FAKE_DESCENDANT_HOLDS_PIPES_MS;
   delete process.env.FAKE_DESCENDANT_PID_PATH;
   delete process.env.FAKE_SELF_SIGNAL;
@@ -267,7 +289,7 @@ afterEach(() => {
 });
 
 describe("runLane", () => {
-  for (const provider of ["claude", "codex", "grok"] as const) {
+  for (const provider of ["claude", "codex", "grok", "agy"] as const) {
     it(`executes and receipts the ${provider} external lane`, async () => {
       const input = options(provider);
       const result = await runLane(input);
@@ -279,8 +301,10 @@ describe("runLane", () => {
         status: "complete",
         provider,
         model: input.model,
-        modelVerified: provider !== "codex",
-        modelEvidence: provider === "codex" ? "pinned-argv" : "provider-report",
+        modelVerified: provider !== "codex" && provider !== "agy",
+        modelEvidence: provider === "codex" || provider === "agy"
+          ? "pinned-argv"
+          : "provider-report",
         preflight: { status: "passed" },
       });
     });
@@ -415,6 +439,39 @@ describe("runLane", () => {
       error: {
         message: "launcher received SIGTERM during authentication preflight retry delay",
       },
+    });
+  });
+
+  it("classifies Agy sign-in failure without retrying preflight", async () => {
+    process.env.FAKE_AGY_UNAUTH = "1";
+    const modelStarted = join(scratch, "agy-model.started");
+    process.env.FAKE_MODEL_STARTED_PATH = modelStarted;
+    const input = options("agy", "agy-unauthenticated");
+    const result = await runLane(input);
+
+    expect(result.exitCode).toBe(77);
+    expect(existsSync(modelStarted)).toBe(false);
+    expect(receipt(input.receiptPath)).toMatchObject({
+      status: "unauthenticated",
+      preflight: { status: "failed" },
+    });
+    expect(receipt(input.receiptPath).preflight.evidence).toContain(
+      "Please sign in"
+    );
+  });
+
+  it("classifies a missing Agy model without retrying preflight", async () => {
+    process.env.FAKE_AGY_MISSING_MODEL = "1";
+    const modelStarted = join(scratch, "agy-missing-model.started");
+    process.env.FAKE_MODEL_STARTED_PATH = modelStarted;
+    const input = options("agy", "agy-missing-model");
+    const result = await runLane(input);
+
+    expect(result.exitCode).toBe(69);
+    expect(existsSync(modelStarted)).toBe(false);
+    expect(receipt(input.receiptPath)).toMatchObject({
+      status: "unavailable-model",
+      preflight: { status: "failed" },
     });
   });
 
@@ -912,6 +969,10 @@ describe("childEnvironment", () => {
       KEEP_ME: "yes",
     });
     expect(childEnvironment("grok", source)).toEqual({
+      PATH: "/bin",
+      KEEP_ME: "yes",
+    });
+    expect(childEnvironment("agy", source)).toEqual({
       PATH: "/bin",
       KEEP_ME: "yes",
     });

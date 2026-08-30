@@ -2,6 +2,10 @@
 
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## Unreleased adds Agy as an external pstack-runner provider
+
+`pstack-runner` accepts `--provider agy` from a Claude Code or Codex parent. The lane preflights `agy models`, invokes print mode once, pins `--sandbox`, maps read-only to `--mode plan` and isolated-write to `--mode accept-edits`, and never passes `--dangerously-skip-permissions`. Agy's effort flag is `low|medium|high`; `xhigh` and `max` pin to `high`. Receipts use Codex-style `pinned-argv` proof because Agy JSON does not report a served model id. Agy is not a parent harness and is not a fifth first-run matrix family.
+
 ## 1.2.0 adds verified multi-PR plans, earlier runtime diagnostics, and shared review-bot triage
 
 Plans with several stages now use one checklist instead of an overview and separate files for each stage. It has one ordered section for every pull request and keeps all ten ways of testing the real product, unit tests, live and performance proof, checks for how changes work together, merge rules, and supporting details in one place. A Node-based checker with no extra dependencies rejects missing or out-of-order sections, fake screenshots, empty definitions of success, incomplete performance proof, incorrectly written review checks, unsupported punctuation, and incorrect command use. Claude Code and Codex use the same installed skill and checker through their existing parent-controlled setup. If a provider fails, it is identified by name and treated as a dropout. No backup provider or hidden time limit was added.

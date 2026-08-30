@@ -110,6 +110,39 @@ describe("parseProviderOutput", () => {
     expect(parsed.reportedModel).toBe("claude-fable-5");
   });
 
+  it("extracts Agy JSON without inventing a provider-reported model", () => {
+    const parsed = parseProviderOutput(
+      "agy",
+      JSON.stringify({
+        conversation_id: "agy-session",
+        status: "SUCCESS",
+        response: "AGY_OK\n",
+        usage: {
+          input_tokens: 11,
+          output_tokens: 2,
+          thinking_tokens: 4,
+          cache_read_tokens: 3,
+          total_tokens: 13,
+        },
+      }),
+      "",
+      "gemini-3.1-pro-high"
+    );
+    expect(parsed).toMatchObject({
+      text: "AGY_OK\n",
+      reportedModel: null,
+      sessionId: "agy-session",
+      usage: {
+        inputTokens: 11,
+        outputTokens: 2,
+        reasoningTokens: 4,
+        cachedInputTokens: 3,
+        totalTokens: 13,
+      },
+      costUsd: null,
+    });
+  });
+
   it("rejects malformed or textless responses", () => {
     expect(() =>
       parseProviderOutput("claude", "not-json", "", "claude-fable-5")
@@ -122,5 +155,17 @@ describe("parseProviderOutput", () => {
         "gpt-5.6-sol"
       )
     ).toThrow("final agent message");
+    expect(() =>
+      parseProviderOutput(
+        "agy",
+        JSON.stringify({
+          status: "ERROR",
+          response: "",
+          error: "invalid model selection",
+        }),
+        "",
+        "gemini-3.1-pro-high"
+      )
+    ).toThrow("invalid model selection");
   });
 });
