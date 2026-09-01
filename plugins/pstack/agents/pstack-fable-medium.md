@@ -1,7 +1,7 @@
 ---
 name: pstack-fable-medium
-description: Native Claude lane for pstack roles configured as claude:claude-fable-5@medium.
-model: claude-fable-5
+description: Native Claude lane for pstack roles configured as claude:fable@medium.
+model: fable
 effort: medium
 background: true
 disallowedTools: Agent, Task

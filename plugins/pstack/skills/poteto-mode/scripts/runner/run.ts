@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { invocationCommand, preflightCommand, type CommandSpec } from "./commands.ts";
+import { versionedClaudeAlias } from "./model-aliases.ts";
 import { parseProviderOutput, reportedModelMatches } from "./parse-output.ts";
 import type {
   Provider,
@@ -442,7 +443,7 @@ function modelProof(
   readonly modelVerified: boolean;
   readonly modelEvidence: "provider-report" | "pinned-argv" | null;
 } {
-  if (reportedModelMatches(requested, reported)) {
+  if (reportedModelMatches(provider, requested, reported)) {
     return {
       reportedModel: reported,
       modelVerified: true,
@@ -488,6 +489,14 @@ export function validateOptions(options: RunnerOptions): void {
     );
   }
   if (options.model.trim().length === 0) throw new UsageError("model must not be empty");
+  const staleAlias = options.provider === "claude"
+    ? versionedClaudeAlias(options.model)
+    : null;
+  if (staleAlias !== null) {
+    throw new UsageError(
+      `Claude model ${options.model} is a version pin; normalize it to ${staleAlias} before invoking the runner`
+    );
+  }
   if (
     options.timeoutMs !== null &&
     (!Number.isFinite(options.timeoutMs) || options.timeoutMs <= 0)

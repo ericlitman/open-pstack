@@ -10,14 +10,14 @@ describe("parseProviderOutput", () => {
         session_id: "claude-session",
         usage: { input_tokens: 10, output_tokens: 3 },
         total_cost_usd: 0.05,
-        modelUsage: { "claude-fable-5": { inputTokens: 10 } },
+        modelUsage: { "claude-fable-9-9": { inputTokens: 10 } },
       }),
       "",
-      "claude-fable-5"
+      "fable"
     );
     expect(parsed).toMatchObject({
       text: "CLAUDE_OK",
-      reportedModel: "claude-fable-5",
+      reportedModel: "claude-fable-9-9",
       sessionId: "claude-session",
       usage: { inputTokens: 10, outputTokens: 3 },
       costUsd: 0.05,
@@ -89,7 +89,7 @@ describe("parseProviderOutput", () => {
     );
     expect(parsed.text).toBe("GROK_OK");
     expect(parsed.reportedModel).toBe("grok-4.6-build");
-    expect(reportedModelMatches("grok-4.6", parsed.reportedModel)).toBe(
+    expect(reportedModelMatches("grok", "grok-4.6", parsed.reportedModel)).toBe(
       true
     );
   });
@@ -101,18 +101,28 @@ describe("parseProviderOutput", () => {
         result: "CLAUDE_OK",
         modelUsage: {
           "claude-haiku-4-5-20251001": {},
-          "claude-fable-5": {},
+          "claude-fable-9-9": {},
         },
       }),
       "",
-      "claude-fable-5"
+      "fable"
     );
-    expect(parsed.reportedModel).toBe("claude-fable-5");
+    expect(parsed.reportedModel).toBe("claude-fable-9-9");
+  });
+
+  it("matches only concrete Claude revisions from the requested rolling family", () => {
+    expect(reportedModelMatches("claude", "fable", "claude-fable-9-9")).toBe(true);
+    expect(reportedModelMatches("claude", "opus", "claude-opus-9")).toBe(true);
+    expect(reportedModelMatches("claude", "fable", "claude-opus-9")).toBe(false);
+    expect(reportedModelMatches("claude", "fable", "claude-fable-beta")).toBe(false);
+    expect(reportedModelMatches("claude", "fable", "fable")).toBe(false);
+    expect(reportedModelMatches("claude", "fable", "fable-preview")).toBe(false);
+    expect(reportedModelMatches("grok", "fable", "claude-fable-9-9")).toBe(false);
   });
 
   it("rejects malformed or textless responses", () => {
     expect(() =>
-      parseProviderOutput("claude", "not-json", "", "claude-fable-5")
+      parseProviderOutput("claude", "not-json", "", "fable")
     ).toThrow("valid JSON");
     expect(() =>
       parseProviderOutput(

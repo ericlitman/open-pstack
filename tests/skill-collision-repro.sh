@@ -45,6 +45,33 @@ else
   fail=1
 fi
 
+# Active configuration must use Claude's rolling family aliases. Concrete
+# provider reports may still appear in runner fixtures, but no shipped
+# descriptor, native-agent model field, or live test invocation may pin one.
+legacy_model_pins="$(
+  grep -REn \
+    --include='*.md' --include='*.ts' --include='*.sh' \
+    'claude:claude-(fable|opus)-[0-9]|^model: claude-(fable|opus)-[0-9]|--model claude-(fable|opus)-[0-9]' \
+    "$repo/plugins/pstack" "$repo/tests" "$repo/README.md" "$repo/docs/reference.md" \
+    2>/dev/null || true
+)"
+standalone_code_pins="$(
+  grep -REn \
+    --include='*.ts' --include='*.js' \
+    --exclude='*.test.ts' --exclude='*.test.js' \
+    "['\"]claude-(fable|opus)-[0-9]" \
+    "$repo/plugins/pstack" \
+    2>/dev/null || true
+)"
+if [ -n "$legacy_model_pins" ] || [ -n "$standalone_code_pins" ]; then
+  note "FAIL: active Fable or Opus configuration still pins a model revision:"
+  [ -z "$legacy_model_pins" ] || note "$legacy_model_pins"
+  [ -z "$standalone_code_pins" ] || note "$standalone_code_pins"
+  fail=1
+else
+  note "ok: active Fable and Opus configuration uses rolling aliases"
+fi
+
 # Static invariant (CHANGES maintenance note): provider-dispatch owns the default
 # provider/model quad and the four panel skills plus setup-pstack copy it verbatim.
 setup="$repo/plugins/pstack/skills/setup-pstack/SKILL.md"
@@ -170,7 +197,7 @@ Then stop. Do not invoke any skill or tool.
 EOF
 
 run() {
-  claude -p --plugin-dir "$scratch" --model claude-fable-5 --effort max --max-turns 3 "$1" < /dev/null 2>&1
+  claude -p --plugin-dir "$scratch" --model fable --effort max --max-turns 3 "$1" < /dev/null 2>&1
 }
 
 check() { # $1 label, $2 expected marker, $3 output
