@@ -59,7 +59,7 @@ Then proceed to Step 3.
 
 ### Step 2b. Direct Explain (simple questions)
 
-Dispatch one read-only lane that explores and explains in one pass using your configured how-explainer descriptor (default `claude:claude-fable-5@max`).
+Dispatch one read-only lane that explores and explains in one pass using your configured how-explainer descriptor (default `claude:fable@max`).
 
 The agent does its own exploration (Glob, Grep, Read) and writes the explanation directly. Read `references/explainer-prompt.md` for the communication style and output format. Same structure, just no explorer findings as input.
 
@@ -67,7 +67,7 @@ Proceed to Step 4.
 
 ### Step 3. Synthesize (complex questions only)
 
-Once all explorers return, dispatch one read-only lane to synthesize their findings into one coherent explanation using your configured how-explainer descriptor (default `claude:claude-fable-5@max`).
+Once all explorers return, dispatch one read-only lane to synthesize their findings into one coherent explanation using your configured how-explainer descriptor (default `claude:fable@max`).
 
 The explainer gets all explorers' findings and writes the human-facing explanation (output format below). Read `references/explainer-prompt.md` for the full prompt template. The explainer reconciles overlapping findings, resolves contradictions, and weaves the slices into a unified picture.
 
@@ -99,7 +99,7 @@ Run the full explain flow above (Steps 1-4). You must understand the architectur
 
 ### Step 2. Spawn Critics
 
-After the explanation is complete, start one architectural critic per descriptor in your configured how-critics list (defaults `claude:claude-fable-5@max`, `codex:gpt-5.6-sol@max`, `grok:grok-4.6@xhigh`, `claude:claude-opus-5@xhigh`) in one fan-out phase.
+After the explanation is complete, start one architectural critic per descriptor in your configured how-critics list (defaults `claude:fable@max`, `codex:gpt-5.6-sol@max`, `grok:grok-4.6@xhigh`, `claude:opus@xhigh`) in one fan-out phase.
 
 Route each critic descriptor in `read-only` mode. These are minimum reasoning levels. The lead may raise effort within the same current-frontier model when the architecture warrants it, but must not substitute providers silently.
 

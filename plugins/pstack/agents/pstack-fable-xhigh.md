@@ -1,7 +1,7 @@
 ---
 name: pstack-fable-xhigh
-description: Native Claude lane for pstack roles configured as claude:claude-fable-5@xhigh.
-model: claude-fable-5
+description: Native Claude lane for pstack roles configured as claude:fable@xhigh.
+model: fable
 effort: xhigh
 background: true
 disallowedTools: Agent, Task

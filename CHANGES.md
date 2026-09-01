@@ -2,6 +2,12 @@
 
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## 1.2.1 keeps Fable and Opus on their latest Claude revisions
+
+Open Pstack now stores `claude:fable@<effort>` and `claude:opus@<effort>` in its model matrix, role defaults, and generated setup sheets. Claude Code resolves those aliases to the latest family revision. Native Claude agents and external runner calls pass the same aliases.
+
+Runtime dispatch normalizes the provider-qualified versioned Fable and Opus descriptors written by earlier releases before it chooses a route, so an installed sheet stops pinning as soon as the plugin updates. It does not write user files and reports that setup should persist the migration. `setup-pstack` applies the same rule before validation, preserves roles, lane order, and effort selections, and writes only after the existing probes and confirmation. The runner rejects any version pin that reaches its boundary, records both the requested alias and Claude's concrete reported revision, and verifies that the report belongs to the requested family. Static checks reject new active version pins.
+
 ## 1.2.0 adds verified multi-PR plans, earlier runtime diagnostics, and shared review-bot triage
 
 Plans with several stages now use one checklist instead of an overview and separate files for each stage. It has one ordered section for every pull request and keeps all ten ways of testing the real product, unit tests, live and performance proof, checks for how changes work together, merge rules, and supporting details in one place. A Node-based checker with no extra dependencies rejects missing or out-of-order sections, fake screenshots, empty definitions of success, incomplete performance proof, incorrectly written review checks, unsupported punctuation, and incorrect command use. Claude Code and Codex use the same installed skill and checker through their existing parent-controlled setup. If a provider fails, it is identified by name and treated as a dropout. No backup provider or hidden time limit was added.

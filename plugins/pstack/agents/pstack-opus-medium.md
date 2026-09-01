@@ -1,7 +1,7 @@
 ---
 name: pstack-opus-medium
-description: Native Claude lane for pstack roles configured as claude:claude-opus-5@medium.
-model: claude-opus-5
+description: Native Claude lane for pstack roles configured as claude:opus@medium.
+model: opus
 effort: medium
 background: true
 disallowedTools: Agent, Task

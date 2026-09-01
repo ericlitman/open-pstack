@@ -89,6 +89,11 @@ if (name === "grok" && args[0] === "models") {
 }
 const modelIndex = args.findIndex((value) => value === "--model");
 const model = modelIndex >= 0 ? args[modelIndex + 1] : "unknown";
+const reportedModel = model === "fable"
+  ? "claude-fable-9-9"
+  : model === "opus"
+    ? "claude-opus-9"
+    : model;
 if (process.env.FAKE_INVALID_MODEL === "1") {
   console.error("The requested model is not supported with this account.");
   process.exit(1);
@@ -110,7 +115,7 @@ if (stage === "model" && process.env.FAKE_SELF_SIGNAL) {
   await Bun.sleep(5_000);
 }
 if (name === "claude") {
-  console.log(JSON.stringify({result:"CLAUDE_OK",session_id:"c1",usage:{input_tokens:10,output_tokens:2},total_cost_usd:0.01,modelUsage:{[model]:{}}}));
+  console.log(JSON.stringify({result:"CLAUDE_OK",session_id:"c1",usage:{input_tokens:10,output_tokens:2},total_cost_usd:0.01,modelUsage:{[reportedModel]:{}}}));
 } else if (name === "codex") {
   console.log(JSON.stringify({type:"thread.started",thread_id:"o1"}));
   console.log(JSON.stringify({type:"item.completed",item:{type:"agent_message",text:"CODEX_OK"}}));
@@ -134,7 +139,7 @@ function options(provider: Provider, suffix: string = provider): RunnerOptions {
   const parent = provider === "codex" ? "claude" : "codex";
   const model =
     provider === "claude"
-      ? "claude-fable-5"
+      ? "fable"
       : provider === "codex"
         ? "gpt-5.6-sol"
         : "grok-4.6";
@@ -283,6 +288,9 @@ describe("runLane", () => {
         modelEvidence: provider === "codex" ? "pinned-argv" : "provider-report",
         preflight: { status: "passed" },
       });
+      if (provider === "claude") {
+        expect(receipt(input.receiptPath).reportedModel).toBe("claude-fable-9-9");
+      }
     });
   }
 
@@ -886,6 +894,15 @@ describe("runLane", () => {
   it("rejects same-provider recursion", async () => {
     const input = { ...options("claude"), parent: "claude" as const };
     await expect(runLane(input)).rejects.toThrow("native to parent");
+  });
+
+  it("rejects a versioned Claude family before it can stay pinned", async () => {
+    const input = { ...options("claude"), model: "claude-fable-9-9" };
+    await expect(runLane(input)).rejects.toThrow(
+      "normalize it to fable before invoking the runner"
+    );
+    expect(existsSync(input.outputPath)).toBe(false);
+    expect(existsSync(input.receiptPath)).toBe(false);
   });
 });
 

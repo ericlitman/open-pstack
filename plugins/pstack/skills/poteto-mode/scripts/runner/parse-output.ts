@@ -3,6 +3,10 @@ import type {
   ParsedOutput,
   Provider,
 } from "./types.ts";
+import {
+  concreteModelMatchesRollingAlias,
+  isRollingClaudeAlias,
+} from "./model-aliases.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -42,11 +46,17 @@ function normalizedUsage(value: unknown): NormalizedUsage | null {
     : null;
 }
 
-function modelFromUsage(value: unknown, requestedModel: string): string | null {
+function modelFromUsage(
+  value: unknown,
+  provider: Provider,
+  requestedModel: string
+): string | null {
   const usage = object(value);
   if (usage === null) return null;
   const models = Object.keys(usage);
-  return models.find((model) => reportedModelMatches(requestedModel, model))
+  return models.find((model) =>
+    reportedModelMatches(provider, requestedModel, model)
+  )
     ?? models[0]
     ?? null;
 }
@@ -67,7 +77,7 @@ function parseClaude(stdout: string, requestedModel: string): ParsedOutput {
 
   return {
     text,
-    reportedModel: modelFromUsage(value.modelUsage, requestedModel),
+    reportedModel: modelFromUsage(value.modelUsage, "claude", requestedModel),
     sessionId: nullableString(value.session_id ?? value.sessionId),
     usage: normalizedUsage(value.usage),
     costUsd: finiteNumber(value.total_cost_usd) ?? null,
@@ -97,7 +107,7 @@ function parseGrok(stdout: string, requestedModel: string): ParsedOutput {
 
   return {
     text,
-    reportedModel: modelFromUsage(result.modelUsage, requestedModel),
+    reportedModel: modelFromUsage(result.modelUsage, "grok", requestedModel),
     sessionId: nullableString(result.session_id),
     usage: normalizedUsage(result.usage),
     costUsd: finiteNumber(result.total_cost_usd) ?? null,
@@ -164,9 +174,16 @@ export function parseProviderOutput(
 }
 
 export function reportedModelMatches(
+  provider: Provider,
   requested: string,
   reported: string | null
 ): boolean {
   if (reported === null) return false;
-  return reported === requested || reported.startsWith(`${requested}-`);
+  if (provider === "claude" && isRollingClaudeAlias(requested)) {
+    return concreteModelMatchesRollingAlias(requested, reported);
+  }
+  if (reported === requested || reported.startsWith(`${requested}-`)) {
+    return true;
+  }
+  return false;
 }

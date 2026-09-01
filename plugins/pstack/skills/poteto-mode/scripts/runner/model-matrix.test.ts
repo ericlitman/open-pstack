@@ -223,6 +223,14 @@ describe("model matrix", () => {
       ["grok", "xhigh"],
       ["opus", "xhigh"],
     ]);
+    expect(
+      rows
+        .filter((row) => row.family === "fable" || row.family === "opus")
+        .map((row) => [row.family, row.model])
+    ).toEqual([
+      ["fable", "fable"],
+      ["opus", "opus"],
+    ]);
   });
 
   it("ships exactly the declared Claude-native frontier agents", () => {
@@ -313,6 +321,9 @@ describe("model matrix", () => {
     expect(setup).toContain("A failed probe writes nothing:");
     expect(setup).toContain("Run one probe per family");
     expect(setup).toContain("normalized complete role map from step 2");
+    expect(setup).toContain("starts with `claude-fable-` or `claude-opus-`");
+    expect(setup).toContain("preserving the provider, effort, role, and lane order");
+    expect(setup).toContain("Show any rolling-alias migrations");
     expect(setup).toContain("Every documented role remains present.");
     expect(setup).toContain("An effort-only rerun cannot change a role's family.");
     expect(setup).toContain("<!-- pstack:models:begin -->");
@@ -330,5 +341,19 @@ describe("model matrix", () => {
       "match the descriptor's `(provider, model)` to one model-matrix row"
     );
     expect(nativeLanes).toContain("`pstack-<stem>-<effort>`");
+  });
+
+  it("normalizes old rolling-family pins before any runtime route", () => {
+    const dispatch = readFileSync(DISPATCH_PATH, "utf8");
+    const normalizationStart = dispatch.indexOf("## Read-time normalization");
+    const parentStart = dispatch.indexOf("## The parent owns the route");
+    expect(normalizationStart).toBeGreaterThan(-1);
+    expect(parentStart).toBeGreaterThan(normalizationStart);
+    const normalization = dispatch.slice(normalizationStart, parentStart);
+    expect(normalization).toContain("replace that model component in memory");
+    expect(normalization).toContain("Never pass the versioned predecessor to Claude.");
+    expect(normalization).toContain("without writing user files");
+    expect(normalization).toContain("`/setup-pstack` will rewrite it");
+    expect(normalization).toContain("runner rejects a missed Fable or Opus version pin");
   });
 });
