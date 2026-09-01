@@ -55,9 +55,18 @@ legacy_model_pins="$(
     "$repo/plugins/pstack" "$repo/tests" "$repo/README.md" "$repo/docs/reference.md" \
     2>/dev/null || true
 )"
-if [ -n "$legacy_model_pins" ]; then
+standalone_code_pins="$(
+  grep -REn \
+    --include='*.ts' --include='*.js' \
+    --exclude='*.test.ts' --exclude='*.test.js' \
+    "['\"]claude-(fable|opus)-[0-9]" \
+    "$repo/plugins/pstack" \
+    2>/dev/null || true
+)"
+if [ -n "$legacy_model_pins" ] || [ -n "$standalone_code_pins" ]; then
   note "FAIL: active Fable or Opus configuration still pins a model revision:"
-  note "$legacy_model_pins"
+  [ -z "$legacy_model_pins" ] || note "$legacy_model_pins"
+  [ -z "$standalone_code_pins" ] || note "$standalone_code_pins"
   fail=1
 else
   note "ok: active Fable and Opus configuration uses rolling aliases"
