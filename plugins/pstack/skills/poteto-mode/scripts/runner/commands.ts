@@ -55,6 +55,18 @@ function grokTools(mode: AccessMode): string {
   return [...readonly, ...(mode === "isolated-write" ? ["search_replace"] : [])].join(",");
 }
 
+// grok treats plan/dontAsk as compatibility no-ops and falls back to the
+// host's .claude/settings.json defaultMode; under auto, uncleared commands
+// escalate to an interactive prompt no headless lane can answer, and the
+// 30s timeout kills the lane (measured 2026-08-29). Founder-approved scope,
+// same date: bypassPermissions ONLY for read-only grok lanes, where the
+// seatbelt sandbox forbids writes and no network exists, so the classifier's
+// only headless effect was killing reviewers mid-run. Write lanes keep the
+// classifier: test-gaming inside a workspace-write sandbox is a real threat.
+function grokPermissionMode(mode: AccessMode): string {
+  return mode === "read-only" ? "bypassPermissions" : permissionMode(mode);
+}
+
 function permissionMode(mode: AccessMode): string {
   return mode === "read-only" ? "plan" : "acceptEdits";
 }
@@ -129,7 +141,7 @@ export function invocationCommand(options: RunnerOptions): CommandSpec {
           "--reasoning-effort",
           options.effort,
           "--permission-mode",
-          permissionMode(options.mode),
+          grokPermissionMode(options.mode),
           "--sandbox",
           grokSandbox(options.mode),
           "--tools",

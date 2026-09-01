@@ -96,7 +96,7 @@ describe("invocationCommand", () => {
       "--reasoning-effort",
       "xhigh",
       "--permission-mode",
-      "plan",
+      "bypassPermissions",
       "--sandbox",
       "read-only",
       "--tools",
@@ -111,6 +111,25 @@ describe("invocationCommand", () => {
       "--disable-web-search",
       "--verbatim",
     ]);
+  });
+
+  it("keeps acceptEdits and the workspace sandbox for isolated-write Grok lanes", () => {
+    const spec = invocationCommand(
+      options({
+        provider: "grok",
+        model: "grok-4.6",
+        effort: "xhigh",
+        mode: "isolated-write",
+      })
+    );
+    expect(spec.args).toEqual(
+      expect.arrayContaining([
+        "--permission-mode",
+        "acceptEdits",
+        "--sandbox",
+        "workspace",
+      ])
+    );
   });
 
   it("uses bounded write modes without blanket bypasses", () => {
