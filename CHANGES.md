@@ -2,6 +2,12 @@
 
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## Unreleased bypasses the permission classifier for read-only Grok lanes and names Grok terminal errors
+
+Read-only Grok lanes now pass `--permission-mode bypassPermissions`. Grok treats `plan` as a no-op and falls back to the host default. Under `auto`, an uncleared command escalates to an interactive prompt no headless lane can answer, and the 30 s timeout kills the lane. The read-only seatbelt sandbox forbids writes and has no network, so bypassing the classifier there has no write-side risk. Isolated-write Grok lanes still use `acceptEdits` and the workspace sandbox.
+
+A non-success Grok terminal event now names `subtype` and `stop_reason` in the error instead of the flat `grok reported an error result`.
+
 ## 1.2.0 adds verified multi-PR plans, earlier runtime diagnostics, and shared review-bot triage
 
 Plans with several stages now use one checklist instead of an overview and separate files for each stage. It has one ordered section for every pull request and keeps all ten ways of testing the real product, unit tests, live and performance proof, checks for how changes work together, merge rules, and supporting details in one place. A Node-based checker with no extra dependencies rejects missing or out-of-order sections, fake screenshots, empty definitions of success, incomplete performance proof, incorrectly written review checks, unsupported punctuation, and incorrect command use. Claude Code and Codex use the same installed skill and checker through their existing parent-controlled setup. If a provider fails, it is identified by name and treated as a dropout. No backup provider or hidden time limit was added.
