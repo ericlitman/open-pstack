@@ -123,4 +123,34 @@ describe("parseProviderOutput", () => {
       )
     ).toThrow("final agent message");
   });
+
+  it("names Grok's terminal state on a non-success result", () => {
+    expect(() =>
+      parseProviderOutput(
+        "grok",
+        JSON.stringify({
+          type: "result",
+          subtype: "error",
+          is_error: true,
+          stop_reason: "permission_timeout",
+        }),
+        "",
+        "grok-4.6"
+      )
+    ).toThrow("subtype=error, stop_reason=permission_timeout");
+  });
+
+  it("names an absent Grok subtype on a non-success result", () => {
+    expect(() =>
+      parseProviderOutput(
+        "grok",
+        JSON.stringify({
+          type: "result",
+          is_error: true,
+        }),
+        "",
+        "grok-4.6"
+      )
+    ).toThrow("subtype=absent");
+  });
 });

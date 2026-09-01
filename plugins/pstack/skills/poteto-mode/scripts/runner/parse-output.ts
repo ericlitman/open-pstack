@@ -90,7 +90,12 @@ function parseGrok(stdout: string, requestedModel: string): ParsedOutput {
 
   if (result === null) throw new Error("grok result did not contain a terminal event");
   if (result.is_error === true || result.subtype !== "success") {
-    throw new Error("grok reported an error result");
+    // Name the terminal state: without subtype/stop_reason a permission
+    // timeout, a refusal and a crash all read the same in the receipt.
+    const subtype = nullableString(result.subtype) ?? "absent";
+    const stopReason = nullableString(result.stop_reason);
+    const detail = stopReason === null ? "" : `, stop_reason=${stopReason}`;
+    throw new Error(`grok reported a non-success result (subtype=${subtype}${detail})`);
   }
   const text = nullableString(result.result);
   if (text === null) throw new Error("grok result did not contain final text");
