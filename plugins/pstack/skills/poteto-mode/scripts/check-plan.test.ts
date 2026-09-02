@@ -177,8 +177,8 @@ describe("check-plan", () => {
     );
     const mutated = replaceOnce(
       withLaneNest,
-      "- [ ] Probe. <The command or procedure, run at trunk and at the head, interleaved.>\n",
-      "- [ ] Probe. <The command or procedure, run at trunk and at the head, interleaved.>\n  - [ ] Warm the cache first.\n",
+      "- [ ] Probe. <The command or procedure, run at trunk and at the head, interleaved. Both sides must produce the metric.>\n",
+      "- [ ] Probe. <The command or procedure, run at trunk and at the head, interleaved. Both sides must produce the metric.>\n  - [ ] Warm the cache first.\n",
     );
     expect(problemsOf(mutated)).toEqual([]);
   });
@@ -186,8 +186,8 @@ describe("check-plan", () => {
   it("accepts capital-X checked boxes", () => {
     const mutated = replaceOnce(
       skeleton,
-      "- [ ] Lane 1. <Scenario.> Save `<slug>.png`. Pass when <predicate>.",
-      "- [X] Lane 1. <Scenario.> Save `<slug>.png`. Pass when <predicate>.",
+      "- [ ] Lane 1. Regression lane against trunk. Run <the same load-bearing scenario> at trunk and head. If trunk lacks the feature, record that and gate <the behavior the diff adds plus the end state the user waits for>. Save `<slug>.png`. Pass when <predicate>.",
+      "- [X] Lane 1. Regression lane against trunk. Run <the same load-bearing scenario> at trunk and head. If trunk lacks the feature, record that and gate <the behavior the diff adds plus the end state the user waits for>. Save `<slug>.png`. Pass when <predicate>.",
     );
     expect(problemsOf(mutated)).toEqual([]);
   });
@@ -350,7 +350,7 @@ describe("check-plan", () => {
     ],
     [
       "incomplete perf evidence",
-      replaceOnce(skeleton, "- [ ] Rule. <Head against trunk, with the number that fails, such as 20.>\n", ""),
+      replaceOnce(skeleton, "- [ ] Rule. <Head against trunk, with the number that fails, such as 20. If the scenarios differ, add absolute budgets for the diff-added work and the user-visible end state instead of an invalid ratio.>\n", ""),
       "perf boxes are",
     ],
     [
@@ -368,14 +368,18 @@ describe("check-plan", () => {
     ],
     [
       "an empty Metric payload",
-      replaceOnce(skeleton, "- [ ] Metric. <What is measured.>", "- [ ] Metric."),
+      replaceOnce(
+        skeleton,
+        "- [ ] Metric. <What is measured at both trunk and head. If trunk lacks the feature, also name the diff-added work and the end-to-end state the user waits for.>",
+        "- [ ] Metric.",
+      ),
       "Metric. has no payload",
     ],
     [
       "an empty Probe payload",
       replaceOnce(
         skeleton,
-        "- [ ] Probe. <The command or procedure, run at trunk and at the head, interleaved.>",
+        "- [ ] Probe. <The command or procedure, run at trunk and at the head, interleaved. Both sides must produce the metric.>",
         "- [ ] Probe.",
       ),
       "Probe. has no payload",
@@ -393,7 +397,7 @@ describe("check-plan", () => {
       "a Rule without a numeric threshold",
       replaceOnce(
         skeleton,
-        "- [ ] Rule. <Head against trunk, with the number that fails, such as 20.>",
+        "- [ ] Rule. <Head against trunk, with the number that fails, such as 20. If the scenarios differ, add absolute budgets for the diff-added work and the user-visible end state instead of an invalid ratio.>",
         "- [ ] Rule. Head against trunk.",
       ),
       "Rule. names no numeric failure threshold",
