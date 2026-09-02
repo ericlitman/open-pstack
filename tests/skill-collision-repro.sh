@@ -324,6 +324,82 @@ else
   note "ok: forge-neutral landing keeps head/base, auto-merge/queue, split-remote, fork-stack, rebase-push, and watch safety rules"
 fi
 
+excluded_skill="$plugin/skills/make-bot-ui"
+if [ -e "$excluded_skill" ]; then
+  note "FAIL: excluded upstream skill exists: $excluded_skill"
+  fail=1
+else
+  note "ok: excluded upstream skills stay absent"
+fi
+
+routed_model_skills=(how why unslop typescript-best-practices)
+routed_model_bad=""
+for name in "${routed_model_skills[@]}"; do
+  routed_skill="$plugin/skills/$name/SKILL.md"
+  front="$(sed -n '2,/^---$/p' "$routed_skill")"
+  if printf '%s\n' "$front" | grep -q '^disable-model-invocation: true$'; then
+    routed_model_bad="${routed_model_bad}${routed_skill}"$'\n'
+  fi
+done
+if [ -n "$routed_model_bad" ]; then
+  note "FAIL: skills routed by name must stay model-invocable:"
+  note "$routed_model_bad"
+  fail=1
+else
+  note "ok: routed skills stay model-invocable"
+fi
+
+sol_descriptor="$(awk -F '|' '
+  $2 ~ /^[[:space:]]*sol[[:space:]]*$/ {
+    for (i = 4; i <= 6; i++) gsub(/^[[:space:]]+|[[:space:]]+$/, "", $i)
+    print $4 ":" $5 "@" $6
+  }
+' "$dispatch")"
+solo_code_bad=""
+if [ -z "$sol_descriptor" ]; then
+  solo_code_bad="could not read the sol row from $dispatch"$'\n'
+fi
+for role in bug-fix perf-issue hillclimb; do
+  setup_descriptor="$(sed -n "s/^${role}: //p" "$setup")"
+  if [ "$setup_descriptor" != "$sol_descriptor" ]; then
+    solo_code_bad="${solo_code_bad}${setup} ${role}: [${setup_descriptor}] != [${sol_descriptor}]"$'\n'
+  fi
+  role_playbook="$plugin/skills/poteto-mode/playbooks/$role.md"
+  playbook_descriptor="$(sed -n 's/.*default `\([^`]*\)`.*/\1/p' "$role_playbook")"
+  if [ "$playbook_descriptor" != "$sol_descriptor" ]; then
+    solo_code_bad="${solo_code_bad}${role_playbook}: [${playbook_descriptor}] != [${sol_descriptor}]"$'\n'
+  fi
+done
+if [ -n "$solo_code_bad" ]; then
+  note "FAIL: solo code roles must use the sol row:"
+  note "$solo_code_bad"
+  fail=1
+else
+  note "ok: solo code roles stay on the sol row ($sol_descriptor)"
+fi
+
+codex_manifest="$plugin/.codex-plugin/plugin.json"
+logo_path="$(sed -n 's/^[[:space:]]*"logo":[[:space:]]*"\([^"]*\)".*/\1/p' "$codex_manifest")"
+logo_bad=""
+case "$logo_path" in
+  "") logo_bad="interface.logo is missing from $codex_manifest" ;;
+  /*) logo_bad="interface.logo must be plugin-relative: $logo_path" ;;
+esac
+logo_rel="${logo_path#./}"
+case "/$logo_rel/" in
+  */../*) logo_bad="interface.logo escapes the plugin root: $logo_path" ;;
+esac
+if [ -z "$logo_bad" ] && { [ ! -f "$plugin/$logo_rel" ] || [ -L "$plugin/$logo_rel" ]; }; then
+  logo_bad="interface.logo does not name a regular file under the plugin root: $logo_path"
+fi
+if [ -n "$logo_bad" ]; then
+  note "FAIL: codex logo path does not resolve"
+  note "$logo_bad"
+  fail=1
+else
+  note "ok: codex logo path resolves"
+fi
+
 if [ "${PSTACK_STATIC_ONLY:-0}" = "1" ]; then
   exit "$fail"
 fi
