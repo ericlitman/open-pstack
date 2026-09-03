@@ -55,8 +55,12 @@ function grokTools(mode: AccessMode): string {
   return [...readonly, ...(mode === "isolated-write" ? ["search_replace"] : [])].join(",");
 }
 
-function permissionMode(mode: AccessMode): string {
+function claudePermissionMode(mode: AccessMode): string {
   return mode === "read-only" ? "plan" : "acceptEdits";
+}
+
+function grokPermissionMode(mode: AccessMode): string {
+  return mode === "read-only" ? "plan" : "bypassPermissions";
 }
 
 function effortOverride(effort: Effort): string {
@@ -75,7 +79,7 @@ export function invocationCommand(options: RunnerOptions): CommandSpec {
           "--effort",
           options.effort,
           "--permission-mode",
-          permissionMode(options.mode),
+          claudePermissionMode(options.mode),
           "--setting-sources",
           "project",
           "--strict-mcp-config",
@@ -129,7 +133,7 @@ export function invocationCommand(options: RunnerOptions): CommandSpec {
           "--reasoning-effort",
           options.effort,
           "--permission-mode",
-          permissionMode(options.mode),
+          grokPermissionMode(options.mode),
           "--sandbox",
           grokSandbox(options.mode),
           "--tools",
