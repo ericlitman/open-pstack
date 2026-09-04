@@ -60,8 +60,8 @@ The marketplace install is the normal user path. Direct links are only for testi
 │   ├── .claude-plugin/plugin.json    # Claude Code manifest
 │   ├── .codex-plugin/plugin.json     # Codex manifest (skills: ./skills/)
 │   ├── skills/                       # 52 skills shared by Claude Code and Codex
-│   │   ├── poteto-mode/references/{codex-tools,provider-dispatch}.md  # tool + provider routing
-│   │   └── poteto-mode/scripts/      # bun/bash/node tooling: watch-pr, orch, runner, check-plan.mjs, worktree-audit.sh
+│   │   ├── poteto-mode/references/{codex-tools,provider-dispatch,conductor-dispatch}.md
+│   │   └── poteto-mode/scripts/      # bun/bash/node tooling, including the Conductor boundary helper
 │   ├── hooks/                        # SessionStart auto-fire: injects the poteto-mode mandate (Claude Code only)
 │   └── agents/                       # Claude subagents, including native Fable and Opus lanes at each selectable effort
 ├── tests/skill-collision-repro.sh    # native-skill package invariants and Claude invocation checks
@@ -79,7 +79,7 @@ Plugin-internal `skills/<name>/` path references in the docs below are relative 
 
 ## Running on Codex
 
-The Codex build shares one `skills/` tree with the Claude Code build. Nothing is forked or generated. Two narrow references keep runtime translation separate: `codex-tools.md` maps harness primitives and `provider-dispatch.md` maps model providers. pstack otherwise keeps the upstream Claude-native prose and adds a one-line Platform note to each skill that names a Claude primitive, so the port stays in lockstep with upstream sync.
+The Codex build shares one `skills/` tree with the Claude Code build. Nothing is forked or generated. `codex-tools.md` maps harness primitives. Projects without Conductor mode use `provider-dispatch.md` for model-provider routing. Conductor projects use `conductor-dispatch.md` instead. pstack otherwise keeps the upstream Claude-native prose and adds a one-line Platform note to each skill that names a Claude primitive, so the port stays in lockstep with upstream sync.
 
 - **Skill invocation.** Codex loads `SKILL.md` natively. There is no `Skill` tool. You invoke a skill by name (ask for it, or pick `pstack:poteto-mode` from the list).
 - **Package surface.** The native `skills/` tree is the only workflow source. The plugin ships no `commands/` layer and does not link prompts into `~/.codex/prompts/`. Codex would migrate such files into duplicate source-command skills while loading the native skill tree. The 21 `principle-*` leaves declare `user-invocable: false`. Claude keeps them out of its user picker; Codex 0.149.0 currently shows them despite that metadata ([#8](https://github.com/ericlitman/open-pstack/issues/8)).
@@ -89,6 +89,46 @@ The Codex build shares one `skills/` tree with the Claude Code build. Nothing is
 - **Models.** `/setup-pstack` writes provider-qualified descriptors and asks one requested effort per frontier family (`low`, `medium`, `high`, `xhigh`, `max`). The first-run panel is Fable max, GPT-5.6 Sol max, Grok 4.6 xhigh, and Opus xhigh. Fable and Opus use Claude's rolling aliases. Runtime dispatch normalizes older versioned descriptors in memory, so an installed sheet stops pinning immediately. A setup rerun persists that migration while keeping each role's family and effort. In Codex, Sol uses native `spawn_agent`; Claude and Grok use the deterministic external runner. In Claude Code, Fable and Opus use native agents; Sol and Grok use the runner. Children never detect the parent or reroute themselves. The `bug-fix`, `perf-issue`, and `hillclimb` roles stay on GPT-5.6 Sol max instead of upstream's Fable default because Sol costs less for these frequent delegated code roles.
 
 Verified in fresh installed Claude Code and Codex sessions: the user-facing skills are discovered and namespaced under `pstack`; both parents fan out the frontier quad through the documented native/external route table, retain long-running handles without a default timeout, and cross-judge only after every candidate is terminal. The `principle-*` leaves remain available for `poteto-mode` to read by path. Claude honors their `user-invocable: false` metadata; Codex 0.149.0 does not ([#8](https://github.com/ericlitman/open-pstack/issues/8)).
+
+## Conductor project mode
+
+Conductor mode is opt-in per repository. It activates only when the nearest
+`.conductor/poteto-mode.json` passes the strict version-one parser and declares
+`"mode": "conductor"`. Projects without that policy keep the portable routing
+described above.
+
+The invoking Claude or Codex session remains the coordinator. It binds the
+run to `CONDUCTOR_SESSION_ID`, validates the authenticated workspace through
+`whoami` and `get_session_status`, and resolves every role from committed
+project policy. It does not elect another coordinator or use a personal model
+sheet.
+
+Every delegated worker gets a separate Conductor workspace and branch. This
+includes read-only exploration and review. Claude, Codex, and Cursor are agent
+choices at the Conductor boundary, so a project can route Grok through Cursor
+without installing a local Grok launcher. Each worker receives a complete
+prompt plus `PSTACK_WORKER=1`, which prevents recursive Poteto dispatch.
+
+The `scripts/conductor/pstack-conductor` executable is a local policy and state
+boundary. It parses saved MCP responses, fixes run ceilings, records stable
+message IDs, validates post-create and post-run model receipts, accepts one
+attempt-matched assistant result, and emits cleanup targets. It does not call
+Conductor over HTTP or read authentication data. The coordinator performs the
+MCP calls documented in
+[`conductor-dispatch.md`](../plugins/pstack/skills/poteto-mode/references/conductor-dispatch.md).
+
+Setup calls the hosted [Conductor MCP
+server](https://www.conductor.build/docs/api/mcp), checks the live catalog, and
+runs one isolated marker smoke. It leaves `~/.claude/pstack-models.md` and
+`~/.codex/pstack-models.md` unchanged. Missing authentication, unavailable
+models, receipt mismatches, unknown workspace creation, or malformed results
+fail closed. There is no native-agent, portable-runner, lower-effort, or model
+fallback.
+
+The implementation ships contract fixtures derived from Conductor's published
+API shapes. They are not live evidence. A release remains blocked until the
+exact candidate completes the acceptance matrix from real Claude and Codex
+Conductor coordinator sessions.
 
 ## Dependencies
 
@@ -110,6 +150,7 @@ Not declared as deps, but referenced in skill bodies:
 - **`bun`** — runs the vendored `skills/poteto-mode/scripts/` tooling (`watch-pr`, `orch`, `runner`). Install via [`brew install oven-sh/bun/bun`](https://bun.sh). `bootstrap.ts` installs dependencies for `watch-pr` and `orch`; the runner uses only Bun and Node built-ins, so it launches directly without an install/re-exec layer.
 - **`node`** — runs `skills/poteto-mode/scripts/check-plan.mjs`. The checker uses only Node built-ins and does not need Bun.
 - **Claude Code, Codex, and Grok Build CLIs** — the external runner uses the assigned subscribed CLI directly. Install and authenticate only the providers present in your model sheet. Same-provider work stays native; the runner refuses it.
+- **Conductor MCP server.** Required only for repositories that enable Conductor mode. Connect `https://api.conductor.build/mcp` through OAuth or the harness's supported bearer-token environment. The local helper never receives that credential.
 - **`jq` and `rg` (ripgrep)** — only for `scripts/worktree-audit.sh` (the Worktree cleanup playbook). Without them the audit still runs but blanks its PR and LAST_CHAT columns, so it warns on stderr rather than returning a table that looks complete.
 
 No third-party plugins. The harsher-critique escape hatch lives in the bundled `thermo-nuclear-code-quality-review` skill (imported from cursor-team-kit), not in an external plugin.

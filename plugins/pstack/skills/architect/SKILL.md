@@ -7,7 +7,7 @@ description: "Sketch types, signatures, and module structure before code, then s
 
 Design before implementing. Sketch types, function signatures, class shapes, and module boundaries with `not implemented` bodies and pseudocode. Synthesize across multiple model perspectives, then fill in code against the chosen sketch. If implementation proves the sketch wrong, throw it out and redesign.
 
-**Dispatch contract.** Architect's Arena uses the centralized provider routing in [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md). Configured entries are descriptors, not native model slugs. On Codex, resolve remaining Claude tool names via [`codex-tools.md`](../poteto-mode/references/codex-tools.md).
+**Dispatch contract.** Architect's Arena follows the parent-selected Poteto dispatch reference. Conductor mode resolves `architect-runners` from project policy and isolates every sketch in its own workspace. Provider descriptors and native tool mappings apply only to the portable route.
 
 ## Start
 
@@ -31,7 +31,7 @@ Skip Phase A only when the work is genuinely greenfield with no surrounding syst
 
 Run the **arena** skill with the design-sketch task and the Phase A grounding artifacts. Pass `references/runner-prompt.md` as each runner's prompt. Each candidate produces a design package shaped per `references/rationale-template.md`: the caller's usage written first, then the type sketch, function signatures, module map, and prose rationale derived from it.
 
-Use your configured architect runners (defaults `claude:fable@max`, `codex:gpt-5.6-sol@max`, `grok:grok-4.6@xhigh`, `claude:opus@xhigh`).
+Use the configured architect runners. Conductor mode reads `architect-runners` from project policy. The portable defaults are `claude:fable@max`, `codex:gpt-5.6-sol@max`, `grok:grok-4.6@xhigh`, and `claude:opus@xhigh`.
 
 Design it twice. Require at least two structurally distinct candidates before synthesis, even when the first looks sufficient. This is the **exhaust-the-design-space** principle skill made concrete. Whole-shape alternatives, not point fixes inside one shape.
 

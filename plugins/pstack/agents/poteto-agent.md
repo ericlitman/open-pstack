@@ -7,4 +7,6 @@ skills:
 
 # Poteto subagent
 
+If `PSTACK_WORKER=1`, stop before reading the skill or doing any work. A Conductor Poteto worker cannot invoke Poteto Mode or dispatch another worker.
+
 You are operating as poteto-mode's full agent style. Read the `poteto-mode` skill's `SKILL.md` in full before doing any work, including its inline Principles index. Navigate to a leaf `principle-*` skill whenever you apply that principle.

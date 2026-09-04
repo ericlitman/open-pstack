@@ -7,7 +7,7 @@ description: "Spawn N parallel candidates at the same task, pick a base, graft t
 
 Fan out N parallel attempts at the same task. Read every candidate end to end. Pick the strongest as the base. Graft the best ideas from the others into it. Verify the synthesized result.
 
-**Dispatch contract.** Read [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md) before fan-out. Configured values are provider-qualified descriptors, not host-native model slugs. The parent starts native and external lanes directly; children never route themselves. On Codex, resolve the remaining Claude tool names via [`codex-tools.md`](../poteto-mode/references/codex-tools.md).
+**Dispatch contract.** Follow the parent-selected Poteto dispatch reference. In Conductor mode, resolve `arena-runners` and `arena-cross-judge-pool` from project policy and give every candidate and judge an isolated workspace. The provider descriptors, model sheet, native agents, and launcher below apply only to the portable route. Children never route themselves.
 
 ## Start
 
@@ -26,12 +26,12 @@ The N candidates will receive the same prompt, so the prompt is the contract. Ge
 
 1. State the artifact each candidate is producing.
 2. Derive the rubric. State what success looks like for *this* task, then turn it into 3-6 concrete gradeable criteria. Concrete: `Adds a --dry-run flag that skips writes`. Vague: `code is correct`. The rubric is the picker's tool in Phase D; candidates only see the task.
-3. Pick the runners. Use `arena runners` from the current harness's pstack model sheet when present. Otherwise default to `claude:fable@max`, `codex:gpt-5.6-sol@max`, `grok:grok-4.6@xhigh`, `claude:opus@xhigh`. Spawn more when the arena covers multiple design directions. Same descriptor N times when the work is generation-bound rather than judgment-sensitive.
+3. Pick the runners. In Conductor mode, use the `arena-runners` policy route. On the portable route, use `arena runners` from the current harness's pstack model sheet when present. Otherwise default to `claude:fable@max`, `codex:gpt-5.6-sol@max`, `grok:grok-4.6@xhigh`, `claude:opus@xhigh`. Spawn more when the arena covers multiple design directions. Use the same lane N times when the work is generation-bound rather than judgment-sensitive.
 4. Assign output paths. Each candidate writes to its own location (a git worktree where possible, otherwise `/tmp/arena-<slug>/candidate-<n>/`). N candidates writing to the same path is shared mutable state and fails the the **separate-before-serializing-shared-state** principle skill test.
 
 ## Phase B: Fan out
 
-Start all N lanes in one fan-out phase through the provider-dispatch contract. Native lanes are background subagents. External lanes are direct background launcher processes with retained task/session handles, never foreground calls and never subagents supervising subprocesses. Give every lane the task, the path to the shared grounding, its own output path, and instructions to produce both the artifact and a short rationale.
+Start all N lanes in one fan-out phase through the selected dispatch contract. In Conductor mode, each lane is a distinct persisted workspace attempt. On the portable route, native lanes are background subagents and external lanes are background launcher processes with retained handles. Give every lane the task, the path to the shared grounding, its own output path, and instructions to produce both the artifact and a short rationale.
 
 The rationale is mandatory. Without it, the parent cannot tell whether a candidate's structure is principled or accidental, which makes Phase E grafting unreliable. Each rationale names the alternatives the candidate considered and what it rejected.
 
@@ -39,7 +39,7 @@ An external lane counts only when its receipt says `complete` and carries either
 
 ## Phase C: Cross-judge
 
-After all Phase B candidates complete, choose the judge descriptor from `arena cross-judge pool` in the current harness's pstack model sheet when present, otherwise from the runner defaults above. Prefer a provider different from the parent and the likely base candidate. Dispatch one read-only judge through the provider contract. It sees the rubric and completed candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Starting it while candidates are still writing means the judge sees partial or empty outputs and reports them as dropouts.
+After all Phase B candidates complete, choose the judge from the selected `arena-cross-judge-pool` route. On the portable route, use the current harness model sheet when present, otherwise use the runner defaults above. Prefer a provider different from the parent and the likely base candidate. Dispatch one read-only judge through the selected contract. It sees the rubric and completed candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with the parent's reading in Phase D, not with the candidates themselves. Starting it while candidates are still writing means the judge sees partial or empty outputs and reports them as dropouts.
 
 ## Phase D: Pick a base
 

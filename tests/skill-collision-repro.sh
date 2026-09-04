@@ -150,6 +150,13 @@ else
   note "ok: Claude poteto-agent preloads poteto-mode"
 fi
 
+if ! grep -Fq 'PSTACK_WORKER=1' "$poteto_agent"; then
+  note "FAIL: Claude poteto-agent does not refuse worker recursion"
+  fail=1
+else
+  note "ok: Claude poteto-agent refuses worker recursion"
+fi
+
 canon="$plugin/skills/poteto-mode/references/bugbot-triage.md"
 skill="$plugin/skills/babysit/SKILL.md"
 playbook="$plugin/skills/poteto-mode/playbooks/babysit.md"

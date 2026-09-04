@@ -4,6 +4,33 @@ This port applies the Cursor → Claude Code substitutions in skill bodies. Earl
 
 ## Unreleased
 
+**Opt-in Conductor orchestration.** A repository can now select a strict
+Conductor route with `.conductor/poteto-mode.json`. The Claude or Codex session
+that invokes Poteto Mode remains the fixed coordinator. Every delegated Claude,
+Codex, or Cursor worker receives an isolated Conductor workspace and branch.
+Cursor provides the Grok lane through its exact Conductor agent and model pair.
+
+The new local helper validates the project policy and live model catalog,
+persists fixed run budgets and retry-safe message IDs, parses untrusted MCP
+responses, verifies post-create and post-run session receipts, accepts one
+attempt-matched assistant result, and emits run-scoped cleanup targets. It does
+not make network calls or read credentials. Missing identity, catalog entries,
+response fields, or receipts fail the lane without a native, portable-runner,
+effort, agent, or model fallback.
+
+Setup detects Conductor projects before portable model-sheet configuration.
+It validates `whoami`, the coordinator session status, and `list_models`, then
+runs one isolated marker smoke while leaving both user model sheets untouched.
+Poteto workers refuse recursive invocation before loading the skill. Arena,
+Architect, How, Interrogate, Reflect, and Swarm follow the dispatch route chosen
+by the parent instead of bypassing it.
+
+The Conductor unit, strict type, and static contract suites cover policy,
+state transitions, uncertain create reconciliation, exact receipts, transcript
+trust, CLI lifecycle, cleanup safety, and worker refusal. Published-contract
+fixtures are deliberately labeled as non-live. Release is gated on running the
+exact candidate from real Claude and Codex Conductor coordinator sessions.
+
 **Claude poteto-agent preload.** The Claude Code agent definition preloads `pstack:poteto-mode` through its `skills` frontmatter. Claude subagents start with isolated context, so the upstream prompt alone exposed the skill name but not its body. The shared skill tree and the Codex path are unchanged. The static invariants preserve the binding, and the behavioral check proves that the packaged agent can read a named principle without invoking `Skill` or reading a file.
 
 ## 1.3.0 syncs to Cursor pstack 0.14.7

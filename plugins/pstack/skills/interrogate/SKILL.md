@@ -9,7 +9,7 @@ Spawn one reviewer per configured model to adversarially review code changes. Ea
 
 The deliverable is a synthesized verdict. Do NOT auto-apply changes.
 
-**Dispatch contract.** Read [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md) before launching reviewers. Configured entries are provider-qualified descriptors; the parent starts native and external read-only lanes directly. On Codex, resolve remaining Claude tool names via [`codex-tools.md`](../poteto-mode/references/codex-tools.md).
+**Dispatch contract.** Follow the parent-selected Poteto dispatch reference. Conductor mode resolves `interrogate-reviewers` from project policy and gives every reviewer an isolated workspace. Provider descriptors, model sheets, native agents, and the launcher apply only to the portable route.
 
 ## Step 1, Determine Scope
 
@@ -34,7 +34,7 @@ Write one clear paragraph. Reviewers challenge whether the work achieves the int
 
 ## Step 3, Spawn Reviewers
 
-Start all reviewers in one fan-out phase. Use `interrogate reviewers` from the current harness's pstack model sheet when present, one reviewer per entry, extending or shrinking the Reviewer A/B/C/D labels below to the configured entry count; otherwise use the table defaults. Native reviewers use the parent subagent primitive. External reviewers use the launcher directly and must return a complete, model-verified receipt.
+Start all reviewers in one fan-out phase. In Conductor mode, use `interrogate-reviewers` from project policy and require a strict Conductor receipt from every attempt. On the portable route, use `interrogate reviewers` from the current harness model sheet when present, one reviewer per entry, otherwise use the table defaults.
 
 | Subagent | Default model |
 |----------|---------------|
@@ -43,7 +43,7 @@ Start all reviewers in one fan-out phase. Use `interrogate reviewers` from the c
 | Reviewer C | `grok:grok-4.6@xhigh` |
 | Reviewer D | `claude:opus@xhigh` |
 
-For each reviewer, route the configured descriptor with `read-only` access and a unique output/receipt path. If the descriptor is `inherit-parent` or `auto`, use the parent subagent primitive without a model override. If a provider, login, or model is unavailable, record a dropout and continue with the completed reviewers. Never pick the closest model or silently fall back; that destroys the meaning of cross-provider agreement.
+For each reviewer, route the configured lane with read-only access and a unique output and receipt path. On the portable route, `inherit-parent` and `auto` use the parent subagent primitive without a model override. If an agent, login, or model is unavailable, record a dropout and continue only when the playbook permits reduced coverage. Never pick the closest model or silently fall back.
 
 Read `references/reviewer-prompt.md` and fill in the template with:
 1. The stated intent

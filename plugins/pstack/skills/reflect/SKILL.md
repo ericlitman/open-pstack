@@ -7,7 +7,7 @@ description: Spawn three parallel review subagents over the active transcript, s
 
 Mine the current conversation for durable learnings, then route them into skill edits.
 
-**Dispatch contract.** Resolve every configured role through [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md). Reviewers need the parent's live MCP surface, so the default and supported portable route is `inherit-parent` (or its `auto` alias). Pass the transcript or digest plus any required evidence paths. On Codex, resolve remaining Claude tool names via [`codex-tools.md`](../poteto-mode/references/codex-tools.md).
+**Dispatch contract.** Follow the parent-selected Poteto dispatch reference. The Conductor project route for `reflect` is `coordinator`, so apply the three lenses and synthesis in the invoking session without creating workers. On the portable route, reviewers use `inherit-parent` or `auto` so they retain the parent's live MCP surface.
 
 ## When to invoke
 
@@ -35,7 +35,7 @@ For each candidate, read the first JSONL line and check that `message.content[0]
 
 ### 2. Spawn three reviewers in parallel
 
-Start all three read-only lanes in one fan-out phase through provider dispatch. Reviewers need MCP access for context lookups (tickets, chat threads, observability traces referenced in the transcript), so keep them native to the parent. The prompt forbids file writes; the parent applies edits.
+In Conductor mode, perform all three read-only lenses in the coordinator session. On the portable route, start all three lanes in one native fan-out. Reviewers need MCP access for context lookups. The prompt forbids file writes; the parent applies edits.
 
 | Lens | Model descriptor | Prompt template |
 |---|---|---|
@@ -47,7 +47,7 @@ Pass each template verbatim, substituting the transcript path or digest where ma
 
 ### 3. Synthesize
 
-Dispatch one lane using your configured reflect-judgment descriptor (default `inherit-parent`). Preserve relevant MCP access because the synthesizer spot-verifies citations. Use `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. The synthesizer returns a structured Accepted / Rejected / Backlog list.
+In Conductor mode, synthesize in the coordinator. On the portable route, dispatch one lane using the configured reflect-judgment descriptor, whose default is `inherit-parent`. Preserve relevant MCP access because the synthesizer spot-verifies citations. Use `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. The synthesizer returns a structured Accepted / Rejected / Backlog list.
 
 ### 4. Structural enforcement check
 

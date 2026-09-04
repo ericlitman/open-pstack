@@ -7,7 +7,7 @@ description: "Use for \"how does X work\", code walkthroughs before changing som
 
 Explore the codebase to answer "how does X work?" questions. Produce clear architectural explanations at the level of a senior engineer onboarding onto a subsystem. Enough to build a working mental model, not annotated source code.
 
-**Dispatch contract.** Resolve every configured role through [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md). Values are provider-qualified descriptors; the parent chooses native versus external execution. On Codex, resolve remaining Claude tool names via [`codex-tools.md`](../poteto-mode/references/codex-tools.md).
+**Dispatch contract.** Follow the parent-selected Poteto dispatch reference. Conductor mode resolves `how-explorer`, `how-explainer`, and `how-critics` from project policy and isolates every delegated read in a workspace. Provider descriptors and native tool mappings apply only to the portable route.
 
 Two modes:
 
@@ -44,7 +44,7 @@ Decompose the question into 2-4 parallel exploration angles, each a distinct sli
 
 The right decomposition depends on the question. Use your judgment. Narrow questions: 2 explorers is fine. Broad subsystems: up to 4.
 
-Start all explorers in one fan-out phase through provider dispatch. Use your configured how-explorer descriptor (default `grok:grok-4.6@xhigh`) in `read-only` mode. A native lane uses the parent subagent primitive; an external lane uses the launcher directly.
+Start all explorers in one fan-out phase through the selected dispatch contract. Use the configured `how-explorer` route in read-only mode. Its portable default is `grok:grok-4.6@xhigh`.
 
 Each explorer gets the same base prompt from `references/explorer-prompt.md` plus a specific exploration angle naming its slice. Each explorer should:
 - Start broad: Glob for relevant directories, Grep for key types/interfaces/class names

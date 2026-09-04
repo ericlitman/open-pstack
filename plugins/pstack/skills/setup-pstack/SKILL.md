@@ -5,6 +5,40 @@ description: Configure pstack's provider-qualified models, per-family requested 
 
 # Setup pstack
 
+## Conductor projects
+
+Before portable setup, search from the repository root for the nearest
+`.conductor/poteto-mode.json`. When its validated `mode` is `conductor`, use
+this branch and stop after it succeeds. Do not run the nine portable steps.
+
+1. Read
+   [`conductor-dispatch.md`](../poteto-mode/references/conductor-dispatch.md)
+   and locate its `scripts/conductor/pstack-conductor` helper.
+2. Refuse immediately when `PSTACK_WORKER=1` or
+   `CONDUCTOR_SESSION_ID` is missing.
+3. Call `whoami`. Then call `get_session_status` for
+   `CONDUCTOR_SESSION_ID`. Save both redacted responses in a protected
+   temporary directory. The helper must prove that the returned session and
+   workspace match the current Conductor context.
+4. Call `list_models` through every page. Run `pstack-conductor policy validate`
+   with the identity, coordinator status, live catalog, and project
+   policy. All configured agent, model, effort, and fast-mode pairs must pass
+   before creating a workspace.
+5. Run one minimal read-only marker worker through the full Conductor route.
+   It receives one isolated workspace and no initial message. Verify both
+   session receipts, the new assistant result, and unchanged coordinator
+   files. Cancel if still active and archive only the cleanup target emitted by
+   the helper.
+6. Report the bound coordinator session, exact catalog targets, receipt, and
+   cleanup result. Authentication, catalog, receipt, or cleanup validation
+   failures stop setup. There is no native, runner, or model fallback.
+
+Leave both `~/.claude/pstack-models.md` and `~/.codex/pstack-models.md`
+untouched. A Conductor project uses its committed policy as the only model
+configuration source.
+
+## Portable projects
+
 Configure one portable model sheet for the current parent harness. Read [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md) before probing or writing anything. Its model matrix, descriptor grammar, and route table are the contract. Choose one requested effort per matrix family. Do not add a second configuration file, a runtime resolver, or a weaker-model fallback.
 
 Claude Code writes `~/.claude/pstack-models.md` and loads it from `~/.claude/CLAUDE.md` with:
