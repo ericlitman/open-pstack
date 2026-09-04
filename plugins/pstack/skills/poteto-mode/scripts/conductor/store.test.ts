@@ -28,7 +28,7 @@ import type {
   PlanAttemptInput,
   PotetoRun,
   RunBudget,
-  WorkspaceCandidate,
+  WorkspaceListing,
 } from "./types.ts";
 
 const directories: string[] = [];
@@ -116,6 +116,19 @@ describe("Conductor run state", () => {
       "session other-session cannot take ownership from coordinator-session"
     );
     expect(() => assertCoordinator(run, "coordinator-session")).not.toThrow();
+    expect(() =>
+      createRun({
+        runId: "run-1",
+        coordinator: {
+          workspaceId: "coordinator-workspace",
+          sessionId: "coordinator-session",
+          agent: "claude",
+          model: "fable-5-1",
+        },
+        budget,
+        existing: run,
+      })
+    ).toThrow("persisted run coordinator does not match");
   });
 
   test("derives a unique workspace name from the run and attempt", () => {
@@ -191,14 +204,12 @@ describe("Conductor run state", () => {
       "attempt-1",
       "lost response"
     );
-    const wrong: WorkspaceCandidate = {
+    const wrong: WorkspaceListing = {
       workspaceId: "wrong-workspace",
-      sessionId: "wrong-session",
       workspaceName: "another-name",
     };
-    const exact: WorkspaceCandidate = {
+    const exact: WorkspaceListing = {
       workspaceId: "worker-workspace",
-      sessionId: "worker-session",
       workspaceName: "poteto-run-1-attempt-1",
     };
 
@@ -207,12 +218,17 @@ describe("Conductor run state", () => {
       "unresolved"
     );
     const decision = reconcileUnknown(run, "attempt-1", [wrong, exact]);
-    expect(decision.kind).toBe("adopt");
-    if (decision.kind !== "adopt") {
+    expect(decision.kind).toBe("adopt-workspace");
+    if (decision.kind !== "adopt-workspace") {
       throw new Error("exact workspace should be adopted");
     }
     expect(
-      adoptUnknown(run, "attempt-1", decision.ids, postCreate).workers[0]?.state
+      adoptUnknown(
+        run,
+        "attempt-1",
+        { workspaceId: decision.workspaceId, sessionId: "worker-session" },
+        postCreate
+      ).workers[0]?.state
     ).toBe("queued");
   });
 
@@ -222,15 +238,13 @@ describe("Conductor run state", () => {
       "attempt-1",
       "lost response"
     );
-    const candidates: readonly WorkspaceCandidate[] = [
+    const candidates: readonly WorkspaceListing[] = [
       {
         workspaceId: "worker-a",
-        sessionId: "session-a",
         workspaceName: "poteto-run-1-attempt-1",
       },
       {
         workspaceId: "worker-b",
-        sessionId: "session-b",
         workspaceName: "poteto-run-1-attempt-1",
       },
     ];
@@ -321,6 +335,22 @@ describe("Conductor run state", () => {
     expect(
       recordComplete(run, "attempt-1", postCreate, "result-message").status
     ).toBe("complete");
+  });
+
+  test("makes dispatch recording idempotent only for the same cursor", () => {
+    let run = markCreating(plan(freshRun(), 1), "attempt-1");
+    run = recordCreated(
+      run,
+      "attempt-1",
+      { workspaceId: "worker-workspace", sessionId: "worker-session" },
+      postCreate
+    );
+    run = recordDispatch(run, "attempt-1", "message-1");
+
+    expect(recordDispatch(run, "attempt-1", "message-1")).toEqual(run);
+    expect(() => recordDispatch(run, "attempt-1", "message-2")).toThrow(
+      "different dispatch cursor"
+    );
   });
 
   test("records a receipt-bearing dropout without inventing worker IDs", () => {

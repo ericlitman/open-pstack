@@ -1,6 +1,31 @@
 {
   "agents": [
     {
+      "agent": "claude",
+      "models": [
+        {
+          "id": "fable-5-1",
+          "efforts": ["high"],
+          "supportsFastMode": true
+        },
+        {
+          "id": "opus-5-1m",
+          "efforts": ["high"],
+          "supportsFastMode": true
+        }
+      ]
+    },
+    {
+      "agent": "codex",
+      "models": [
+        {
+          "id": "gpt-5.6-sol",
+          "efforts": ["xhigh"],
+          "supportsFastMode": true
+        }
+      ]
+    },
+    {
       "agent": "cursor",
       "models": [
         {

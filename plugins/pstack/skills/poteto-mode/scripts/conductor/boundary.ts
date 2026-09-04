@@ -186,8 +186,17 @@ export function parseCreatedWorkspace(raw: unknown): WorkerIds {
   };
 }
 
-export function parseObservedSession(raw: unknown): ObservedSession {
+export function parseObservedSession(
+  raw: unknown,
+  expectedSessionId?: string
+): ObservedSession {
   const session = record(unwrap(raw), "session");
+  if (
+    expectedSessionId !== undefined &&
+    text(session.id, "session.id") !== expectedSessionId
+  ) {
+    throw new BoundaryError("Conductor session ID mismatch");
+  }
   if (session.fastMode !== false) {
     fail("session.fastMode must be false");
   }

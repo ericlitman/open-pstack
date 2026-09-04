@@ -20,6 +20,13 @@ interface RenderWorkerPromptInput {
 
 export function renderWorkerPrompt(input: RenderWorkerPromptInput): string {
   const { brief, coordinatorSessionId, request, runId, target } = input;
+  const resultExample = JSON.stringify({
+    attemptId: request.attemptId,
+    status: "complete",
+    summary: "...",
+    evidence: ["..."],
+    changedFiles: ["..."],
+  });
   return [
     "# Poteto worker assignment",
     "",
@@ -53,7 +60,7 @@ export function renderWorkerPrompt(input: RenderWorkerPromptInput): string {
     "End with exactly one assistant result block in this form:",
     "",
     `<PSTACK_RESULT attempt="${request.attemptId}">`,
-    `{"attemptId":"${request.attemptId}","status":"complete","summary":"...","evidence":["..."],"changedFiles":["..."]}`,
+    resultExample,
     "</PSTACK_RESULT>",
   ].join("\n");
 }

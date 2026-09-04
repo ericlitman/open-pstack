@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "mode": "conductor",
+  "lanes": {
+    "judgment": {
+      "agent": "claude",
+      "model": "fable-5-1",
+      "resolvedModel": "fable-5-1",
+      "effort": "high",
+      "fastMode": false
+    },
+    "hard-review": {
+      "agent": "claude",
+      "model": "opus-5-1m",
+      "resolvedModel": "opus-5-1m",
+      "effort": "high",
+      "fastMode": false
+    },
+    "implementation": {
+      "agent": "codex",
+      "model": "gpt-5.6-sol",
+      "resolvedModel": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "fastMode": false
+    },
+    "exploration": {
+      "agent": "cursor",
+      "model": "grok-4.6",
+      "resolvedModel": "grok-4.6",
+      "effort": "xhigh",
+      "fastMode": false
+    }
+  },
+  "roles": {
+    "feature": ["exploration"],
+    "refactoring": ["exploration"],
+    "bug-fix": ["implementation"],
+    "perf-issue": ["implementation"],
+    "hillclimb": ["implementation"],
+    "judgment": ["judgment"],
+    "prose": ["judgment"],
+    "hardest-tasks": ["judgment"],
+    "how-explorer": ["exploration"],
+    "how-explainer": ["judgment"],
+    "how-critics": ["judgment", "implementation", "exploration", "hard-review"],
+    "why": "coordinator",
+    "reflect": "coordinator",
+    "arena-runners": ["judgment", "implementation", "exploration", "hard-review"],
+    "arena-cross-judge-pool": ["judgment", "implementation", "exploration", "hard-review"],
+    "swarm-workers": ["exploration"],
+    "architect-runners": ["judgment", "implementation", "exploration", "hard-review"],
+    "interrogate-reviewers": ["judgment", "implementation", "exploration", "hard-review"]
+  },
+  "budget": {
+    "maxWorkspaces": 5,
+    "maxConcurrentWorkspaces": 4,
+    "maxAttempts": 6,
+    "maxFollowUpsPerAttempt": 2
+  }
+}

@@ -153,16 +153,12 @@ export interface CleanupTarget extends WorkerIds {
   readonly expectedWorkspaceName: string;
 }
 
-export interface WorkspaceCandidate extends WorkerIds {
-  readonly workspaceName: string;
-}
-
 export type ReconcileDecision =
   | { readonly kind: "unresolved"; readonly run: PotetoRun }
   | {
-      readonly kind: "adopt";
+      readonly kind: "adopt-workspace";
       readonly run: PotetoRun;
-      readonly ids: WorkerIds;
+      readonly workspaceId: string;
     }
   | {
       readonly kind: "ambiguous";
@@ -218,7 +214,8 @@ export interface WorkerBrief {
 }
 
 export type CompletionObservation =
-  | { readonly kind: "waiting" | "working" }
+  | { readonly kind: "waiting" }
+  | { readonly kind: "working" }
   | { readonly kind: "dropout"; readonly error: string }
   | {
       readonly kind: "complete";

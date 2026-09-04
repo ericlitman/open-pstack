@@ -27,7 +27,7 @@ import type {
   WorkerAttempt,
   WorkerIds,
   WorkerRequest,
-  WorkspaceCandidate,
+  WorkspaceListing,
 } from "./types.ts";
 
 const LOCK_FILE = ".conductor.lock";
@@ -49,7 +49,10 @@ export function createRun(input: StartRunInput): PotetoRun {
   if (input.existing !== undefined) {
     if (
       input.existing.runId !== input.runId ||
-      input.existing.coordinator.sessionId !== input.coordinator.sessionId
+      input.existing.coordinator.sessionId !== input.coordinator.sessionId ||
+      input.existing.coordinator.workspaceId !== input.coordinator.workspaceId ||
+      input.existing.coordinator.agent !== input.coordinator.agent ||
+      input.existing.coordinator.model !== input.coordinator.model
     ) {
       throw new RunStateError("persisted run coordinator does not match");
     }
@@ -230,7 +233,7 @@ export function markUnknown(
 export function reconcileUnknown(
   run: PotetoRun,
   attemptId: string,
-  candidates: readonly WorkspaceCandidate[]
+  candidates: readonly WorkspaceListing[]
 ): ReconcileDecision {
   const attempt = run.workers[attemptIndex(run, attemptId)];
   if (attempt?.state !== "unknown") {
@@ -248,12 +251,9 @@ export function reconcileUnknown(
       throw new RunStateError("workspace reconciliation lost its exact match");
     }
     return {
-      kind: "adopt",
+      kind: "adopt-workspace",
       run,
-      ids: {
-        workspaceId: match.workspaceId,
-        sessionId: match.sessionId,
-      },
+      workspaceId: match.workspaceId,
     };
   }
   const candidateWorkspaceIds = matches.map((match) => match.workspaceId);
@@ -296,6 +296,17 @@ export function recordDispatch(
   return replaceAttempt(run, attemptId, (attempt) => {
     if (attempt.state !== "queued") {
       throw new RunStateError(`attempt ${attemptId} must be queued`);
+    }
+    if (attempt.dispatch.state === "sent") {
+      if (
+        attempt.dispatch.transcriptCursorBeforeDispatch !==
+        transcriptCursorBeforeDispatch
+      ) {
+        throw new RunStateError(
+          `attempt ${attemptId} has a different dispatch cursor`
+        );
+      }
+      return attempt;
     }
     return {
       ...attempt,
