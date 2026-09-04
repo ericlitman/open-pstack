@@ -1,0 +1,8 @@
+{
+  "workspaceId": "worker-workspace",
+  "sessionId": "worker-session",
+  "status": "error",
+  "updatedAt": "2026-09-04T00:00:00Z",
+  "lastError": "fixture worker failure",
+  "lastErrorAt": "2026-09-04T00:00:00Z"
+}

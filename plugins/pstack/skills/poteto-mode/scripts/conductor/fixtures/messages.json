@@ -1,0 +1,14 @@
+{
+  "data": [
+    {
+      "id": "message-1",
+      "sessionId": "worker-session",
+      "sessionIndex": 1,
+      "type": "assistant",
+      "content": "<PSTACK_RESULT attempt=\"attempt-1\">\n{\"attemptId\":\"attempt-1\",\"status\":\"complete\",\"summary\":\"fixture complete\",\"evidence\":[\"fixture:ok\"],\"changedFiles\":[]}\n</PSTACK_RESULT>",
+      "receivedAt": "2026-09-04T00:00:00Z"
+    }
+  ],
+  "offset": 0,
+  "hasMore": false
+}

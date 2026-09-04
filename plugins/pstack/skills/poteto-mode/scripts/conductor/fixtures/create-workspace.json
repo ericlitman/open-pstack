@@ -1,0 +1,5 @@
+{
+  "workspaceId": "worker-workspace",
+  "sessionId": "worker-session",
+  "deepLink": "https://example.invalid/workspaces/worker-workspace"
+}

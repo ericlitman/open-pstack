@@ -1,0 +1,14 @@
+{
+  "data": [
+    {
+      "id": "worker-session",
+      "deepLink": "https://example.invalid/sessions/worker-session",
+      "model": "grok-4.6",
+      "resolvedModel": "grok-4.6",
+      "effort": "xhigh",
+      "fastMode": false
+    }
+  ],
+  "offset": 0,
+  "hasMore": false
+}

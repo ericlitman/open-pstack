@@ -1,0 +1,8 @@
+{
+  "userId": "user-fixture",
+  "name": "Fixture User",
+  "email": "fixture@example.invalid",
+  "organizationId": "organization-fixture",
+  "workspaceId": "workspace-fixture",
+  "authMethod": "access-jwt"
+}

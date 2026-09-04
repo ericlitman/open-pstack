@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "id": "worker-workspace",
+      "projectId": "project-fixture",
+      "name": "poteto-run-1-attempt-1",
+      "state": "ready",
+      "repoUrl": "https://example.invalid/repo.git",
+      "createdAt": "2026-09-04T00:00:00Z",
+      "deepLink": "https://example.invalid/workspaces/worker-workspace"
+    }
+  ],
+  "offset": 0,
+  "hasMore": false
+}

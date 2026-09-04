@@ -1,0 +1,14 @@
+{
+  "agents": [
+    {
+      "agent": "cursor",
+      "models": [
+        {
+          "id": "grok-4.6",
+          "efforts": ["high", "xhigh"],
+          "supportsFastMode": false
+        }
+      ]
+    }
+  ]
+}

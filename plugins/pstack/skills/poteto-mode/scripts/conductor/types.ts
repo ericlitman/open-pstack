@@ -169,3 +169,59 @@ export type ReconcileDecision =
       readonly run: PotetoRun;
       readonly candidateWorkspaceIds: readonly string[];
     };
+
+export interface CurrentContext {
+  readonly sessionId: string;
+  readonly workspaceId: string;
+}
+
+export interface SessionStatus {
+  readonly workspaceId: string;
+  readonly sessionId: string;
+  readonly status: "idle" | "working" | "error";
+  readonly error: string | null;
+}
+
+export interface TranscriptMessage {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly index: number;
+  readonly role: "assistant" | "user" | "other";
+  readonly text: string;
+}
+
+export interface Transcript {
+  readonly messages: readonly TranscriptMessage[];
+  readonly lastMessageId: string | null;
+  readonly afterCursor: string | null;
+}
+
+export interface WorkspaceListing {
+  readonly workspaceId: string;
+  readonly workspaceName: string;
+}
+
+export interface WorkerResult {
+  readonly attemptId: string;
+  readonly status: "complete" | "dropout";
+  readonly summary: string;
+  readonly evidence: readonly string[];
+  readonly changedFiles: readonly string[];
+}
+
+export interface WorkerBrief {
+  readonly repository: string;
+  readonly allowedFiles: readonly string[];
+  readonly questions: readonly string[];
+  readonly requiredEvidence: readonly string[];
+  readonly task: string;
+}
+
+export type CompletionObservation =
+  | { readonly kind: "waiting" | "working" }
+  | { readonly kind: "dropout"; readonly error: string }
+  | {
+      readonly kind: "complete";
+      readonly message: TranscriptMessage;
+      readonly result: WorkerResult;
+    };
