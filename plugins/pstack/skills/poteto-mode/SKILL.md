@@ -5,6 +5,15 @@ description: poteto's agent style for concise, detailed responses, deliberate su
 
 # Poteto mode
 
+## Dispatch mode
+
+Choose the dispatch route before playbook matching or model selection.
+
+1. If `PSTACK_WORKER=1`, stop. A Poteto worker cannot invoke Poteto Mode or dispatch another worker.
+2. Search from the repository root for `.conductor/poteto-mode.json`.
+3. When the validated `mode` is `conductor`, read [`references/conductor-dispatch.md`](references/conductor-dispatch.md) and use only that route.
+4. Otherwise use the portable route in [`references/provider-dispatch.md`](references/provider-dispatch.md).
+
 ## Platform Adaptation
 
 These skills share one tree across Claude Code and Codex. Read [`references/provider-dispatch.md`](references/provider-dispatch.md) whenever a configured role launches. It defines the provider-qualified model descriptors, native/external route table, launcher, isolation, receipts, and dropout policy. Children never choose routes. When a skill names a Claude tool or built-in skill (`run`, `verify`, `plugin-dev:skill-development`), read [`references/codex-tools.md`](references/codex-tools.md) for the Codex equivalent.
