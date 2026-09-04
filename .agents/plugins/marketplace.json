@@ -6,6 +6,7 @@
   "plugins": [
     {
       "name": "pstack",
+      "version": "1.4.0",
       "source": {
         "source": "local",
         "path": "./plugins/pstack"
