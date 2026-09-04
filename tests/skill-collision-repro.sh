@@ -132,6 +132,24 @@ else
 fi
 
 plugin="$repo/plugins/pstack"
+
+poteto_agent="$plugin/agents/poteto-agent.md"
+poteto_agent_front="$(sed -n '2,/^---$/p' "$poteto_agent")"
+poteto_preload_bad=""
+if [ "$(printf '%s\n' "$poteto_agent_front" | grep -cx 'skills:' || true)" != "1" ]; then
+  poteto_preload_bad="${poteto_agent} must declare one skills list"$'\n'
+fi
+if [ "$(printf '%s\n' "$poteto_agent_front" | grep -cx '  - pstack:poteto-mode' || true)" != "1" ]; then
+  poteto_preload_bad="${poteto_preload_bad}${poteto_agent} must preload pstack:poteto-mode"$'\n'
+fi
+if [ -n "$poteto_preload_bad" ]; then
+  note "FAIL: Claude poteto-agent does not preload poteto-mode:"
+  note "$poteto_preload_bad"
+  fail=1
+else
+  note "ok: Claude poteto-agent preloads poteto-mode"
+fi
+
 canon="$plugin/skills/poteto-mode/references/bugbot-triage.md"
 skill="$plugin/skills/babysit/SKILL.md"
 playbook="$plugin/skills/poteto-mode/playbooks/babysit.md"
@@ -436,5 +454,17 @@ invoke='Call the Skill tool with skill "testplug:foo" exactly once and follow wh
 
 check "model-initiated Skill-tool invocation" "SKILL-RAN" "$(run "$invoke")"
 check "user /testplug:foo invocation" "SKILL-RAN" "$(run '/testplug:foo')"
+
+preloaded_agent_output="$(
+  claude -p \
+    'Use the Agent tool once with subagent_type pstack:poteto-agent. Give it this task verbatim: "Without invoking Skill or reading files, reply with the first Core principle named in the preloaded poteto-mode skill." Return only the child response.' \
+    --plugin-dir "$plugin" \
+    --model fable \
+    --effort max \
+    --max-turns 5 \
+    --tools Agent \
+    < /dev/null 2>&1
+)"
+check "poteto-agent preloaded skill" "Laziness Protocol" "$preloaded_agent_output"
 
 exit "$fail"

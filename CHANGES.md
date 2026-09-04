@@ -2,6 +2,10 @@
 
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## Unreleased
+
+**Claude poteto-agent preload.** The Claude Code agent definition preloads `pstack:poteto-mode` through its `skills` frontmatter. Claude subagents start with isolated context, so the upstream prompt alone exposed the skill name but not its body. The shared skill tree and the Codex path are unchanged. The static invariants preserve the binding, and the behavioral check proves that the packaged agent can read a named principle without invoking `Skill` or reading a file.
+
 ## 1.3.0 syncs to Cursor pstack 0.14.7
 
 Open Pstack now tracks Cursor pstack 0.14.7 at `efa2a531985e0a8084d36ff3cf87233be8a9f34b`.
