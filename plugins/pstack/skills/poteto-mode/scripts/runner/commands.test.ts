@@ -177,4 +177,42 @@ describe("invocationCommand", () => {
       }
     }
   });
+
+  it("pins every additional supported family in external argv", () => {
+    const cases = [
+      {
+        provider: "claude" as const,
+        model: "sonnet",
+        flag: ["--model", "sonnet"],
+      },
+      {
+        provider: "codex" as const,
+        model: "gpt-6-astra",
+        flag: ["--model", "gpt-6-astra"],
+      },
+      {
+        provider: "codex" as const,
+        model: "gpt-5.6-luna",
+        flag: ["--model", "gpt-5.6-luna"],
+      },
+      {
+        provider: "codex" as const,
+        model: "gpt-5.6-terra",
+        flag: ["--model", "gpt-5.6-terra"],
+      },
+    ];
+    for (const { provider, model, flag } of cases) {
+      const spec = invocationCommand(
+        options({ provider, model, effort: "high" })
+      );
+      const modelIndex = spec.args.indexOf("--model");
+      expect(spec.args.slice(modelIndex, modelIndex + 2)).toEqual(flag);
+      const effortFlag =
+        provider === "claude"
+          ? ["--effort", "high"]
+          : ["--config", 'model_reasoning_effort="high"'];
+      const effortIndex = spec.args.indexOf(effortFlag[0]);
+      expect(spec.args.slice(effortIndex, effortIndex + 2)).toEqual(effortFlag);
+    }
+  });
 });

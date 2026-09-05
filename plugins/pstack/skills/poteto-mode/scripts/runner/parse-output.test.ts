@@ -113,7 +113,10 @@ describe("parseProviderOutput", () => {
   it("matches only concrete Claude revisions from the requested rolling family", () => {
     expect(reportedModelMatches("claude", "fable", "claude-fable-9-9")).toBe(true);
     expect(reportedModelMatches("claude", "opus", "claude-opus-9")).toBe(true);
+    expect(reportedModelMatches("claude", "sonnet", "claude-sonnet-9-9")).toBe(true);
     expect(reportedModelMatches("claude", "fable", "claude-opus-9")).toBe(false);
+    expect(reportedModelMatches("claude", "sonnet", "claude-opus-9")).toBe(false);
+    expect(reportedModelMatches("claude", "sonnet", "claude-sonnet-beta")).toBe(false);
     expect(reportedModelMatches("claude", "fable", "claude-fable-beta")).toBe(false);
     expect(reportedModelMatches("claude", "fable", "fable")).toBe(false);
     expect(reportedModelMatches("claude", "fable", "fable-preview")).toBe(false);
