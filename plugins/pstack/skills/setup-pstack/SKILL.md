@@ -43,7 +43,7 @@ Derive the current active family set from the normalized loaded rows: it is exac
 
 ### 4. Choose the target active set and role assignments
 
-Show the supported matrix families and mark the current active set. On a first run, that set is Fable, Sol, Grok, and Opus because those rows have First-run active `yes`; keep it unchanged by default. On a rerun, keep the derived current set by default. Ask whether to add or remove named supported families.
+Show the supported matrix families and mark the current active set. On a first run, that set is Fable, Sol, Grok, and Opus because those rows have First-run active `yes`; keep it unchanged by default. On a rerun, keep the derived current set by default. Ask whether to add or remove named supported families. Require at least one target active family. Refuse an alias-only role map because setup could not probe a model family or choose a behavioral-smoke descriptor from it.
 
 Build the final role map in memory before probing. Start from the normalized complete role map from step 2, preserving every loaded row's lane order and family or alias per lane. Present each pending row and its seeded assignments. If a seeded descriptor names a family outside the target set, require the operator to replace that lane with a target family, `inherit-parent`, or `auto`. Ask whether to keep the other assignments or change named roles. Keeping them is the default. Apply only role changes the operator names; never offer a reset of a customized sheet to the first-run assignments.
 
