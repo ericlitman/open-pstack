@@ -2,6 +2,12 @@
 
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## 1.3.0-codex.2 local candidate
+
+Codex setup accepts optional model families and explicitly loaded provider extensions while retaining the default Claude panel. Native Codex dispatch carries the selected model and effort with a compatible history setting. Claude output parsing supports terminal results inside event arrays, and Grok preflight recognizes API-key authentication while verifying exact model availability.
+
+This candidate is installed from the maintained fork for live Codex verification. It does not change the Cursor sync point or the existing Claude model sheet.
+
 ## 1.3.0 syncs to Cursor pstack 0.14.7
 
 Open Pstack now tracks Cursor pstack 0.14.7 at `efa2a531985e0a8084d36ff3cf87233be8a9f34b`.
