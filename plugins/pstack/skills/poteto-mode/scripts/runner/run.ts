@@ -350,6 +350,13 @@ async function waitForGrokPreflightRetry(
   }
 }
 
+function grokModelAvailable(value: string, model: string): boolean {
+  const escapedModel = model.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(
+    `(^|[^A-Za-z0-9._-])${escapedModel}(?=$|[^A-Za-z0-9._-])`
+  ).test(value);
+}
+
 function preflightPassed(provider: Provider, model: string, result: ProcessResult): boolean {
   if (result.exitCode !== 0 || result.timedOut) return false;
   const combined = `${result.stdout}\n${result.stderr}`;
@@ -368,8 +375,16 @@ function preflightPassed(provider: Provider, model: string, result: ProcessResul
     }
     case "codex":
       return /logged in/i.test(combined);
-    case "grok":
-      return /logged in/i.test(combined) && combined.includes(model);
+    case "grok": {
+      const authenticated =
+        /logged in/i.test(combined) ||
+        /You are using XAI_API_KEY\./.test(combined);
+      return (
+        unavailableStatus(combined) !== "unauthenticated" &&
+        authenticated &&
+        grokModelAvailable(combined, model)
+      );
+    }
   }
 }
 
@@ -396,7 +411,7 @@ function preflightFailureStatus(
 ): ReceiptStatus {
   const status = unavailableStatus(value);
   if (status !== "child-failed") return status;
-  return provider === "grok" && !value.includes(model)
+  return provider === "grok" && !grokModelAvailable(value, model)
     ? "unavailable-model"
     : "unauthenticated";
 }

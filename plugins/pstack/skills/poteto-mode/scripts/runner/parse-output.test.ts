@@ -24,6 +24,69 @@ describe("parseProviderOutput", () => {
     });
   });
 
+  it("extracts Claude terminal evidence from an event array", () => {
+    const parsed = parseProviderOutput(
+      "claude",
+      JSON.stringify([
+        { type: "system", subtype: "init", session_id: "init-session" },
+        {
+          type: "assistant",
+          message: { content: [{ type: "text", text: "progress" }] },
+        },
+        {
+          type: "result",
+          subtype: "success",
+          is_error: false,
+          result: "CLAUDE_ARRAY_OK",
+          session_id: "claude-array-session",
+          usage: { input_tokens: 14, output_tokens: 4 },
+          total_cost_usd: 0.07,
+          modelUsage: {
+            "claude-haiku-4-5-20251001": {},
+            "claude-fable-9-9": {},
+          },
+        },
+      ]),
+      "",
+      "fable"
+    );
+
+    expect(parsed).toEqual({
+      text: "CLAUDE_ARRAY_OK",
+      reportedModel: "claude-fable-9-9",
+      sessionId: "claude-array-session",
+      usage: { inputTokens: 14, outputTokens: 4 },
+      costUsd: 0.07,
+    });
+  });
+
+  it("rejects Claude event arrays with an error or no final text", () => {
+    expect(() =>
+      parseProviderOutput(
+        "claude",
+        JSON.stringify([
+          {
+            type: "result",
+            subtype: "error_during_execution",
+            is_error: true,
+            result: "partial output",
+          },
+        ]),
+        "",
+        "fable"
+      )
+    ).toThrow("reported an error result");
+
+    expect(() =>
+      parseProviderOutput(
+        "claude",
+        JSON.stringify([{ type: "result", subtype: "success", is_error: false }]),
+        "",
+        "fable"
+      )
+    ).toThrow("did not contain final text");
+  });
+
   it("extracts Codex JSONL without inventing a provider-reported model", () => {
     const parsed = parseProviderOutput(
       "codex",

@@ -77,12 +77,16 @@ if (name === "grok" && args[0] === "models") {
     process.exit(0);
   }
   if (process.env.FAKE_GROK_MISSING_MODEL === "1") {
-    console.log("You are logged in with grok.com.\\nAvailable models:\\n  * grok-4.5 (default)");
+    console.log("You are logged in with grok.com.\\nAvailable models:\\n  * grok-4.60 (default)");
     process.exit(0);
   }
   if (process.env.FAKE_GROK_UNAUTH === "1") {
     console.error("Not logged in. Run grok auth login.");
     process.exit(1);
+  }
+  if (process.env.FAKE_GROK_API_KEY_AUTH === "1") {
+    console.log("You are using XAI_API_KEY.\\nAvailable models:\\n  * grok-4.6 (default)");
+    process.exit(0);
   }
   console.log("You are logged in with grok.com.\\nAvailable models:\\n  * grok-4.6 (default)");
   process.exit(0);
@@ -238,6 +242,7 @@ beforeEach(() => {
   delete process.env.FAKE_MODEL_EXITING_PATH;
   delete process.env.FAKE_REMOVE_EXECUTABLE_AFTER_PREFLIGHT;
   delete process.env.FAKE_GROK_UNAUTH;
+  delete process.env.FAKE_GROK_API_KEY_AUTH;
   delete process.env.FAKE_GROK_TRANSIENT_UNAUTH_PATH;
   delete process.env.FAKE_GROK_PREFLIGHT_LOG_PATH;
   delete process.env.FAKE_GROK_MISSING_MODEL;
@@ -262,6 +267,7 @@ afterEach(() => {
   delete process.env.FAKE_MODEL_EXITING_PATH;
   delete process.env.FAKE_REMOVE_EXECUTABLE_AFTER_PREFLIGHT;
   delete process.env.FAKE_GROK_UNAUTH;
+  delete process.env.FAKE_GROK_API_KEY_AUTH;
   delete process.env.FAKE_GROK_TRANSIENT_UNAUTH_PATH;
   delete process.env.FAKE_GROK_PREFLIGHT_LOG_PATH;
   delete process.env.FAKE_GROK_MISSING_MODEL;
@@ -321,6 +327,27 @@ describe("runLane", () => {
       modelEvidence: null,
     });
   });
+
+  it("accepts Grok API-key authentication when the requested model is available", async () => {
+    process.env.FAKE_GROK_API_KEY_AUTH = "1";
+    const preflightLog = join(scratch, "grok-api-key.log");
+    process.env.FAKE_GROK_PREFLIGHT_LOG_PATH = preflightLog;
+    const modelStarted = join(scratch, "grok-api-key-model.started");
+    process.env.FAKE_MODEL_STARTED_PATH = modelStarted;
+    const input = options("grok", "grok-api-key");
+    const result = await runLane(input);
+
+    expect(result.exitCode).toBe(0);
+    expect(readFileSync(preflightLog, "utf8")).toBe("attempt\n");
+    expect(existsSync(modelStarted)).toBe(true);
+    expect(receipt(input.receiptPath)).toMatchObject({
+      status: "complete",
+      preflight: {
+        status: "passed",
+        evidence: "authenticated; model grok-4.6 available",
+      },
+    });
+  }, 10_000);
 
   it("retries a contradictory Grok authentication preflight before running the model", async () => {
     const transientMarker = join(scratch, "grok-transient-unauth.seen");

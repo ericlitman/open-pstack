@@ -91,6 +91,7 @@ canon_quad="$(awk '
     }
     family = cells[1]
     if (family == "Family" || family ~ /^:?-+:?$/) next
+    if (cells[8] != "yes") next
     provider = cells[3]
     model = cells[4]
     effort = cells[5]

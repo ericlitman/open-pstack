@@ -68,12 +68,24 @@ function parseClaude(stdout: string, requestedModel: string): ParsedOutput {
   } catch {
     throw new Error("claude did not emit valid JSON");
   }
-  const value = object(raw);
-  if (value === null) throw new Error("claude emitted a non-object result");
+  let value: JsonObject | null;
+  if (Array.isArray(raw)) {
+    value = null;
+    for (const candidate of raw) {
+      const event = object(candidate);
+      if (event?.type === "result") value = event;
+    }
+    if (value === null) {
+      throw new Error("claude result did not contain a terminal event");
+    }
+  } else {
+    value = object(raw);
+    if (value === null) throw new Error("claude emitted a non-object result");
+  }
 
+  if (value.is_error === true) throw new Error("claude reported an error result");
   const text = nullableString(value.result);
   if (text === null) throw new Error("claude result did not contain final text");
-  if (value.is_error === true) throw new Error("claude reported an error result");
 
   return {
     text,

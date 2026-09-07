@@ -8,16 +8,25 @@ pstack model choices are provider-qualified descriptors:
 
 ## Model matrix
 
-| Family | Upstream pstack choice | Provider | Model | Default effort | Selectable efforts | Claude-native agent stem |
-|---|---|---|---|---|---|---|
-| fable | fable | claude | fable | max | low medium high xhigh max | fable |
-| sol | gpt-5.6-sol-max | codex | gpt-5.6-sol | max | low medium high xhigh max | - |
-| grok | grok-4.6-fast-xhigh | grok | grok-4.6 | xhigh | low medium high xhigh max | - |
-| opus | opus | claude | opus | xhigh | low medium high xhigh max | opus |
+| Family | Upstream pstack choice | Provider | Model | Default effort | Selectable efforts | Claude-native agent stem | First-run active |
+|---|---|---|---|---|---|---|---|
+| fable | fable | claude | fable | max | low medium high xhigh max | fable | yes |
+| sol | gpt-5.6-sol-max | codex | gpt-5.6-sol | max | low medium high xhigh max | - | yes |
+| grok | grok-4.6-fast-xhigh | grok | grok-4.6 | xhigh | low medium high xhigh max | - | yes |
+| opus | opus | claude | opus | xhigh | low medium high xhigh max | opus | yes |
+| astra | - | codex | gpt-6-astra | medium | low medium high xhigh max | - | no |
 
-The allowed effort universe is exactly `low`, `medium`, `high`, `xhigh`, `max`. First-run requested efforts are the Default effort cell of each row. A Claude-native agent stem of `-` means the family has no Claude-native agent. Otherwise the shipped agent name is `pstack-<stem>-<effort>`.
+The allowed effort universe is exactly `low`, `medium`, `high`, `xhigh`, `max`. The default panel selects Fable, Sol, Grok, and Opus in that order. Rows with First-run active `yes` seed a missing sheet; otherwise derive selected families from the loaded role map and explicit user changes. Optional families are selected only by a loaded role descriptor or an explicit user choice. Defaults propose effort only for selected families without a supplied or current value. Explicit user model/effort choices override examples; user effort caps constrain every selection and probe, including loaded values. Never probe above a cap. Reuse choices already supplied in the conversation. A Claude-native agent stem of `-` means the family has no Claude-native agent. Otherwise the shipped agent name is `pstack-<stem>-<effort>`.
 
 `fable` and `opus` are Claude Code's rolling aliases. Claude resolves each alias to the latest available family revision. A runner receipt keeps the requested alias in `model` and the concrete provider-reported revision in `reportedModel`; verification accepts only a numeric `claude-fable-*` or `claude-opus-*` revision from the matching family.
+
+## Optional dispatch extensions
+
+When the current model sheet contains a line `Dispatch extension: <path>`, read that reference before validating or dispatching any role. Setup may also load a path explicitly supplied by the user and persist this pointer in the sheet. Expand `~` for the current user; resolve relative paths against the model sheet directory. A missing reference is inconsistent state.
+
+An extension declares additional provider/model families, selectable efforts, a proposed effort, parent-specific launcher argv, and authentication/model/completion evidence. It adds routing capabilities, never role assignments or a second mutable model configuration. Require unique families and provider/model pairs; extensions cannot override built-in families, routes, aliases, or the user's effort caps. Only families selected by a role descriptor or the user participate in setup. Persist all selected families in the role map.
+
+The parent routes an extension descriptor directly to its declared launcher, with the same unique paths, retained background handle, access boundary, and receipt checks as built-in external lanes. Read the launcher's help before first use. Never send an extension provider to the built-in runner or reinterpret it as a native model. Shared skills consume this contract through the model sheet; no runtime resolver or machine-specific dependency is required.
 
 ## Read-time normalization
 
@@ -43,7 +52,7 @@ The top-level harness resolves the route once. A child receives an assigned prov
 Native dispatch avoids a second CLI startup and its base context.
 
 - Claude Code: match the descriptor's `(provider, model)` to one model-matrix row, then dispatch it through `pstack-<stem>-<effort>` using that row's Claude-native agent stem and the descriptor's effort. Those definitions select the rolling model alias, requested effort, and `background: true`. `pstack-fable-max` and `pstack-opus-xhigh` remain in that set. Pass the complete task, grounding paths, access mode, and unique output location in the `Agent` prompt. Retain the task handle and drain it only after fan-out.
-- Codex: call `spawn_agent` with the descriptor's model and `reasoning_effort`, the complete task, grounding paths, access mode, and unique output location. Use an isolated worktree for a writer. Codex subagents already run concurrently.
+- Codex: call `spawn_agent` with the descriptor's model, `reasoning_effort`, and `fork_turns: "none"` (full-history forks cannot override model or effort), the complete task, grounding paths, access mode, and unique output location. Use an isolated worktree for a writer. Codex subagents already run concurrently.
 
 Do not send a same-provider descriptor to the external runner. It rejects that call because the native route is cheaper and already available.
 

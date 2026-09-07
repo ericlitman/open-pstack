@@ -19,9 +19,10 @@ const MATRIX_HEADER = [
   "Default effort",
   "Selectable efforts",
   "Claude-native agent stem",
+  "First-run active",
 ] as const;
 
-const FAMILY_ORDER = ["fable", "sol", "grok", "opus"] as const;
+const DEFAULT_FAMILY_ORDER = ["fable", "sol", "grok", "opus"] as const;
 const PROVIDERS = ["claude", "codex", "grok"] as const;
 const DESCRIPTOR_RE =
   /(claude|codex|grok):[a-z0-9.-]+@(low|medium|high|xhigh|max)/g;
@@ -54,7 +55,7 @@ const SETUP_SECTION_ORDER = [
   "### 2. Load current state",
   "### 3. Parse per-family efforts",
   "### 4. Collect one requested effort per family",
-  "### 5. Probe the four requested pairs",
+  "### 5. Probe the selected pairs",
   "### 6. Render, preserving role families",
   "### 7. Confirm and commit",
 ] as const;
@@ -67,6 +68,7 @@ interface MatrixRow {
   defaultEffort: Effort;
   selectableEfforts: Effort[];
   claudeNativeAgentStem: string | null;
+  firstRunActive: boolean;
 }
 
 function splitRow(line: string): string[] {
@@ -91,6 +93,12 @@ function asEffort(value: string): Effort {
   throw new Error(`not an effort: ${value}`);
 }
 
+function asFirstRunActive(value: string): boolean {
+  if (value === "yes") return true;
+  if (value === "no") return false;
+  throw new Error(`invalid First-run active value: ${value}`);
+}
+
 function parseModelMatrix(markdown: string): MatrixRow[] {
   const lines = markdown.split(/\r?\n/);
   const start = lines.findIndex((line) => line.trim() === "## Model matrix");
@@ -108,9 +116,10 @@ function parseModelMatrix(markdown: string): MatrixRow[] {
     .slice(start + 1, end)
     .map((line) => line.trim())
     .filter((line) => line.startsWith("|"));
-  if (table.length !== 6) {
+  const minimumRows = DEFAULT_FAMILY_ORDER.length + 2;
+  if (table.length < minimumRows) {
     throw new Error(
-      `model matrix must be header, separator, and 4 data rows, got ${table.length}`
+      `model matrix must contain the default families, got ${table.length - 2} data rows`
     );
   }
   const header = splitRow(table[0]);
@@ -120,7 +129,7 @@ function parseModelMatrix(markdown: string): MatrixRow[] {
   if (!isSeparator(splitRow(table[1]))) {
     throw new Error("matrix header separator missing");
   }
-  return table.slice(2).map((line) => {
+  const rows = table.slice(2).map((line) => {
     const cells = splitRow(line);
     if (cells.length !== MATRIX_HEADER.length) {
       throw new Error(`matrix row has ${cells.length} cells: ${line}`);
@@ -133,9 +142,13 @@ function parseModelMatrix(markdown: string): MatrixRow[] {
       defaultEffortRaw,
       selectableRaw,
       stemRaw,
+      firstRunActiveRaw,
     ] = cells;
     if (!(PROVIDERS as readonly string[]).includes(provider)) {
       throw new Error(`invalid provider: ${provider}`);
+    }
+    if (!/^[a-z0-9.-]+$/.test(model)) {
+      throw new Error(`invalid model for ${family}: ${model}`);
     }
     const selectableEfforts = selectableRaw.split(/\s+/).map(asEffort);
     const claudeNativeAgentStem = stemRaw === "-" ? null : stemRaw;
@@ -146,6 +159,7 @@ function parseModelMatrix(markdown: string): MatrixRow[] {
       throw new Error(`${family} stem must be present iff provider is claude`);
     }
     const defaultEffort = asEffort(defaultEffortRaw);
+    const firstRunActive = asFirstRunActive(firstRunActiveRaw);
     if (!selectableEfforts.includes(defaultEffort)) {
       throw new Error(`${family} default effort is not selectable`);
     }
@@ -157,8 +171,35 @@ function parseModelMatrix(markdown: string): MatrixRow[] {
       defaultEffort,
       selectableEfforts,
       claudeNativeAgentStem,
+      firstRunActive,
     };
   });
+
+  const families = new Set<string>();
+  const providerModels = new Set<string>();
+  for (const row of rows) {
+    if (families.has(row.family)) {
+      throw new Error(`duplicate family: ${row.family}`);
+    }
+    families.add(row.family);
+
+    const providerModel = `${row.provider}:${row.model}`;
+    if (providerModels.has(providerModel)) {
+      throw new Error(`duplicate provider/model: ${providerModel}`);
+    }
+    providerModels.add(providerModel);
+  }
+
+  const firstRunFamilies = rows
+    .filter((row) => row.firstRunActive)
+    .map((row) => row.family);
+  if (firstRunFamilies.join("|") !== DEFAULT_FAMILY_ORDER.join("|")) {
+    throw new Error(
+      `unexpected first-run families: ${firstRunFamilies.join(", ")}`
+    );
+  }
+
+  return rows;
 }
 
 function defaultDescriptors(rows: MatrixRow[]): string[] {
@@ -200,13 +241,17 @@ function firstRunSheet(setup: string): string {
 }
 
 describe("model matrix", () => {
-  const rows = parseModelMatrix(readFileSync(DISPATCH_PATH, "utf8"));
+  const dispatch = readFileSync(DISPATCH_PATH, "utf8");
+  const rows = parseModelMatrix(dispatch);
+  const defaultRows = rows.filter((row) => row.firstRunActive);
   const setup = readFileSync(SETUP_PATH, "utf8");
-  const quad = defaultDescriptors(rows);
+  const quad = defaultDescriptors(defaultRows);
 
   it("owns the effort universe and first-run defaults", () => {
     expect([...EFFORTS]).toEqual(["low", "medium", "high", "xhigh", "max"]);
-    expect(rows.map((row) => row.family)).toEqual([...FAMILY_ORDER]);
+    expect(defaultRows.map((row) => row.family)).toEqual([
+      ...DEFAULT_FAMILY_ORDER,
+    ]);
     for (const row of rows) {
       expect(row.upstreamChoice.length).toBeGreaterThan(0);
       expect(row.model.length).toBeGreaterThan(0);
@@ -216,7 +261,7 @@ describe("model matrix", () => {
       );
     }
     expect(
-      rows.map((row) => [row.family, row.defaultEffort])
+      defaultRows.map((row) => [row.family, row.defaultEffort])
     ).toEqual([
       ["fable", "max"],
       ["sol", "max"],
@@ -231,6 +276,31 @@ describe("model matrix", () => {
       ["fable", "fable"],
       ["opus", "opus"],
     ]);
+    expect(
+      rows
+        .filter((row) => !row.firstRunActive)
+        .map((row) => [row.family, row.provider, row.model, row.defaultEffort])
+    ).toContainEqual(["astra", "codex", "gpt-6-astra", "medium"]);
+  });
+
+  it("rejects duplicate families and provider/model pairs", () => {
+    expect(() =>
+      parseModelMatrix(
+        dispatch.replace(
+          "| astra | - | codex | gpt-6-astra |",
+          "| sol | - | codex | gpt-6-astra |"
+        )
+      )
+    ).toThrow("duplicate family: sol");
+
+    expect(() =>
+      parseModelMatrix(
+        dispatch.replace(
+          "| astra | - | codex | gpt-6-astra |",
+          "| astra | - | codex | gpt-5.6-sol |"
+        )
+      )
+    ).toThrow("duplicate provider/model: codex:gpt-5.6-sol");
   });
 
   it("ships exactly the declared Claude-native frontier agents", () => {
@@ -319,8 +389,8 @@ describe("model matrix", () => {
     expect(setup).toContain("Do not invent a precedence rule.");
     expect(setup).toContain("Do not probe or write while any inconsistency is unresolved.");
     expect(setup).toContain("A failed probe writes nothing:");
-    expect(setup).toContain("Run one probe per family");
-    expect(setup).toContain("normalized complete role map from step 2");
+    expect(setup).toContain("Run one probe per selected family");
+    expect(setup).toContain("final in-memory assignments from step 2");
     expect(setup).toContain("starts with `claude-fable-` or `claude-opus-`");
     expect(setup).toContain("preserving the provider, effort, role, and lane order");
     expect(setup).toContain("Show any rolling-alias migrations");
