@@ -168,7 +168,7 @@ The port is editorial, not mechanical. Anywhere upstream pstack assumed Cursor-s
 
 - **`skills/babysit/`** — Claude Code analog of Cursor's closed-source `/babysit` built-in. Wraps `gh pr view` / `gh pr checks` / `gh run view --log-failed` plus the `loop` skill for pacing. Independently authored; workflow informed by Cursor's public `/babysit` behavior — not a copy of Cursor's implementation. Since the v0.14.2 sync, poteto-mode routes PR-status requests to the ported `playbooks/babysit.md` instead, and this skill is the standalone `/babysit` entry point.
 - **`skills/deslop/`** — imported verbatim from `cursor-team-kit`. Cleans AI tells out of diffs before commit.
-- **`skills/thermo-nuclear-code-quality-review/`** — imported verbatim from `cursor-team-kit`. Used as the harsher-critique escape hatch in `arena`, `interrogate`, `architect`, and `how` (replaces the Cursor-original cross-vendor bridge).
+- **`skills/thermo-nuclear-code-quality-review/`** — imported verbatim from `cursor-team-kit`.
 - **`skills/make-pr-easy-to-review/`** — imported verbatim from `cursor-team-kit`. Composes with `opening-a-pr` and `babysit`.
 - **`skills/fix-ci/`** — imported verbatim from `cursor-team-kit`. Narrower CI-fix primitive that `babysit` can route to.
 - **`skills/fix-merge-conflicts/`** — imported verbatim from `cursor-team-kit`. Pairs with `babysit` step 5.
@@ -193,7 +193,7 @@ The port is editorial, not mechanical. Anywhere upstream pstack assumed Cursor-s
 | Cursor's `/goal` (standing objective across turns) | The program objective written into the run's standing orders and restated in the todolist |
 | The Cursor agent store (path in the system prompt) | `~/.claude/orchestrate/<project-slug>/`, which survives the session restarts a multi-day program expects |
 | Model rule `~/.cursor/rules/pstack-models.mdc` | Override sheet `~/.claude/pstack-models.md`, included from `CLAUDE.md` |
-| Multi-model panels (arena, architect, interrogate, how-critics) | Provider dispatch restores the upstream frontier quad: `claude:fable@max`, `codex:gpt-5.6-sol@max`, `grok:grok-4.6@xhigh`, `claude:opus@xhigh`. Same-provider lanes stay native; external lanes use the bundled runner. |
+| Multi-model panels (arena, architect, interrogate) | Provider dispatch restores the upstream frontier quad: `claude:fable@max`, `codex:gpt-5.6-sol@max`, `grok:grok-4.6@xhigh`, `claude:opus@xhigh`. Same-provider lanes stay native; external lanes use the bundled runner. |
 
 ### Cross-vendor dispatch
 
@@ -204,7 +204,7 @@ The earlier port collapsed panels to Claude-only models. The bundled runner rest
 - The `poteto-agent` subagent ID and all references to it.
 - `run_in_background: true` on Agent calls (Claude Code supports it).
 - `/loop`, `/deslop`, `/babysit` slash references in skill bodies — they all resolve in Claude Code now.
-- The principle/playbook structure and every word of the principles themselves.
+- The principle/playbook structure and upstream principle prose, except the local correctness edits in `principle-attack-the-premise` and `principle-test-behavior-not-implementation`.
 
 ### What's deliberately not ported
 
