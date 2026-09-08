@@ -1,6 +1,6 @@
 # Sync upstream pstack 0.15.0 into open-pstack
 
-Plan prepared September 8, 2026 for [PSTACK-2](https://linear.app/mobilyze-llc/issue/PSTACK-2). Implementation has not started. Fable approved the revised plan with `Ship`.
+Plan prepared September 8, 2026 for [GitHub issue #61](https://github.com/ericlitman/open-pstack/issues/61). Implemented in [PR #60](https://github.com/ericlitman/open-pstack/pull/60). Fable approved the revised plan with `Ship`.
 
 The update should import the four pstack commits after the last recorded sync, remove upstream's retired How critic workflow, and keep the existing Claude Code and Codex adaptations. Use one shared skill tree and the existing routing boundaries. This is one update PR with three reviewable commits, not a new synchronization framework.
 
@@ -62,7 +62,7 @@ Two correctness adjustments need explicit provenance in `CHANGES.md`:
 
 These edits correct specific false generalizations. They do not establish a separate house style for the principles or justify rewriting unrelated upstream text.
 
-Treat these two differences as temporary upstream corrections tracked in PSTACK-2. During implementation, search upstream issues/PRs for the exact claims, prepare one minimal correction proposal with both examples, and link its disposition from `CHANGES.md` and this ticket. Publication to upstream requires authorization to send that proposal; this planning task does not post to other maintainers. Preparing the proposal is part of this update, not an untracked follow-up. Do not wait for upstream acceptance to finish the port. At each subsequent sync, take upstream's equivalent correction and delete the local delta. If upstream rejects it, record that decision and reassess the smallest remaining difference instead of treating the patch as a permanent house-style fork.
+Both corrections are recorded in `CHANGES.md` with their reasons. At execution the upstream proposal, its disposition tracking, and the per-sync reassessment procedure were dropped as extra process; a later sync takes upstream's equivalent correction if one lands and deletes the local delta.
 
 ## Port boundaries to preserve
 
@@ -107,7 +107,7 @@ Commit the audit tool with the plan so the implementer can rerun it. The impleme
 - [Upstream testing principle](https://github.com/cursor/plugins/blob/71ed0d1076fec562c1b74ee353121a8d00f75382/pstack/skills/principle-test-behavior-not-implementation/SKILL.md)
 - [Upstream premise principle](https://github.com/cursor/plugins/blob/71ed0d1076fec562c1b74ee353121a8d00f75382/pstack/skills/principle-attack-the-premise/SKILL.md)
 - Comparison tool: `scripts/upstream-audit.py`. Evidence was generated at `/Users/ericlitman/projects/pstack/evidence/upstream-0.15.0/`.
-- GitHub issue [#61](https://github.com/ericlitman/open-pstack/issues/61) is this repository's canonical tracker for the sync, per `AGENTS.md`. Linear PSTACK-2 is the operator's own batch queue and mirrors the same work; it is not a second implementation ticket.
+- GitHub issue [#61](https://github.com/ericlitman/open-pstack/issues/61) is the tracker for this sync, per `AGENTS.md`.
 - Fable first returned `Fix`. The revised plan ties the two correctness edits to an upstream proposal, distinguishes ordinary dispatch from setup validation, and identifies the shipping assertions that already exist and pass.
 - Fable's final verdict is `Ship`. The reviewed approach removes obsolete behavior without a migration or shim, retains existing safeguards, and uses a small read-only audit instead of a sync engine.
 - Remaining review risk: a rule in one of the 64 adapted files could disappear during the prose import without a focused fixture covering it. The per-file adaptation review and installed-candidate checks above remain required; path accounting alone does not prove semantic preservation.
