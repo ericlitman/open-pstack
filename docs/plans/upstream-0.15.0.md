@@ -107,7 +107,7 @@ Commit the audit tool with the plan so the implementer can rerun it. The impleme
 - [Upstream testing principle](https://github.com/cursor/plugins/blob/71ed0d1076fec562c1b74ee353121a8d00f75382/pstack/skills/principle-test-behavior-not-implementation/SKILL.md)
 - [Upstream premise principle](https://github.com/cursor/plugins/blob/71ed0d1076fec562c1b74ee353121a8d00f75382/pstack/skills/principle-attack-the-premise/SKILL.md)
 - Comparison tool: `scripts/upstream-audit.py`. Evidence was generated at `/Users/ericlitman/projects/pstack/evidence/upstream-0.15.0/`.
-- The current task explicitly requests Linear tracking, superseding this repository's standing GitHub-only instruction for this update. There is no second implementation ticket.
+- GitHub issue [#61](https://github.com/ericlitman/open-pstack/issues/61) is this repository's canonical tracker for the sync, per `AGENTS.md`. Linear PSTACK-2 is the operator's own batch queue and mirrors the same work; it is not a second implementation ticket.
 - Fable first returned `Fix`. The revised plan ties the two correctness edits to an upstream proposal, distinguishes ordinary dispatch from setup validation, and identifies the shipping assertions that already exist and pass.
 - Fable's final verdict is `Ship`. The reviewed approach removes obsolete behavior without a migration or shim, retains existing safeguards, and uses a small read-only audit instead of a sync engine.
 - Remaining review risk: a rule in one of the 64 adapted files could disappear during the prose import without a focused fixture covering it. The per-file adaptation review and installed-candidate checks above remain required; path accounting alone does not prove semantic preservation.

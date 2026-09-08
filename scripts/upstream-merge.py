@@ -29,13 +29,20 @@ def main(audit_path):
         if port is None:
             skipped.append(up)
             continue
+        comparison = change["comparison"]
         if change["change"] == "delete":
+            if comparison not in ("unchanged-since-base", "already-matches-target"):
+                conflicted.append((port, f"upstream deleted a port-edited file ({comparison})"))
+                continue
             if os.path.exists(port):
                 os.remove(port)
             removed.append(port)
             continue
         new = blob(target, up)
-        if change["change"] == "add" or change["comparison"] == "unchanged-since-base":
+        if change["change"] == "add" and comparison != "upstream-addition":
+            conflicted.append((port, f"upstream added a path the port already has ({comparison})"))
+            continue
+        if change["change"] == "add" or comparison == "unchanged-since-base":
             os.makedirs(os.path.dirname(port) or ".", exist_ok=True)
             open(port, "wb").write(new)
             verbatim.append(port)
@@ -51,8 +58,8 @@ def main(audit_path):
         os.remove(tmp_new)
         (clean if result.returncode == 0 else conflicted).append((port, result.returncode))
     print(f"verbatim {len(verbatim)}, clean merge {len(clean)}, conflicted {len(conflicted)}, removed {len(removed)}, unmapped {len(skipped)}")
-    for port, hunks in conflicted:
-        print(f"conflict {hunks:2d} {port}")
+    for port, why in conflicted:
+        print(f"conflict {why} {port}")
     for path in skipped:
         print(f"unmapped {path}")
     return 1 if conflicted else 0
