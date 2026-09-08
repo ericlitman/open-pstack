@@ -108,6 +108,23 @@ def main(audit_path):
         variant["changes"] = [row]
         code, out = run(variant, tree)
         results.append(check("already-matching addition is a no-op", code == 0 and changed(tree) == "", out))
+        tree = worktree(port); trees.append(tree)
+        variant = copy.deepcopy(audit)
+        variant["changes"] = [c for c in variant["changes"] if c["port_path"] is None]
+        open(os.path.join(tree, "audit.json"), "w").write("{}")
+        code, out = run(variant, tree)
+        results.append(check("all-unmapped audit is not refused by the untracked audit file", code == 0 and "unmapped" in out, out))
+
+        tree = worktree(port); trees.append(tree)
+        variant = copy.deepcopy(audit)
+        row = copy.deepcopy(next(c for c in variant["changes"] if c["comparison"] == "port-diverged-review" and c["change"] == "modify"))
+        row["target"]["mode"] = "100755"
+        variant["changes"] = [row]
+        binary = os.path.join(tree, row["port_path"])
+        open(binary, "wb").write(b"\x00\x01 binary local copy\n")
+        sh("git", "update-index", "--assume-unchanged", row["port_path"], cwd=tree)
+        code, out = run(variant, tree)
+        results.append(check("binary merge-file failure reported, no mode change", "merge-file failed" in out and not os.access(binary, os.X_OK), out))
     finally:
         for tree in trees:
             sh("git", "worktree", "remove", "--force", tree, cwd=ROOT, check=False)

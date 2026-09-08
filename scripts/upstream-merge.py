@@ -38,6 +38,8 @@ def refuse_drift(audit, ports):
     head = git("rev-parse", "HEAD").decode().strip()
     if head != audit["port_commit"]:
         return f"HEAD {head[:12]} is not the audited port commit {audit['port_commit'][:12]}"
+    if not ports:
+        return None
     dirty = git("status", "--porcelain", "--untracked-files=all", "--", *ports).decode().strip()
     if dirty:
         return "mapped paths have local changes:\n" + dirty
@@ -95,8 +97,14 @@ def main(audit_path):
             verbatim.append(port)
             continue
         hunks = merge_three_way(port, blob(base, up), new)
+        if hunks < 0 or hunks > 127:
+            review.append((port, f"git merge-file failed with status {hunks}"))
+            continue
         apply_mode(port, mode)
-        (clean if hunks == 0 else review).append((port, f"{hunks} conflict hunks") if hunks else port)
+        if hunks:
+            review.append((port, f"{hunks} conflict hunks"))
+        else:
+            clean.append(port)
     print(f"verbatim {len(verbatim)}, clean merge {len(clean)}, needs review {len(review)}, removed {len(removed)}, unmapped {len(skipped)}")
     for port, why in review:
         print(f"review {why}: {port}")
