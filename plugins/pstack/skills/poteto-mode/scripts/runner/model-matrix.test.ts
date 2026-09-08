@@ -26,7 +26,6 @@ const PROVIDERS = ["claude", "codex", "grok"] as const;
 const DESCRIPTOR_RE =
   /(claude|codex|grok):[a-z0-9.-]+@(low|medium|high|xhigh|max)/g;
 const PANEL_ROLES = [
-  "how critics",
   "arena runners",
   "arena cross-judge pool",
   "architect runners",
@@ -41,7 +40,6 @@ const SHEET_ROLES = [
   "hardest tasks",
   "how explorer",
   "how explainer",
-  "how critics",
   "why investigators, synthesizer",
   "reflect tooling, judgment, divergent, synthesizer",
   "arena runners",

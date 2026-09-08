@@ -73,7 +73,7 @@ else
 fi
 
 # Static invariant (CHANGES maintenance note): provider-dispatch owns the default
-# provider/model quad and the four panel skills plus setup-pstack copy it verbatim.
+# provider/model quad and the three panel skills plus setup-pstack copy it verbatim.
 setup="$repo/plugins/pstack/skills/setup-pstack/SKILL.md"
 dispatch="$repo/plugins/pstack/skills/poteto-mode/references/provider-dispatch.md"
 quad_of() { { grep -oE '(claude|codex|grok):[a-z0-9.-]+@(low|medium|high|xhigh|max)' || true; } | tr '\n' ' ' | sed 's/ $//'; }
@@ -104,9 +104,9 @@ quad_bad=""
 # Anchor on the quad's last slug rather than a hard-coded one, so a model swap in
 # setup-pstack cannot leave this check hunting for a slug nobody ships any more.
 anchor="${canon_quad##* }"
-# arena, architect, and how each state the quad on one line; interrogate lists it
+# arena and architect each state the quad on one line; interrogate lists it
 # as one slug per row of its Reviewer A/B/C/D table (upstream #167).
-for name in arena architect how; do
+for name in arena architect; do
   skill="$repo/plugins/pstack/skills/$name/SKILL.md"
   n="$(grep -Fc "$anchor" "$skill" || true)"
   if [ "$n" != "1" ]; then
@@ -122,13 +122,13 @@ got="$(grep -E '^\| Reviewer [A-Z] \|' "$interrogate" | quad_of)"
 while IFS= read -r line; do
   got="$(printf '%s\n' "$line" | quad_of)"
   [ "$got" = "$canon_quad" ] || quad_bad="$quad_bad$setup role row: [$got] != [$canon_quad]"$'\n'
-done < <(grep -E '^(arena runners|arena cross-judge pool|architect runners|interrogate reviewers|how critics):' "$setup")
+done < <(grep -E '^(arena runners|arena cross-judge pool|architect runners|interrogate reviewers):' "$setup")
 if [ -n "$quad_bad" ]; then
   note "FAIL: the default model quad is not identical across provider dispatch, the panel skills, and setup-pstack:"
   note "$quad_bad"
   fail=1
 else
-  note "ok: default model quad identical across provider dispatch + 4 panel skills + setup-pstack ($canon_quad)"
+  note "ok: default model quad identical across provider dispatch + 3 panel skills + setup-pstack ($canon_quad)"
 fi
 
 plugin="$repo/plugins/pstack"
