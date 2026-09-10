@@ -2,6 +2,10 @@
 
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## 1.4.1 syncs to Cursor pstack 0.15.1
+
+Open Pstack 1.4.1 tracks Cursor pstack 0.15.1 at `f8abeddd1862dc73704e3d719dd73df0d51b8c71`. Poteto-mode now requires each claim to include its evidence or a measured, inferred, or guess label in the same sentence. Agents also run any check they can run themselves instead of handing that check to the user. No playbook, model, runtime, or dependency changed.
+
 ## 1.4.0 syncs to Cursor pstack 0.15.0
 
 Open Pstack tracks Cursor pstack 0.15.0 at `71ed0d1076fec562c1b74ee353121a8d00f75382`. The shared catalog contains 54 skills, including 23 principles. This sync imports the skill density and punctuation passes, the 361,140-byte logo, and the verbatim upstream README. How, Why, and Teach take the shorter explanation guidance. Reflect runs only on explicit invocation. Poteto-mode no longer requires reading the whole principle index as the first todo, but still requires reading any applied leaf and citing it truthfully. Unslop adds the mannered-prose and over-compression rules, preserving stable rule numbers. Technical-writing proposes new abstract-metaphor offenders and replacements without editing Unslop automatically.
