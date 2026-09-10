@@ -113,7 +113,7 @@ describe("invocationCommand", () => {
     ]);
   });
 
-  it("uses bounded write modes without blanket bypasses", () => {
+  it("uses provider-specific write permissions inside bounded sandboxes", () => {
     const codex = invocationCommand(options({ mode: "isolated-write" }));
     expect(codex.args).toEqual(
       expect.arrayContaining(["--sandbox", "workspace-write"])
@@ -124,11 +124,13 @@ describe("invocationCommand", () => {
     expect(grok.args).toEqual(
       expect.arrayContaining([
         "--permission-mode",
-        "acceptEdits",
+        "bypassPermissions",
         "--sandbox",
         "workspace",
         "--tools",
         "read_file,grep,list_dir,run_terminal_cmd,search_replace",
+        "--disallowed-tools",
+        "Agent,search_tool,use_tool",
       ])
     );
     expect(grok.args).not.toContain("--always-approve");
