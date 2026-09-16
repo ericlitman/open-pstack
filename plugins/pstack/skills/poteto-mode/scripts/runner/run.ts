@@ -368,8 +368,13 @@ function preflightPassed(provider: Provider, model: string, result: ProcessResul
     }
     case "codex":
       return /logged in/i.test(combined);
-    case "grok":
-      return /logged in/i.test(combined) && combined.includes(model);
+    case "grok": {
+      // OAuth session: "You are logged in with grok.com."
+      // API key (incl. via CLIProxyAPI): "You are using XAI_API_KEY."
+      const authenticated =
+        /logged in/i.test(combined) || /using XAI_API_KEY/i.test(combined);
+      return authenticated && combined.includes(model);
+    }
   }
 }
 

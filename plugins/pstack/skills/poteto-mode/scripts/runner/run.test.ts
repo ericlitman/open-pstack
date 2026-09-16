@@ -84,6 +84,10 @@ if (name === "grok" && args[0] === "models") {
     console.error("Not logged in. Run grok auth login.");
     process.exit(1);
   }
+  if (process.env.FAKE_GROK_API_KEY === "1") {
+    console.log("You are using XAI_API_KEY.\\n\\nAvailable models:\\n  * grok-4.6 (default)");
+    process.exit(0);
+  }
   console.log("You are logged in with grok.com.\\nAvailable models:\\n  * grok-4.6 (default)");
   process.exit(0);
 }
@@ -241,6 +245,7 @@ beforeEach(() => {
   delete process.env.FAKE_GROK_TRANSIENT_UNAUTH_PATH;
   delete process.env.FAKE_GROK_PREFLIGHT_LOG_PATH;
   delete process.env.FAKE_GROK_MISSING_MODEL;
+  delete process.env.FAKE_GROK_API_KEY;
   delete process.env.FAKE_DESCENDANT_HOLDS_PIPES_MS;
   delete process.env.FAKE_DESCENDANT_PID_PATH;
   delete process.env.FAKE_SELF_SIGNAL;
@@ -265,6 +270,7 @@ afterEach(() => {
   delete process.env.FAKE_GROK_TRANSIENT_UNAUTH_PATH;
   delete process.env.FAKE_GROK_PREFLIGHT_LOG_PATH;
   delete process.env.FAKE_GROK_MISSING_MODEL;
+  delete process.env.FAKE_GROK_API_KEY;
   delete process.env.FAKE_DESCENDANT_HOLDS_PIPES_MS;
   delete process.env.FAKE_DESCENDANT_PID_PATH;
   delete process.env.FAKE_SELF_SIGNAL;
@@ -346,6 +352,17 @@ describe("runLane", () => {
       "attempt 2 passed"
     );
   }, 10_000);
+
+  it("accepts Grok API-key authentication preflight", async () => {
+    process.env.FAKE_GROK_API_KEY = "1";
+    const input = options("grok", "grok-api-key-preflight");
+    const code = await runMain(input);
+    expect(code).toBe(0);
+    expect(receipt(input.receiptPath)).toMatchObject({
+      preflight: { status: "passed" },
+    });
+    expect(receipt(input.receiptPath).preflight.evidence).toMatch(/authenticated/i);
+  });
 
   it("classifies Grok authentication failure after two consecutive preflights", async () => {
     process.env.FAKE_GROK_UNAUTH = "1";
