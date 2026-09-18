@@ -100,7 +100,7 @@ describe("invocationCommand", () => {
       "--sandbox",
       "read-only",
       "--tools",
-      "read_file,grep,list_dir,run_terminal_cmd",
+      "read_file,grep,list_dir",
       "--disallowed-tools",
       "Agent,search_tool,use_tool",
       "--output-format",

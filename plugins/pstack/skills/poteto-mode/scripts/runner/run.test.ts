@@ -98,6 +98,20 @@ if (process.env.FAKE_INVALID_MODEL === "1") {
   console.error("The requested model is not supported with this account.");
   process.exit(1);
 }
+if (name === "grok" && process.env.FAKE_GROK_TERMINAL) {
+  if (process.env.FAKE_GROK_LONG_WARNING === "1") console.error("startup warning\\n".repeat(400));
+  const subtype = process.env.FAKE_GROK_TERMINAL;
+  if (subtype === "malformed") console.log("not JSON");
+  else console.log(JSON.stringify({
+    type:"result", subtype, is_error:subtype !== "success",
+    result: subtype === "success" ? "GROK_OK" : subtype === "api_error" ? "partial assistant output" : "User cancelled the execution for tool run_terminal_command",
+    errors: subtype === "api_error" ? ["API unavailable"] : undefined,
+    stop_reason: subtype === "error_during_execution" ? "cancelled" : undefined,
+    session_id:"terminal-session", usage:{input_tokens:30,output_tokens:4},
+    total_cost_usd:0.02,modelUsage:{[process.env.FAKE_GROK_REPORTED_MODEL ?? "grok-4.6-build"]:{}},
+  }));
+  process.exit(Number(process.env.FAKE_GROK_EXIT_CODE ?? 0));
+}
 if (stage === "model" && process.env.FAKE_DESCENDANT_HOLDS_PIPES_MS) {
   const seconds = Number(process.env.FAKE_DESCENDANT_HOLDS_PIPES_MS) / 1000;
   const descendant = Bun.spawn(["/bin/sh", "-c", "sleep " + seconds], {
@@ -244,6 +258,10 @@ beforeEach(() => {
   delete process.env.FAKE_DESCENDANT_HOLDS_PIPES_MS;
   delete process.env.FAKE_DESCENDANT_PID_PATH;
   delete process.env.FAKE_SELF_SIGNAL;
+  delete process.env.FAKE_GROK_TERMINAL;
+  delete process.env.FAKE_GROK_LONG_WARNING;
+  delete process.env.FAKE_GROK_EXIT_CODE;
+  delete process.env.FAKE_GROK_REPORTED_MODEL;
 });
 
 afterEach(() => {
@@ -268,6 +286,10 @@ afterEach(() => {
   delete process.env.FAKE_DESCENDANT_HOLDS_PIPES_MS;
   delete process.env.FAKE_DESCENDANT_PID_PATH;
   delete process.env.FAKE_SELF_SIGNAL;
+  delete process.env.FAKE_GROK_TERMINAL;
+  delete process.env.FAKE_GROK_LONG_WARNING;
+  delete process.env.FAKE_GROK_EXIT_CODE;
+  delete process.env.FAKE_GROK_REPORTED_MODEL;
   rmSync(scratch, { recursive: true, force: true });
 });
 
@@ -288,6 +310,9 @@ describe("runLane", () => {
         modelEvidence: provider === "codex" ? "pinned-argv" : "provider-report",
         preflight: { status: "passed" },
       });
+      expect(readFileSync(receipt(input.receiptPath).stdoutPath, "utf8")).toContain(
+        provider.toUpperCase()
+      );
       if (provider === "claude") {
         expect(receipt(input.receiptPath).reportedModel).toBe("claude-fable-9-9");
       }
@@ -305,6 +330,103 @@ describe("runLane", () => {
       modelVerified: false,
       modelEvidence: "pinned-argv",
     });
+  });
+
+  it("retains Grok's cancelled terminal result and complete warning stream", async () => {
+    process.env.FAKE_GROK_TERMINAL = "error_during_execution";
+    process.env.FAKE_GROK_LONG_WARNING = "1";
+    const input = options("grok", "terminal-cancelled");
+    const result = await runLane(input);
+    const recorded = receipt(input.receiptPath);
+    expect(result.exitCode).toBe(130);
+    expect(recorded).toMatchObject({
+      status: "cancelled", exitCode: 0, signal: null,
+      reportedModel: "grok-4.6-build", sessionId: "terminal-session",
+      modelVerified: true, modelEvidence: "provider-report",
+      usage: { inputTokens: 30, outputTokens: 4 }, costUsd: 0.02,
+      error: { message: "User cancelled the execution for tool run_terminal_command" },
+    });
+    expect(existsSync(input.outputPath)).toBe(false);
+    expect(readFileSync(recorded.stdoutPath, "utf8")).toContain("User cancelled the execution");
+    expect(readFileSync(recorded.stderrPath, "utf8")).toContain("startup warning\n".repeat(400));
+    expect(recorded.error?.evidence).toContain("User cancelled the execution");
+  });
+
+  it("classifies a well-formed Grok failure with nonzero exit and retains artifacts", async () => {
+    process.env.FAKE_GROK_TERMINAL = "error_during_execution";
+    process.env.FAKE_GROK_EXIT_CODE = "1";
+    const input = options("grok", "terminal-nonzero");
+    const result = await runLane(input);
+    expect(result.exitCode).toBe(130);
+    expect(receipt(input.receiptPath)).toMatchObject({
+      status: "cancelled", exitCode: 1, sessionId: "terminal-session",
+      error: { message: "User cancelled the execution for tool run_terminal_command" },
+    });
+    expect(readFileSync(receipt(input.receiptPath).stdoutPath, "utf8")).toContain("error_during_execution");
+  });
+
+  it("preserves a well-formed Grok provider error distinct from malformed output", async () => {
+    process.env.FAKE_GROK_TERMINAL = "api_error";
+    const input = options("grok", "terminal-api-error");
+    expect((await runLane(input)).exitCode).toBe(70);
+    expect(receipt(input.receiptPath)).toMatchObject({
+      status: "child-failed", reportedModel: "grok-4.6-build",
+      modelVerified: true, modelEvidence: "provider-report",
+      sessionId: "terminal-session", usage: { inputTokens: 30 },
+      error: { message: "API unavailable" },
+    });
+
+    process.env.FAKE_GROK_REPORTED_MODEL = "grok-4.5-build";
+    const mismatched = options("grok", "terminal-api-error-mismatch");
+    expect((await runLane(mismatched)).exitCode).toBe(70);
+    expect(receipt(mismatched.receiptPath)).toMatchObject({
+      status: "child-failed", reportedModel: "grok-4.5-build",
+      modelVerified: false, modelEvidence: null,
+      error: { message: "API unavailable" },
+    });
+  });
+
+  it("keeps malformed Grok output distinct from a terminal provider failure", async () => {
+    process.env.FAKE_GROK_TERMINAL = "malformed";
+    const input = options("grok", "malformed");
+    expect((await runLane(input)).exitCode).toBe(65);
+    expect(receipt(input.receiptPath)).toMatchObject({
+      status: "malformed-output", reportedModel: null,
+      error: { message: "grok emitted a non-JSON event" },
+    });
+    expect(readFileSync(receipt(input.receiptPath).stdoutPath, "utf8")).toBe("not JSON\n");
+  });
+
+  it("keeps successful Grok model proof strict", async () => {
+    process.env.FAKE_GROK_TERMINAL = "success";
+    process.env.FAKE_GROK_REPORTED_MODEL = "grok-4.5-build";
+    const input = options("grok", "model-mismatch");
+    expect((await runLane(input)).exitCode).toBe(65);
+    expect(receipt(input.receiptPath)).toMatchObject({
+      status: "malformed-output", reportedModel: "grok-4.5-build",
+      modelVerified: false, error: { message: "requested model grok-4.6 was not reported by grok" },
+    });
+    expect(existsSync(input.outputPath)).toBe(false);
+  });
+
+  it("never overwrites a pre-existing sidecar or an input path", async () => {
+    const input = options("grok", "sidecar-conflict");
+    const stdoutPath = `${input.receiptPath}.stdout`;
+    writeFileSync(stdoutPath, "owned");
+    await expect(runLane(input)).rejects.toThrow();
+    expect(readFileSync(stdoutPath, "utf8")).toBe("owned");
+    expect(existsSync(input.outputPath)).toBe(false);
+    expect(existsSync(input.receiptPath)).toBe(false);
+
+    const next = options("grok", "prompt-collision");
+    const colliding = { ...next, promptPath: `${next.receiptPath}.stdout` };
+    writeFileSync(colliding.promptPath, "prompt");
+    await expect(runLane(colliding)).rejects.toThrow();
+    expect(readFileSync(colliding.promptPath, "utf8")).toBe("prompt");
+
+    const outputCollision = { ...next, outputPath: `${next.receiptPath}.stderr` };
+    await expect(runLane(outputCollision)).rejects.toThrow("must be distinct");
+    expect(existsSync(outputCollision.outputPath)).toBe(false);
   });
 
   it("classifies an unavailable model without falling back", async () => {

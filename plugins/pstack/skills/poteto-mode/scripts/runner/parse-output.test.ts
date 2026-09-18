@@ -132,5 +132,8 @@ describe("parseProviderOutput", () => {
         "gpt-5.6-sol"
       )
     ).toThrow("final agent message");
+    expect(() =>
+      parseProviderOutput("grok", JSON.stringify({ type: "result" }), "", "grok-4.6")
+    ).toThrow("valid terminal status");
   });
 });
