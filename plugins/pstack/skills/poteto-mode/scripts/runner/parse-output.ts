@@ -10,6 +10,16 @@ import {
 
 type JsonObject = Record<string, unknown>;
 
+export class ProviderResultError extends Error {
+  constructor(
+    message: string,
+    readonly status: "cancelled" | "child-failed",
+    readonly metadata: Omit<ParsedOutput, "text">
+  ) {
+    super(message);
+  }
+}
+
 function object(value: unknown): JsonObject | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as JsonObject)
@@ -99,18 +109,43 @@ function parseGrok(stdout: string, requestedModel: string): ParsedOutput {
   }
 
   if (result === null) throw new Error("grok result did not contain a terminal event");
+  if (nullableString(result.subtype) === null || typeof result.is_error !== "boolean") {
+    throw new Error("grok result did not contain a valid terminal status");
+  }
+  const metadata = {
+    reportedModel: modelFromUsage(result.modelUsage, "grok", requestedModel),
+    sessionId: nullableString(result.session_id),
+    usage: normalizedUsage(result.usage),
+    costUsd: finiteNumber(result.total_cost_usd) ?? null,
+  };
   if (result.is_error === true || result.subtype !== "success") {
-    throw new Error("grok reported an error result");
+    const errors = Array.isArray(result.errors)
+      ? result.errors.filter((item): item is string => typeof item === "string")
+      : [];
+    const error = object(result.error);
+    const message = nullableString(error?.message)
+      ?? nullableString(result.error)
+      ?? (errors.length > 0 ? errors.join("; ") : null)
+      ?? nullableString(result.result)
+      ?? nullableString(result.stop_reason)
+      ?? `grok reported ${nullableString(result.subtype) ?? "an error"}`;
+    const stopReason = nullableString(result.stop_reason);
+    const subtype = nullableString(result.subtype);
+    const cancelled = stopReason === "cancelled" || stopReason === "canceled"
+      || subtype === "cancelled" || subtype === "canceled"
+      || /^User cancel(?:led|ed) the execution\b|^PermissionCancelled\b/i.test(message);
+    throw new ProviderResultError(
+      message,
+      cancelled ? "cancelled" : "child-failed",
+      metadata
+    );
   }
   const text = nullableString(result.result);
   if (text === null) throw new Error("grok result did not contain final text");
 
   return {
     text,
-    reportedModel: modelFromUsage(result.modelUsage, "grok", requestedModel),
-    sessionId: nullableString(result.session_id),
-    usage: normalizedUsage(result.usage),
-    costUsd: finiteNumber(result.total_cost_usd) ?? null,
+    ...metadata,
   };
 }
 

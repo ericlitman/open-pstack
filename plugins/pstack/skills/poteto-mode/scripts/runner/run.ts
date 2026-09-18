@@ -7,12 +7,14 @@ import {
   statSync,
   unlinkSync,
   writeFileSync,
+  writeSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { invocationCommand, preflightCommand, type CommandSpec } from "./commands.ts";
 import { versionedClaudeAlias } from "./model-aliases.ts";
-import { parseProviderOutput, reportedModelMatches } from "./parse-output.ts";
+import { parseProviderOutput, ProviderResultError, reportedModelMatches } from "./parse-output.ts";
 import type {
+  ParsedOutput,
   Provider,
   ReceiptStatus,
   RunnerOptions,
@@ -56,21 +58,39 @@ function removeIfExists(path: string): void {
   if (existsSync(path)) unlinkSync(path);
 }
 
-function reserve(path: string): void {
+function reserve(path: string): number {
   mkdirSync(dirname(path), { recursive: true });
-  const descriptor = openSync(path, "wx", 0o600);
-  closeSync(descriptor);
+  return openSync(path, "wx", 0o600);
 }
 
-function reserveOutputs(options: RunnerOptions): void {
-  if (options.outputPath === options.receiptPath) {
-    throw new UsageError("output and receipt paths must differ");
-  }
-  reserve(options.outputPath);
+interface ModelStreams {
+  readonly stdout: number;
+  readonly stderr: number;
+}
+
+function modelStreamPaths(options: RunnerOptions): { stdoutPath: string; stderrPath: string } {
+  return {
+    stdoutPath: `${options.receiptPath}.stdout`,
+    stderrPath: `${options.receiptPath}.stderr`,
+  };
+}
+
+function reserveOutputs(options: RunnerOptions): ModelStreams {
+  const { stdoutPath, stderrPath } = modelStreamPaths(options);
+  const created: string[] = [];
+  const descriptors: number[] = [];
   try {
-    reserve(options.receiptPath);
+    for (const path of [options.outputPath, options.receiptPath, stdoutPath, stderrPath]) {
+      const descriptor = reserve(path);
+      created.push(path);
+      descriptors.push(descriptor);
+    }
+    closeSync(descriptors[0]!);
+    closeSync(descriptors[1]!);
+    return { stdout: descriptors[2]!, stderr: descriptors[3]! };
   } catch (error) {
-    removeIfExists(options.outputPath);
+    for (const descriptor of descriptors) closeSync(descriptor);
+    for (const path of created) removeIfExists(path);
     throw error;
   }
 }
@@ -173,7 +193,7 @@ interface StreamCapture {
   cancel(): Promise<void>;
 }
 
-function captureStream(stream: ReadableStream<Uint8Array>): StreamCapture {
+function captureStream(stream: ReadableStream<Uint8Array>, descriptor?: number): StreamCapture {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let text = "";
@@ -184,6 +204,12 @@ function captureStream(stream: ReadableStream<Uint8Array>): StreamCapture {
       while (true) {
         const next = await reader.read();
         if (next.done) break;
+        if (descriptor !== undefined) {
+          let offset = 0;
+          while (offset < next.value.length) {
+            offset += writeSync(descriptor, next.value, offset, next.value.length - offset);
+          }
+        }
         text += decoder.decode(next.value, { stream: true });
       }
       text += decoder.decode();
@@ -222,7 +248,8 @@ async function runProcess(
   env: NodeJS.ProcessEnv,
   prompt: string,
   deadlineAt: number | null,
-  cancellation: RunCancellation
+  cancellation: RunCancellation,
+  modelStreams?: ModelStreams
 ): Promise<ProcessResult> {
   const child = Bun.spawn([executable, ...spec.args], {
     cwd,
@@ -232,8 +259,8 @@ async function runProcess(
     stderr: "pipe",
   });
   let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
-  const stdoutCapture = captureStream(child.stdout);
-  const stderrCapture = captureStream(child.stderr);
+  const stdoutCapture = captureStream(child.stdout, modelStreams?.stdout);
+  const stderrCapture = captureStream(child.stderr, modelStreams?.stderr);
   const streams = Promise.all([stdoutCapture.result, stderrCapture.result]);
   const exited = child.exited.then((exitCode): ProcessEvent => ({
     kind: "exited",
@@ -466,7 +493,7 @@ function modelProof(
 
 function completeReceipt(
   options: RunnerOptions,
-  partial: Omit<RunnerReceipt, "schemaVersion" | "parent" | "provider" | "model" | "effort" | "mode" | "cwd" | "promptPath" | "outputPath">
+  partial: Omit<RunnerReceipt, "schemaVersion" | "parent" | "provider" | "model" | "effort" | "mode" | "cwd" | "promptPath" | "outputPath" | "stdoutPath" | "stderrPath">
 ): RunnerReceipt {
   return {
     schemaVersion: 1,
@@ -478,6 +505,7 @@ function completeReceipt(
     cwd: options.cwd,
     promptPath: options.promptPath,
     outputPath: options.outputPath,
+    ...modelStreamPaths(options),
     ...partial,
   };
 }
@@ -509,11 +537,10 @@ export function validateOptions(options: RunnerOptions): void {
   if (!existsSync(options.cwd) || !statSync(options.cwd).isDirectory()) {
     throw new UsageError(`cwd is not a directory: ${options.cwd}`);
   }
-  if (
-    options.promptPath === options.outputPath ||
-    options.promptPath === options.receiptPath
-  ) {
-    throw new UsageError("prompt, output, and receipt paths must be distinct");
+  const { stdoutPath, stderrPath } = modelStreamPaths(options);
+  const paths = [options.promptPath, options.outputPath, options.receiptPath, stdoutPath, stderrPath];
+  if (new Set(paths.map((path) => resolve(path))).size !== paths.length) {
+    throw new UsageError("prompt, output, receipt, and model stream paths must be distinct");
   }
 }
 
@@ -530,7 +557,8 @@ async function executeLane(
   deadlineAt: number | null,
   invocation: CommandSpec,
   preflight: CommandSpec,
-  progress: LaneProgress
+  progress: LaneProgress,
+  modelStreams: ModelStreams
 ): Promise<RunResult> {
   const startedAt = new Date(started).toISOString();
   const prompt = readFileSync(options.promptPath, "utf8");
@@ -751,7 +779,8 @@ async function executeLane(
     env,
     prompt,
     deadlineAt,
-    cancellation
+    cancellation,
+    modelStreams
   );
   const completed = Date.now();
   const base = {
@@ -765,23 +794,37 @@ async function executeLane(
     signal: result.signal,
   } as const;
 
-  if (result.cancelledBy !== null || result.timedOut || result.exitCode !== 0) {
+  let grokOutput: ParsedOutput | null = null;
+  let grokFailure: ProviderResultError | null = null;
+  if (options.provider === "grok" && result.cancelledBy === null && !result.timedOut) {
+    try {
+      grokOutput = parseProviderOutput(options.provider, result.stdout, result.stderr, options.model);
+    } catch (error) {
+      if (error instanceof ProviderResultError) grokFailure = error;
+    }
+  }
+
+  if (result.cancelledBy !== null || result.timedOut || result.exitCode !== 0 || grokFailure !== null) {
     const rawFailureEvidence = `${result.stderr}\n${result.stdout}`;
-    const failureEvidence = evidence(rawFailureEvidence);
+    const failureEvidence = evidence(grokFailure === null
+      ? rawFailureEvidence
+      : `${grokFailure.message}\n${rawFailureEvidence}`);
     const status: ReceiptStatus = result.cancelledBy !== null
       ? "cancelled"
       : result.timedOut
         ? "timed-out"
-        : unavailableStatus(rawFailureEvidence);
+        : grokFailure?.status ?? unavailableStatus(rawFailureEvidence);
+    const metadata = grokFailure?.metadata ?? grokOutput;
+    const proof = metadata === null
+      ? { reportedModel: null, modelVerified: false, modelEvidence: null } as const
+      : modelProof(options.provider, options.model, metadata.reportedModel);
     receipt = completeReceipt(options, {
       ...base,
       status,
-      reportedModel: null,
-      modelVerified: false,
-      modelEvidence: null,
-      sessionId: null,
-      usage: null,
-      costUsd: null,
+      ...proof,
+      sessionId: metadata?.sessionId ?? null,
+      usage: metadata?.usage ?? null,
+      costUsd: metadata?.costUsd ?? null,
       error: {
         message: result.cancelledBy !== null
           ? result.signal === result.cancelledBy
@@ -789,7 +832,7 @@ async function executeLane(
             : `launcher received ${result.cancelledBy} after child exited`
           : result.timedOut
             ? `launcher exceeded the explicit ${options.timeoutMs}ms deadline`
-            : `child exited with status ${result.exitCode}`,
+            : grokFailure?.message ?? `child exited with status ${result.exitCode}`,
         evidence: failureEvidence,
       },
     });
@@ -799,7 +842,7 @@ async function executeLane(
   }
 
   try {
-    const parsed = parseProviderOutput(
+    const parsed = grokOutput ?? parseProviderOutput(
       options.provider,
       result.stdout,
       result.stderr,
@@ -831,15 +874,15 @@ async function executeLane(
     receipt = completeReceipt(options, {
       ...base,
       status: "malformed-output",
-      reportedModel: null,
+      reportedModel: grokOutput?.reportedModel ?? null,
       modelVerified: false,
       modelEvidence: null,
-      sessionId: null,
-      usage: null,
-      costUsd: null,
+      sessionId: grokOutput?.sessionId ?? null,
+      usage: grokOutput?.usage ?? null,
+      costUsd: grokOutput?.costUsd ?? null,
       error: {
         message,
-        evidence: evidence(`${result.stderr}\n${result.stdout}`),
+        evidence: evidence(`${message}\n${result.stderr}\n${result.stdout}`),
       },
     });
   }
@@ -866,8 +909,9 @@ export async function runLane(
     argv: [invocation.command, ...invocation.args],
   };
   const cancellation = installRunCancellation();
+  let modelStreams: ModelStreams | null = null;
   try {
-    reserveOutputs(options);
+    modelStreams = reserveOutputs(options);
     try {
       return await executeLane(
         options,
@@ -876,7 +920,8 @@ export async function runLane(
         deadlineAt,
         invocation,
         preflight,
-        progress
+        progress,
+        modelStreams
       );
     } catch (error) {
       const completed = Date.now();
@@ -920,6 +965,10 @@ export async function runLane(
       return { exitCode: statusExitCode(status), receipt };
     }
   } finally {
+    if (modelStreams !== null) {
+      closeSync(modelStreams.stdout);
+      closeSync(modelStreams.stderr);
+    }
     cancellation.dispose();
   }
 }
