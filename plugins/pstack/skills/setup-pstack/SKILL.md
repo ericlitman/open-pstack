@@ -88,21 +88,21 @@ After the operator confirms, write the in-memory render from step 6. Never paste
 
 Provider-qualified per-role choices. Read the installed pstack provider-dispatch reference before dispatching a configured role. Every documented role remains present. `inherit-parent` and `auto` use the parent model natively and still count as one panel lane.
 
-feature, refactoring: grok:grok-4.6@xhigh
-bug-fix: codex:gpt-5.6-sol@max
-perf-issue: codex:gpt-5.6-sol@max
-hillclimb: codex:gpt-5.6-sol@max
+feature, refactoring: grok:grok-4.7@xhigh
+bug-fix: codex:gpt-6-sol@max
+perf-issue: codex:gpt-6-sol@max
+hillclimb: codex:gpt-6-sol@max
 judgment and prose: claude:fable@max
 hardest tasks: claude:fable@max
-how explorer: grok:grok-4.6@xhigh
+how explorer: grok:grok-4.7@xhigh
 how explainer: claude:fable@max
 why investigators, synthesizer: inherit-parent
 reflect tooling, judgment, divergent, synthesizer: inherit-parent
-arena runners: claude:fable@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:opus@xhigh
-arena cross-judge pool: claude:fable@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:opus@xhigh
-swarm workers: grok:grok-4.6@xhigh
-architect runners: claude:fable@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:opus@xhigh
-interrogate reviewers: claude:fable@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:opus@xhigh
+arena runners: claude:fable@max, codex:gpt-6-sol@max, grok:grok-4.7@xhigh, claude:opus@xhigh
+arena cross-judge pool: claude:fable@max, codex:gpt-6-sol@max, grok:grok-4.7@xhigh, claude:opus@xhigh
+swarm workers: grok:grok-4.7@xhigh
+architect runners: claude:fable@max, codex:gpt-6-sol@max, grok:grok-4.7@xhigh, claude:opus@xhigh
+interrogate reviewers: claude:fable@max, codex:gpt-6-sol@max, grok:grok-4.7@xhigh, claude:opus@xhigh
 ```
 
 ### 8. Wire it in

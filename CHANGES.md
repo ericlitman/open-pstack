@@ -40,7 +40,7 @@ Origin merge commands omit GitHub's unsupported `--squash` flag and stop when Or
 
 **No-op upstream revisions.** Upstream moved several Fable references to a newer revision slug. Open Pstack already stores rolling `claude:fable` and `claude:opus` aliases, so those edits require no port change.
 
-**Upstream-only exclusions.** `make-bot-ui` from `799151d` and `6fecddb` is not ported because it is built entirely from Cursor routine, webhook, and UI primitives. The `disable-model-invocation` additions from `73f8be4` are not applied to `how`, `why`, `unslop`, or `typescript-best-practices`; the flag would break poteto-mode's named invocation path on Claude Code. The `23a56e2` defaults that move `bug-fix`, `perf-issue`, and `hillclimb` from Sol to Fable are not applied because Fable costs much more for these frequent delegated code roles; all three stay on `codex:gpt-5.6-sol@max`. The Claude manifest logo field from `efa2a53` is also omitted because Claude Code has no schema for it.
+**Upstream-only exclusions.** `make-bot-ui` from `799151d` and `6fecddb` is not ported because it is built entirely from Cursor routine, webhook, and UI primitives. The `disable-model-invocation` additions from `73f8be4` are not applied to `how`, `why`, `unslop`, or `typescript-best-practices`; the flag would break poteto-mode's named invocation path on Claude Code. The `23a56e2` defaults that move `bug-fix`, `perf-issue`, and `hillclimb` from Sol to Fable are not applied because Fable costs much more for these frequent delegated code roles; all three stay on `codex:gpt-6-sol@max`. The Claude manifest logo field from `efa2a53` is also omitted because Claude Code has no schema for it.
 
 ## 1.2.1 keeps Fable and Opus on their latest Claude revisions
 
