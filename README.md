@@ -18,6 +18,8 @@ Open Pstack is an unofficial community project that makes pstack work in Claude 
 
 The stock setup and model matrix remain in place. A follow-up change will add gateway routes to setup and document the lane configurations. The fork's provenance and sync process are recorded in [UPSTREAM-FLEX.md](UPSTREAM-FLEX.md). Anthropic does not support pointing Claude Code at non-Anthropic endpoints; use synthetic data for gateway testing and keep API keys in your local environment.
 
+New here? **[docs/USAGE.md](docs/USAGE.md)** is the walkthrough: diagrams of how work flows through the lanes, three setup configurations (full frontier, hybrid saver, zero-subscription), copy-paste examples for the daily skills, and troubleshooting.
+
 ## What pstack does
 
 pstack is a plugin for coding agents. It is not a new model or a hosted service. It gives your agent engineering rules, step-by-step workflows for different kinds of work, focused skills, and small local tools.
@@ -45,7 +47,7 @@ You need a current Claude Code or Codex installation. For the full four-model re
 Run these commands inside Claude Code:
 
 ```text
-/plugin marketplace add ericlitman/open-pstack
+/plugin marketplace add thisguymartin/pstack-flex
 /plugin install pstack@open-pstack
 /reload-plugins
 ```
@@ -55,7 +57,7 @@ Run these commands inside Claude Code:
 Run these commands in your shell:
 
 ```shell
-codex plugin marketplace add ericlitman/open-pstack --ref main
+codex plugin marketplace add thisguymartin/pstack-flex --ref main
 codex plugin add pstack@open-pstack
 ```
 
