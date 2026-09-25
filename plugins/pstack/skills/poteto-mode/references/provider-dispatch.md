@@ -19,6 +19,21 @@ The allowed effort universe is exactly `low`, `medium`, `high`, `xhigh`, `max`. 
 
 `fable` and `opus` are Claude Code's rolling aliases. Claude resolves each alias to the latest available family revision. A runner receipt keeps the requested alias in `model` and the concrete provider-reported revision in `reportedModel`; verification accepts only a numeric `claude-fable-*` or `claude-opus-*` revision from the matching family.
 
+## Flex model matrix
+
+pstack-flex addition. The stock matrix above is upstream-owned and unchanged; these lanes are additive. A flex lane runs the stock `claude` binary env-pointed at the provider's Anthropic-compatible endpoint, with the provider's own API key and an isolated `CLAUDE_CONFIG_DIR`, so it uses no Anthropic account, no claude.ai login, and no subscription.
+
+| Family | Provider | Model | Default effort | Selectable efforts | API key variable | Base URL default |
+|---|---|---|---|---|---|---|
+| deepseek | deepseek | deepseek-flash | high | low medium high xhigh max | DEEPSEEK_API_KEY | https://api.deepseek.com/anthropic |
+| minimax | minimax | MiniMax-M3 | high | low medium high xhigh max | MINIMAX_API_KEY | https://api.minimax.io/anthropic |
+
+Flex lanes have no Claude-native agent stem and always take the external runner in both parents. The base URL is a documented default; override it with `DEEPSEEK_BASE_URL` or `MINIMAX_BASE_URL`, and confirm it against the provider's current Claude Code guide during setup's live probe. The config dir defaults to `~/.pstack-flex/<provider>` (override: `PSTACK_FLEX_<PROVIDER>_CONFIG_DIR`). Secrets stay in the environment: nothing in the sheet, the receipts, or this repository carries a key.
+
+Gateway receipt semantics differ from stock claude lanes in two documented ways. `costUsd` is always `null`: the claude CLI prices `total_cost_usd` at Anthropic rates, which would be fiction for third-party traffic; real prices live in [LANES.md](../../../../../docs/LANES.md), and token usage in the receipt stays accurate. Model verification accepts a case-insensitive provider report when the endpoint sends one, and otherwise falls back to `modelEvidence: "pinned-argv"` — the same posture Codex lanes already use.
+
+Panel diversity rule (pstack-flex): `arena runners` and `interrogate reviewers` must span at least two distinct providers. DeepSeek plus MiniMax satisfies it. A single-provider panel is written only after the operator explicitly confirms the reduced diversity during setup, and the setup report records that confirmation. The adversarial signal comes from model diversity, so treat the override as an exception, not a configuration style.
+
 ## Read-time normalization
 
 Normalize configured descriptors before matching them to the matrix or choosing a route. If a provider-qualified Claude model starts with `claude-fable-` or `claude-opus-` and its remaining revision contains only digits and hyphens, replace that model component in memory with `fable` or `opus`. Preserve provider, effort, role, and lane order. Use only the normalized descriptor for native dispatch or runner argv. Never pass the versioned predecessor to Claude.
@@ -31,10 +46,12 @@ This read-time rule makes an older installed sheet use the latest family revisio
 
 The top-level harness resolves the route once. A child receives an assigned provider, model, effort, access mode, prompt, working directory, and output path. A child never detects the harness, chooses a provider, or launches another model. Environment markers may corroborate the top-level harness before fan-out, but nested processes inherit parent markers and must not use them for routing.
 
-| Parent | `claude:*` | `codex:*` | `grok:*` |
-|---|---|---|---|
-| Claude Code | native `Agent` | external runner | external runner |
-| Codex | external runner | native `spawn_agent` | external runner |
+| Parent | `claude:*` | `codex:*` | `grok:*` | `deepseek:*` | `minimax:*` |
+|---|---|---|---|---|---|
+| Claude Code | native `Agent` | external runner | external runner | external runner | external runner |
+| Codex | external runner | native `spawn_agent` | external runner | external runner | external runner |
+
+Flex gateway descriptors are never native, even under a Claude Code parent: the gateway lane must run in its own process with injected endpoint, token, and isolated config dir, which the parent's native `Agent` primitive cannot provide.
 
 `inherit-parent` and `auto` remain aliases. They use the parent's current model and effort through its native subagent primitive. In a panel they still consume one lane, but they reduce provider diversity; say so in the synthesis record.
 
@@ -54,7 +71,7 @@ The launcher lives at `skills/poteto-mode/scripts/runner/pstack-runner` under th
 ```text
 pstack-runner \
   --parent <claude|codex> \
-  --provider <claude|codex|grok> \
+  --provider <claude|codex|grok|deepseek|minimax> \
   --model <real CLI model> \
   --effort <low|medium|high|xhigh|max> \
   --mode <read-only|isolated-write> \
@@ -66,6 +83,8 @@ pstack-runner \
 ```
 
 Pass arguments as an argv array or quote every path. Never interpolate prompt text into a shell command. The launcher preflights the assigned CLI and authentication, invokes the model exactly once, disables recursive agents and ambient skill dispatch where the CLI supports it, restricts the built-in tool surface, and records the exact provider/model/effort flags. External lanes do not receive the parent's MCP surface. Keep MCP-dependent Why and Reflect roles on `inherit-parent` or `auto`. The launcher never falls back.
+
+Gateway lanes (`deepseek`, `minimax`) run three checks before the model executes, all fail-closed. First, in-process: the lane's API key variable must be set, and the lane's isolated `CLAUDE_CONFIG_DIR` must be free of OAuth credentials — a `.credentials.json` carrying a claude.ai login, or one that cannot be parsed, refuses the lane with an `unauthenticated` receipt before any subprocess runs, so a claude.ai credential can never be sent to a third-party endpoint. Second, the spawned preflight is `claude --version`, which proves the binary executes; `claude auth status` is deliberately not used because its behavior under token auth is undocumented. Third, the one-shot invocation is the real authentication and model test; an endpoint authentication error classifies as `unauthenticated` like any other lane.
 
 Grok authentication preflight has one bounded retry. If the first `grok models` result would be classified as unauthenticated, the runner waits five seconds and tries the same preflight once more. A second failure is terminal. The delay and second attempt share the runner's absolute deadline and cancellation latch, and the receipt keeps evidence from both attempts. Model execution is never retried.
 
@@ -90,7 +109,7 @@ Success requires all of these:
 
 1. Exit status `0`.
 2. Receipt status `complete`.
-3. Either `modelVerified: true` with `modelEvidence: "provider-report"`, or a Codex receipt with `reportedModel: null`, `modelVerified: false`, and `modelEvidence: "pinned-argv"`. For Claude's `fable` and `opus` aliases, the concrete provider report must belong to the requested family. Codex 0.149.0 accepts the exact `--model` argument but does not report the served model in its JSONL stream.
+3. Either `modelVerified: true` with `modelEvidence: "provider-report"`, or a Codex receipt with `reportedModel: null`, `modelVerified: false`, and `modelEvidence: "pinned-argv"`, or a gateway (`deepseek`/`minimax`) receipt with `modelVerified: false` and `modelEvidence: "pinned-argv"` when the endpoint does not echo the requested slug. For Claude's `fable` and `opus` aliases, the concrete provider report must belong to the requested family. Codex 0.149.0 accepts the exact `--model` argument but does not report the served model in its JSONL stream. Gateway reports match case-insensitively because third-party endpoints are inconsistent about slug casing.
 4. A non-empty output file.
 
 The receipt also carries elapsed time, token usage when the CLI exposes it, and cost when available. Keep it with the arena or review artifacts so parent-harness comparisons are evidence-based.
