@@ -12,6 +12,18 @@ Lauren built pstack from the skills she uses to ship code at Cursor. In a [55-mi
 
 Open Pstack is an unofficial community project that makes pstack work in Claude Code and Codex. If Cursor is your main coding environment, use [Lauren's original pstack](https://github.com/cursor/plugins/tree/main/pstack). If Claude Code or Codex is your main coding environment, use this repository.
 
+## This fork: pstack-flex
+
+**pstack-flex** is a friendly fork of [ericlitman/open-pstack](https://github.com/ericlitman/open-pstack) (fork point: v1.4.1). A stock install behaves exactly like upstream. On top of that it adds model freedom and cost control:
+
+- **Optional model families.** Setup no longer requires all four frontier families. Assign the families you actually have; unassigned families get no effort question and no probe.
+- **Gateway lanes for DeepSeek and MiniMax.** New `deepseek:*` and `minimax:*` descriptors run the stock `claude` binary against each lab's Anthropic-compatible endpoint with that lab's API key — no Anthropic account, no subscription, pay per token. See the flex model matrix in [provider-dispatch.md](plugins/pstack/skills/poteto-mode/references/provider-dispatch.md).
+- **Zero-subscription mode.** The whole stack can run on nothing but `DEEPSEEK_API_KEY` and `MINIMAX_API_KEY`; two labs are two model families, so adversarial panels keep real diversity. Walkthrough in [docs/LANES.md](docs/LANES.md).
+- **Credential isolation by construction.** Gateway lanes use an isolated `CLAUDE_CONFIG_DIR` and refuse to start if a claude.ai OAuth login is present there, so a claude.ai credential can never be sent to a third-party endpoint.
+- **Honest cost reporting.** Gateway receipts force `costUsd` to null instead of reporting Anthropic-rate fiction; real prices (including DeepSeek's off-peak discount window) live in [docs/LANES.md](docs/LANES.md).
+
+What does not change: pstack's skills and playbooks, the four stock lanes and their defaults, the no-fallback and no-implicit-timeout contracts, and upstream's sync process. The flex delta is documented in [UPSTREAM-FLEX.md](UPSTREAM-FLEX.md). Anthropic does not support pointing Claude Code at non-Anthropic endpoints (unsupported is not prohibited); read the safety notes in [docs/LANES.md](docs/LANES.md) before enabling a gateway lane.
+
 ## What pstack does
 
 pstack is a plugin for coding agents. It is not a new model or a hosted service. It gives your agent engineering rules, step-by-step workflows for different kinds of work, focused skills, and small local tools.
