@@ -27,6 +27,14 @@ export function preflightCommand(provider: Provider): CommandSpec {
       };
     case "grok":
       return { command: "grok", args: ["models"], stdin: "none" };
+    case "deepseek":
+    case "minimax":
+      // Gateway lanes run the claude binary with token auth against a
+      // third-party endpoint. `claude auth status` semantics under token
+      // auth are undocumented, so the preflight only proves the binary
+      // executes; credentials are checked in-process by the gateway guard
+      // and the one-shot invocation is the real auth test.
+      return { command: "claude", args: ["--version"], stdin: "none" };
   }
 }
 
@@ -63,33 +71,42 @@ function effortOverride(effort: Effort): string {
   return `model_reasoning_effort=${JSON.stringify(effort)}`;
 }
 
+function claudeInvocation(options: RunnerOptions): CommandSpec {
+  return {
+    command: "claude",
+    args: [
+      "-p",
+      "--model",
+      options.model,
+      "--effort",
+      options.effort,
+      "--permission-mode",
+      permissionMode(options.mode),
+      "--setting-sources",
+      "project",
+      "--strict-mcp-config",
+      "--tools",
+      claudeTools(options.mode),
+      "--no-session-persistence",
+      "--disable-slash-commands",
+      "--disallowed-tools",
+      claudeDeniedTools(options.mode),
+      "--output-format",
+      "json",
+    ],
+    stdin: "prompt",
+  };
+}
+
 export function invocationCommand(options: RunnerOptions): CommandSpec {
   switch (options.provider) {
     case "claude":
-      return {
-        command: "claude",
-        args: [
-          "-p",
-          "--model",
-          options.model,
-          "--effort",
-          options.effort,
-          "--permission-mode",
-          permissionMode(options.mode),
-          "--setting-sources",
-          "project",
-          "--strict-mcp-config",
-          "--tools",
-          claudeTools(options.mode),
-          "--no-session-persistence",
-          "--disable-slash-commands",
-          "--disallowed-tools",
-          claudeDeniedTools(options.mode),
-          "--output-format",
-          "json",
-        ],
-        stdin: "prompt",
-      };
+      return claudeInvocation(options);
+    case "deepseek":
+    case "minimax":
+      // Same binary, same argv; the gateway difference is injected
+      // environment (endpoint, token, isolated CLAUDE_CONFIG_DIR).
+      return claudeInvocation(options);
     case "codex":
       return {
         command: "codex",

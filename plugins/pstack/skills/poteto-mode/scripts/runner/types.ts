@@ -1,10 +1,18 @@
 export const PARENTS = ["claude", "codex"] as const;
-export const PROVIDERS = ["claude", "codex", "grok"] as const;
+export const PROVIDERS = ["claude", "codex", "grok", "deepseek", "minimax"] as const;
+// pstack-flex: gateway providers run the stock `claude` binary against a
+// third-party Anthropic-compatible endpoint with injected environment.
+export const GATEWAY_PROVIDERS = ["deepseek", "minimax"] as const;
 export const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
 export const ACCESS_MODES = ["read-only", "isolated-write"] as const;
 
 export type Parent = (typeof PARENTS)[number];
 export type Provider = (typeof PROVIDERS)[number];
+export type GatewayProvider = (typeof GATEWAY_PROVIDERS)[number];
+
+export function isGatewayProvider(provider: Provider): provider is GatewayProvider {
+  return (GATEWAY_PROVIDERS as readonly string[]).includes(provider);
+}
 export type Effort = (typeof EFFORTS)[number];
 export type AccessMode = (typeof ACCESS_MODES)[number];
 

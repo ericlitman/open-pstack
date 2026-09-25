@@ -3,6 +3,7 @@ import type {
   ParsedOutput,
   Provider,
 } from "./types.ts";
+import { isGatewayProvider } from "./types.ts";
 import {
   concreteModelMatchesRollingAlias,
   isRollingClaudeAlias,
@@ -61,7 +62,11 @@ function modelFromUsage(
     ?? null;
 }
 
-function parseClaude(stdout: string, requestedModel: string): ParsedOutput {
+function parseClaude(
+  stdout: string,
+  requestedModel: string,
+  provider: Provider = "claude"
+): ParsedOutput {
   let raw: unknown;
   try {
     raw = JSON.parse(stdout);
@@ -77,7 +82,7 @@ function parseClaude(stdout: string, requestedModel: string): ParsedOutput {
 
   return {
     text,
-    reportedModel: modelFromUsage(value.modelUsage, "claude", requestedModel),
+    reportedModel: modelFromUsage(value.modelUsage, provider, requestedModel),
     sessionId: nullableString(value.session_id ?? value.sessionId),
     usage: normalizedUsage(value.usage),
     costUsd: finiteNumber(value.total_cost_usd) ?? null,
@@ -170,6 +175,14 @@ export function parseProviderOutput(
       return parseCodex(stdout);
     case "grok":
       return parseGrok(stdout, requestedModel);
+    case "deepseek":
+    case "minimax": {
+      // Gateway lanes emit claude-shaped JSON, but the CLI's
+      // total_cost_usd is computed at Anthropic rates and would be
+      // fiction for third-party traffic. Token usage stays; cost is null.
+      const parsed = parseClaude(stdout, requestedModel, provider);
+      return { ...parsed, costUsd: null };
+    }
   }
 }
 
@@ -181,6 +194,13 @@ export function reportedModelMatches(
   if (reported === null) return false;
   if (provider === "claude" && isRollingClaudeAlias(requested)) {
     return concreteModelMatchesRollingAlias(requested, reported);
+  }
+  if (isGatewayProvider(provider)) {
+    // Third-party endpoints are inconsistent about slug casing
+    // (e.g. MiniMax-M3 vs minimax-m3); compare case-insensitively.
+    const wanted = requested.toLowerCase();
+    const got = reported.toLowerCase();
+    return got === wanted || got.startsWith(`${wanted}-`);
   }
   if (reported === requested || reported.startsWith(`${requested}-`)) {
     return true;
