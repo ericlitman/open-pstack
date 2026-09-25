@@ -26,6 +26,32 @@ Set by you:
 
 Injected by the runner at spawn time (never written to disk, never in receipts): `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, the model pins (`ANTHROPIC_MODEL`, the opus/sonnet/haiku alias defaults, `CLAUDE_CODE_SUBAGENT_MODEL`), `CLAUDE_CODE_ATTRIBUTION_HEADER=0`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, and `CLAUDE_CONFIG_DIR`. Any inherited `ANTHROPIC_*` value from the parent session is deleted first.
 
+## Storing keys
+
+Keys reach a lane through the environment only; the runner never writes them to disk, receipts, or sheets. So key hygiene is entirely about how your shell gets them. Do not put raw keys in dotfiles or committed `.env` files.
+
+Recommended: your OS keychain, loaded on demand.
+
+- **macOS** (built in, encrypted at rest, unlocks with login):
+
+  ```zsh
+  # once per key — prompts for the value, nothing lands in shell history
+  security add-generic-password -a "$USER" -s pstack-deepseek -w
+  security add-generic-password -a "$USER" -s pstack-minimax -w
+
+  # in .zshrc: a function, not an export — keys enter env only when called
+  pstack-keys() {
+    export DEEPSEEK_API_KEY=$(security find-generic-password -a "$USER" -s pstack-deepseek -w)
+    export MINIMAX_API_KEY=$(security find-generic-password -a "$USER" -s pstack-minimax -w)
+  }
+  ```
+
+- **Linux**: `pass` (GPG-encrypted, git-syncable) or `secret-tool` (libsecret) with the same load-on-demand function shape.
+- **1Password CLI**: `op run --env-file=.env.tpl -- claude` injects the keys at process start with biometric unlock and exports nothing into the shell permanently.
+- **direnv**: fine for per-project scoping (gateway lanes are per-project opt-in anyway), but a raw `.envrc` is plaintext — have it call the keychain instead of holding the key.
+
+Honest threat model: encryption at rest protects against dotfile repos, backups, and file theft. Once a key is in process env, any process running as your user can read it — the same exposure your CLI OAuth credential files already have. Keychain storage plus two ops controls is the right amount: **set spend caps on the DeepSeek and MiniMax dashboards** (the real blast-radius limiter) and rotate keys if a machine is ever compromised.
+
 ## Prices (verified 2026-09-25 — re-check before budgeting)
 
 | Lane | Price per million tokens | Notes |
