@@ -2,6 +2,17 @@
 
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## pstack-flex (unreleased) — gateway lanes and optional families
+
+Fork of open-pstack v1.4.1. Additive changes, all in port-owned files:
+
+- Runner: new gateway providers `deepseek` and `minimax` (`runner/flex-providers.ts`). Each spawns the stock `claude` binary with the exact claude argv, plus injected environment: the lab's Anthropic-compatible endpoint, `ANTHROPIC_AUTH_TOKEN` from `DEEPSEEK_API_KEY`/`MINIMAX_API_KEY`, model pins, and an isolated `CLAUDE_CONFIG_DIR` (`~/.pstack-flex/<provider>`). Inherited `ANTHROPIC_*` values are deleted before injection so a parent's credentials or endpoint never bleed into a gateway child.
+- OAuth-leak guard: a gateway lane refuses to start (in-process, `unauthenticated` receipt, exit 77) when its API key variable is missing or when its config dir carries a claude.ai OAuth credentials file, so a claude.ai login can never be pointed at a third-party endpoint.
+- Gateway preflight is `claude --version`; the one-shot invocation is the real auth test. Gateway receipts force `costUsd` to null (the CLI prices at Anthropic rates) and match served models case-insensitively, falling back to `modelEvidence: "pinned-argv"` like Codex.
+- `provider-dispatch.md`: new additive "Flex model matrix" section, extended route table, gateway preflight semantics, and the panel-diversity rule (arena runners and interrogate reviewers span at least two providers unless the operator explicitly confirms otherwise). The stock model matrix is byte-unchanged.
+- `setup-pstack`: role assignments are selected first, and only assigned families get effort questions and probes; there is no requirement to assign every matrix family (mirrors upstream PR #73 / issue #72). The first-run sheet, its stock quad, and the fail-closed write rules are unchanged.
+- Tests: the model-matrix contract gains a flex-matrix section check cross-validated against the runner's gateway specs; runner, commands, parse-output, and CLI tests cover env injection, the guard, cost nulling, and case-insensitive verification. Nothing in the suite performs network I/O.
+
 ## 1.4.1 syncs to Cursor pstack 0.15.1
 
 Open Pstack 1.4.1 tracks Cursor pstack 0.15.1 at `f8abeddd1862dc73704e3d719dd73df0d51b8c71`. Poteto-mode now requires each claim to include its evidence or a measured, inferred, or guess label in the same sentence. Agents also run any check they can run themselves instead of handing that check to the user. No playbook, model, runtime, or dependency changed.
