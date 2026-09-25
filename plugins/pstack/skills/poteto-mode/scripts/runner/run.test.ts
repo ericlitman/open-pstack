@@ -25,7 +25,7 @@ import { appendFileSync, existsSync, unlinkSync, writeFileSync } from "node:fs";
 const args = process.argv.slice(2);
 const name = process.argv[1].split("/").at(-1);
 const isPreflight =
-  (name === "claude" && args[0] === "auth") ||
+  (name === "claude" && (args[0] === "auth" || args[0] === "--version")) ||
   (name === "codex" && args[0] === "login") ||
   (name === "grok" && args[0] === "models");
 const stage = isPreflight ? "preflight" : "model";
@@ -61,6 +61,10 @@ if (name === "claude" && args[0] === "auth") {
   console.log(JSON.stringify({loggedIn:true}));
   process.exit(0);
 }
+if (name === "claude" && args[0] === "--version") {
+  console.log("9.9.9 (fake)");
+  process.exit(0);
+}
 if (name === "codex" && args[0] === "login") {
   console.log("Logged in using ChatGPT");
   process.exit(0);
@@ -89,11 +93,18 @@ if (name === "grok" && args[0] === "models") {
 }
 const modelIndex = args.findIndex((value) => value === "--model");
 const model = modelIndex >= 0 ? args[modelIndex + 1] : "unknown";
-const reportedModel = model === "fable"
+const reportedModel = process.env.FAKE_REPORT_MODEL ?? (model === "fable"
   ? "claude-fable-9-9"
   : model === "opus"
     ? "claude-opus-9"
-    : model;
+    : model);
+if (stage === "model" && process.env.FAKE_DUMP_ENV_PATH) {
+  writeFileSync(process.env.FAKE_DUMP_ENV_PATH, JSON.stringify(process.env));
+}
+if (stage === "model" && process.env.FAKE_AUTH_ERROR === "1") {
+  console.error("API error: authentication_error - invalid api key");
+  process.exit(1);
+}
 if (process.env.FAKE_INVALID_MODEL === "1") {
   console.error("The requested model is not supported with this account.");
   process.exit(1);
@@ -906,7 +917,168 @@ describe("runLane", () => {
   });
 });
 
+describe("gateway lanes", () => {
+  const GATEWAY_TEST_KEYS = [
+    "DEEPSEEK_API_KEY",
+    "MINIMAX_API_KEY",
+    "PSTACK_FLEX_DEEPSEEK_CONFIG_DIR",
+    "PSTACK_FLEX_MINIMAX_CONFIG_DIR",
+    "ANTHROPIC_API_KEY",
+    "FAKE_DUMP_ENV_PATH",
+    "FAKE_AUTH_ERROR",
+    "FAKE_REPORT_MODEL",
+  ] as const;
+
+  function gatewayOptions(
+    provider: "deepseek" | "minimax",
+    suffix: string
+  ): RunnerOptions {
+    return {
+      ...options(provider === "deepseek" ? "claude" : "codex", suffix),
+      provider,
+      parent: "claude",
+      model: provider === "deepseek" ? "deepseek-flash" : "MiniMax-M3",
+      effort: "high",
+    };
+  }
+
+  beforeEach(() => {
+    for (const key of GATEWAY_TEST_KEYS) delete process.env[key];
+    process.env.DEEPSEEK_API_KEY = "sk-deepseek-test";
+    process.env.MINIMAX_API_KEY = "sk-minimax-test";
+    process.env.PSTACK_FLEX_DEEPSEEK_CONFIG_DIR = join(scratch, "flex-deepseek");
+    process.env.PSTACK_FLEX_MINIMAX_CONFIG_DIR = join(scratch, "flex-minimax");
+  });
+
+  afterEach(() => {
+    for (const key of GATEWAY_TEST_KEYS) delete process.env[key];
+  });
+
+  it("refuses without spawning anything when the API key is missing", async () => {
+    delete process.env.DEEPSEEK_API_KEY;
+    process.env.FAKE_PREFLIGHT_STARTED_PATH = join(scratch, "preflight-started");
+    process.env.FAKE_MODEL_STARTED_PATH = join(scratch, "model-started");
+    const input = gatewayOptions("deepseek", "missing-key");
+    const result = await runLane(input);
+    expect(result.exitCode).toBe(77);
+    const written = receipt(input.receiptPath);
+    expect(written.status).toBe("unauthenticated");
+    expect(written.preflight.status).toBe("not-run");
+    expect(written.error?.message).toBe("DEEPSEEK_API_KEY is not set");
+    expect(existsSync(join(scratch, "preflight-started"))).toBe(false);
+    expect(existsSync(join(scratch, "model-started"))).toBe(false);
+    expect(existsSync(input.outputPath)).toBe(false);
+  });
+
+  it("refuses to run over an OAuth login without leaking its contents", async () => {
+    const dir = join(scratch, "flex-deepseek");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, ".credentials.json"),
+      JSON.stringify({ claudeAiOauth: { accessToken: "oauth-secret" } }),
+      { mode: 0o600 }
+    );
+    const input = gatewayOptions("deepseek", "oauth-refused");
+    const result = await runLane(input);
+    expect(result.exitCode).toBe(77);
+    const written = receipt(input.receiptPath);
+    expect(written.status).toBe("unauthenticated");
+    expect(written.error?.message).toContain("OAuth credentials found");
+    expect(written.error?.evidence).toBe(join(dir, ".credentials.json"));
+    expect(JSON.stringify(written)).not.toContain("oauth-secret");
+  });
+
+  it("injects the gateway environment and never the parent's Anthropic identity", async () => {
+    process.env.ANTHROPIC_API_KEY = "parent-anthropic-secret";
+    const dumpPath = join(scratch, "env-dump.json");
+    process.env.FAKE_DUMP_ENV_PATH = dumpPath;
+    const input = gatewayOptions("deepseek", "env-dump");
+    const result = await runLane(input);
+    expect(result.exitCode).toBe(0);
+    const child = JSON.parse(readFileSync(dumpPath, "utf8")) as Record<string, string>;
+    expect(child.ANTHROPIC_BASE_URL).toBe("https://api.deepseek.com/anthropic");
+    expect(child.ANTHROPIC_AUTH_TOKEN).toBe("sk-deepseek-test");
+    expect(child.ANTHROPIC_MODEL).toBe("deepseek-flash");
+    expect(child.CLAUDE_CODE_SUBAGENT_MODEL).toBe("deepseek-flash");
+    expect(child.CLAUDE_CODE_ATTRIBUTION_HEADER).toBe("0");
+    expect(child.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC).toBe("1");
+    expect(child.CLAUDE_CODE_MAX_CONTEXT_TOKENS).toBe("128000");
+    expect(child.CLAUDE_CONFIG_DIR).toBe(join(scratch, "flex-deepseek"));
+    expect(child.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(child.CLAUDECODE).toBeUndefined();
+  });
+
+  it("completes with cost null and a verified provider report on the happy path", async () => {
+    const input = gatewayOptions("deepseek", "happy");
+    const result = await runLane(input);
+    expect(result.exitCode).toBe(0);
+    const written = receipt(input.receiptPath);
+    expect(written.status).toBe("complete");
+    expect(written.costUsd).toBeNull();
+    expect(written.usage).toMatchObject({ inputTokens: 10, outputTokens: 2 });
+    expect(written.modelVerified).toBe(true);
+    expect(written.modelEvidence).toBe("provider-report");
+    expect(written.preflight.status).toBe("passed");
+    expect(written.preflight.evidence).toBe(
+      "claude binary responded; gateway credentials verified in-process"
+    );
+    expect(readFileSync(input.outputPath, "utf8")).toBe("CLAUDE_OK");
+  });
+
+  it("verifies a case-shifted served model for MiniMax", async () => {
+    process.env.FAKE_REPORT_MODEL = "minimax-m3";
+    const input = gatewayOptions("minimax", "case-shift");
+    const result = await runLane(input);
+    expect(result.exitCode).toBe(0);
+    const written = receipt(input.receiptPath);
+    expect(written.modelVerified).toBe(true);
+    expect(written.modelEvidence).toBe("provider-report");
+    expect(written.reportedModel).toBe("minimax-m3");
+  });
+
+  it("falls back to pinned argv when the endpoint reports another slug", async () => {
+    process.env.FAKE_REPORT_MODEL = "unrelated-model";
+    const input = gatewayOptions("minimax", "pinned");
+    const result = await runLane(input);
+    expect(result.exitCode).toBe(0);
+    const written = receipt(input.receiptPath);
+    expect(written.status).toBe("complete");
+    expect(written.modelVerified).toBe(false);
+    expect(written.modelEvidence).toBe("pinned-argv");
+  });
+
+  it("classifies an endpoint authentication error as unauthenticated", async () => {
+    process.env.FAKE_AUTH_ERROR = "1";
+    const input = gatewayOptions("deepseek", "endpoint-401");
+    const result = await runLane(input);
+    expect(result.exitCode).toBe(77);
+    expect(receipt(input.receiptPath).status).toBe("unauthenticated");
+  });
+});
+
 describe("childEnvironment", () => {
+  it("strips identity and Anthropic inheritance before gateway injection", () => {
+    const source = {
+      PATH: "/bin",
+      CLAUDECODE: "1",
+      CODEX_CI: "1",
+      ANTHROPIC_API_KEY: "parent-secret",
+      ANTHROPIC_BASE_URL: "https://api.anthropic.com",
+      DEEPSEEK_API_KEY: "sk-test",
+      PSTACK_FLEX_DEEPSEEK_CONFIG_DIR: "/tmp/flex-deepseek",
+      KEEP_ME: "yes",
+    };
+    const env = childEnvironment("deepseek", source, "deepseek-flash");
+    expect(env.CLAUDECODE).toBeUndefined();
+    expect(env.CODEX_CI).toBeUndefined();
+    expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(env.ANTHROPIC_BASE_URL).toBe("https://api.deepseek.com/anthropic");
+    expect(env.ANTHROPIC_AUTH_TOKEN).toBe("sk-test");
+    expect(env.CLAUDE_CONFIG_DIR).toBe("/tmp/flex-deepseek");
+    expect(env.KEEP_ME).toBe("yes");
+    expect(env.PATH).toBe("/bin");
+  });
+
   it("removes only inherited runtime identity needed to avoid nested detection", () => {
     const source = {
       PATH: "/bin",
