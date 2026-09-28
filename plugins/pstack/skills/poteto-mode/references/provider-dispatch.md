@@ -19,6 +19,18 @@ The allowed effort universe is exactly `low`, `medium`, `high`, `xhigh`, `max`. 
 
 `fable` and `opus` are Claude Code's rolling aliases. Claude resolves each alias to the latest available family revision. A runner receipt keeps the requested alias in `model` and the concrete provider-reported revision in `reportedModel`; verification accepts only a numeric `claude-fable-*` or `claude-opus-*` revision from the matching family.
 
+## Additional model matrix
+
+pstack-flex additions using the existing provider routes. These optional families do not change the stock matrix or first-run role assignments. Default effort is pstack's proposed requested effort when assigning a family, not the provider's default. `-` in Upstream pstack choice means there is no upstream default to replace.
+
+| Family | Upstream pstack choice | Provider | Model | Default effort | Selectable efforts | Claude-native agent stem |
+|---|---|---|---|---|---|---|
+| astra | - | codex | gpt-6-astra | high | low medium high xhigh max | - |
+| sol-6 | - | codex | gpt-6-sol | high | low medium high xhigh max | - |
+| luna | - | codex | gpt-6-luna | high | low medium high xhigh max | - |
+
+These Codex families use native `spawn_agent` under a Codex parent and the external Codex runner under a Claude Code parent. Setup may assign them to any configurable role, including `architect runners`, after each requested model and effort passes the parent-specific probe. The `sol-6` family is independent of the stock `sol` family; existing GPT-5.6 Sol assignments stay unchanged.
+
 ## Flex model matrix
 
 pstack-flex addition. The stock matrix above is upstream-owned and unchanged; these lanes are additive. A flex lane runs the stock `claude` binary env-pointed at the provider's Anthropic-compatible endpoint, with the provider's own API key and an isolated `CLAUDE_CONFIG_DIR`, so it uses no Anthropic account, no claude.ai login, and no subscription.
