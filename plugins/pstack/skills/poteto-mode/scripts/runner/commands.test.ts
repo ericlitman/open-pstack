@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { invocationCommand } from "./commands.ts";
+import { invocationCommand, preflightCommand } from "./commands.ts";
 import type { RunnerOptions } from "./types.ts";
 
 function options(overrides: Partial<RunnerOptions> = {}): RunnerOptions {
@@ -144,6 +144,30 @@ describe("invocationCommand", () => {
         "Read,Write,Edit,Grep,Glob,Bash",
       ])
     );
+  });
+
+  it("runs gateway lanes with the exact claude argv for the lane's model", () => {
+    for (const [provider, model] of [
+      ["deepseek", "deepseek-flash"],
+      ["minimax", "MiniMax-M3"],
+    ] as const) {
+      const gateway = invocationCommand(options({ provider, model }));
+      const claude = invocationCommand(
+        options({ provider: "claude", model })
+      );
+      expect(gateway.command).toBe("claude");
+      expect(gateway.stdin).toBe("prompt");
+      expect(gateway.args).toEqual(claude.args);
+    }
+  });
+
+  it("preflights gateway lanes with a version probe, not an auth check", () => {
+    for (const provider of ["deepseek", "minimax"] as const) {
+      const spec = preflightCommand(provider);
+      expect(spec.command).toBe("claude");
+      expect(spec.args).toEqual(["--version"]);
+      expect(spec.stdin).toBe("none");
+    }
   });
 
   it("covers low, medium, and high for every external provider", () => {

@@ -110,6 +110,38 @@ describe("parseProviderOutput", () => {
     expect(parsed.reportedModel).toBe("claude-fable-9-9");
   });
 
+  it("parses gateway output as claude-shaped JSON with cost forced null", () => {
+    const parsed = parseProviderOutput(
+      "minimax",
+      JSON.stringify({
+        result: "GATEWAY_OK",
+        session_id: "mm-session",
+        usage: { input_tokens: 12, output_tokens: 5 },
+        total_cost_usd: 0.42,
+        modelUsage: { "minimax-m3": {} },
+      }),
+      "",
+      "MiniMax-M3"
+    );
+    expect(parsed).toMatchObject({
+      text: "GATEWAY_OK",
+      reportedModel: "minimax-m3",
+      sessionId: "mm-session",
+      usage: { inputTokens: 12, outputTokens: 5 },
+      costUsd: null,
+    });
+  });
+
+  it("matches gateway model slugs case-insensitively", () => {
+    expect(reportedModelMatches("minimax", "MiniMax-M3", "minimax-m3")).toBe(true);
+    expect(reportedModelMatches("deepseek", "deepseek-flash", "DeepSeek-Flash")).toBe(true);
+    expect(
+      reportedModelMatches("deepseek", "deepseek-flash", "deepseek-flash-0731")
+    ).toBe(true);
+    expect(reportedModelMatches("minimax", "MiniMax-M3", "some-other-model")).toBe(false);
+    expect(reportedModelMatches("claude", "MiniMax-M3", "minimax-m3")).toBe(false);
+  });
+
   it("matches only concrete Claude revisions from the requested rolling family", () => {
     expect(reportedModelMatches("claude", "fable", "claude-fable-9-9")).toBe(true);
     expect(reportedModelMatches("claude", "opus", "claude-opus-9")).toBe(true);

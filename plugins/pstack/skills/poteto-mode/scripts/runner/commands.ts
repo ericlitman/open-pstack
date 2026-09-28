@@ -4,6 +4,7 @@ import type {
   Provider,
   RunnerOptions,
 } from "./types.ts";
+import { isGatewayProvider } from "./types.ts";
 
 export interface CommandSpec {
   readonly command: string;
@@ -12,6 +13,14 @@ export interface CommandSpec {
 }
 
 export function preflightCommand(provider: Provider): CommandSpec {
+  if (isGatewayProvider(provider)) {
+    // Gateway lanes run the claude binary with token auth against a
+    // third-party endpoint. `claude auth status` semantics under token
+    // auth are undocumented, so the preflight only proves the binary
+    // executes; credentials are checked in-process by the gateway guard
+    // and the one-shot invocation is the real auth test.
+    return { command: "claude", args: ["--version"], stdin: "none" };
+  }
   switch (provider) {
     case "claude":
       return {
@@ -63,33 +72,40 @@ function effortOverride(effort: Effort): string {
   return `model_reasoning_effort=${JSON.stringify(effort)}`;
 }
 
+function claudeInvocation(options: RunnerOptions): CommandSpec {
+  return {
+    command: "claude",
+    args: [
+      "-p",
+      "--model",
+      options.model,
+      "--effort",
+      options.effort,
+      "--permission-mode",
+      permissionMode(options.mode),
+      "--setting-sources",
+      "project",
+      "--strict-mcp-config",
+      "--tools",
+      claudeTools(options.mode),
+      "--no-session-persistence",
+      "--disable-slash-commands",
+      "--disallowed-tools",
+      claudeDeniedTools(options.mode),
+      "--output-format",
+      "json",
+    ],
+    stdin: "prompt",
+  };
+}
+
 export function invocationCommand(options: RunnerOptions): CommandSpec {
+  // Gateway lanes use the same binary and argv as claude; the difference is
+  // injected environment (endpoint, token, isolated CLAUDE_CONFIG_DIR).
+  if (isGatewayProvider(options.provider)) return claudeInvocation(options);
   switch (options.provider) {
     case "claude":
-      return {
-        command: "claude",
-        args: [
-          "-p",
-          "--model",
-          options.model,
-          "--effort",
-          options.effort,
-          "--permission-mode",
-          permissionMode(options.mode),
-          "--setting-sources",
-          "project",
-          "--strict-mcp-config",
-          "--tools",
-          claudeTools(options.mode),
-          "--no-session-persistence",
-          "--disable-slash-commands",
-          "--disallowed-tools",
-          claudeDeniedTools(options.mode),
-          "--output-format",
-          "json",
-        ],
-        stdin: "prompt",
-      };
+      return claudeInvocation(options);
     case "codex":
       return {
         command: "codex",

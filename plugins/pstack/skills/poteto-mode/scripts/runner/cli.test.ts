@@ -40,4 +40,28 @@ describe("runner CLI parsing", () => {
       "greater than zero"
     );
   });
+
+  it("accepts gateway providers", () => {
+    const parsed = parseArgs([
+      ...argv().map((value, index, all) =>
+        all[index - 1] === "--provider"
+          ? "minimax"
+          : all[index - 1] === "--model"
+            ? "MiniMax-M3"
+            : value
+      ),
+    ]);
+    expect(parsed?.provider).toBe("minimax");
+    expect(parsed?.model).toBe("MiniMax-M3");
+  });
+
+  it("names the gateway providers in the provider rejection", () => {
+    expect(() =>
+      parseArgs(
+        argv().map((value, index, all) =>
+          all[index - 1] === "--provider" ? "gemini" : value
+        )
+      )
+    ).toThrow("deepseek, minimax");
+  });
 });

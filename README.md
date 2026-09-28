@@ -12,6 +12,12 @@ Lauren built pstack from the skills she uses to ship code at Cursor. In a [55-mi
 
 Open Pstack is an unofficial community project that makes pstack work in Claude Code and Codex. If Cursor is your main coding environment, use [Lauren's original pstack](https://github.com/cursor/plugins/tree/main/pstack). If Claude Code or Codex is your main coding environment, use this repository.
 
+## This fork: pstack-flex
+
+**pstack-flex** is a fork of [ericlitman/open-pstack](https://github.com/ericlitman/open-pstack) at v1.4.1. This change adds `deepseek` and `minimax` providers to the external runner. Each provider runs the stock `claude` binary against its Anthropic-compatible endpoint with its own API key. The runner uses an isolated `CLAUDE_CONFIG_DIR`, rejects OAuth credentials found there, and removes inherited Anthropic headers and provider-selection flags before starting the child. Gateway receipts keep token usage but set `costUsd` to null because Claude Code's cost estimate uses Anthropic prices.
+
+The stock setup and model matrix remain in place. A follow-up change will add gateway routes to setup and document the lane configurations. The fork's provenance and sync process are recorded in [UPSTREAM-FLEX.md](UPSTREAM-FLEX.md). Anthropic does not support pointing Claude Code at non-Anthropic endpoints; use synthetic data for gateway testing and keep API keys in your local environment.
+
 ## What pstack does
 
 pstack is a plugin for coding agents. It is not a new model or a hosted service. It gives your agent engineering rules, step-by-step workflows for different kinds of work, focused skills, and small local tools.

@@ -10,6 +10,11 @@ import {
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { invocationCommand, preflightCommand, type CommandSpec } from "./commands.ts";
+import {
+  GATEWAY_INHERITED_CONFLICTS,
+  gatewayEnvironment,
+  gatewayGuard,
+} from "./flex-providers.ts";
 import { versionedClaudeAlias } from "./model-aliases.ts";
 import { parseProviderOutput, reportedModelMatches } from "./parse-output.ts";
 import type {
@@ -18,7 +23,7 @@ import type {
   RunnerOptions,
   RunnerReceipt,
 } from "./types.ts";
-import { UsageError } from "./types.ts";
+import { isGatewayProvider, UsageError } from "./types.ts";
 
 const ERROR_EVIDENCE_LIMIT = 4_000;
 const GROK_PREFLIGHT_RETRY_DELAY_MS = 5_000;
@@ -131,7 +136,8 @@ const CLAUDE_IDENTITY = [
 
 export function childEnvironment(
   provider: Provider,
-  source: NodeJS.ProcessEnv = process.env
+  source: NodeJS.ProcessEnv = process.env,
+  model: string = ""
 ): NodeJS.ProcessEnv {
   const result = { ...source };
   const remove = provider === "claude"
@@ -140,6 +146,13 @@ export function childEnvironment(
       ? CLAUDE_IDENTITY
       : [...CODEX_IDENTITY, ...CLAUDE_IDENTITY];
   for (const key of remove) delete result[key];
+  if (isGatewayProvider(provider)) {
+    for (const key of Object.keys(result)) {
+      if (key.startsWith("ANTHROPIC_")) delete result[key];
+    }
+    for (const key of GATEWAY_INHERITED_CONFLICTS) delete result[key];
+    Object.assign(result, gatewayEnvironment(provider, model, source));
+  }
   return result;
 }
 
@@ -352,6 +365,9 @@ async function waitForGrokPreflightRetry(
 
 function preflightPassed(provider: Provider, model: string, result: ProcessResult): boolean {
   if (result.exitCode !== 0 || result.timedOut) return false;
+  // `claude --version` succeeded; gateway credentials were already verified
+  // in-process by the gateway guard before any subprocess ran.
+  if (isGatewayProvider(provider)) return true;
   const combined = `${result.stdout}\n${result.stderr}`;
   switch (provider) {
     case "claude": {
@@ -374,6 +390,9 @@ function preflightPassed(provider: Provider, model: string, result: ProcessResul
 }
 
 function successfulPreflightEvidence(provider: Provider, model: string): string {
+  if (isGatewayProvider(provider)) {
+    return "claude binary responded; gateway credentials verified in-process";
+  }
   return provider === "grok"
     ? `authenticated; model ${model} available`
     : "authenticated";
@@ -396,6 +415,11 @@ function preflightFailureStatus(
 ): ReceiptStatus {
   const status = unavailableStatus(value);
   if (status !== "child-failed") return status;
+  if (isGatewayProvider(provider)) {
+    // The gateway preflight is a version probe, not an auth check; a
+    // failure here means the binary misbehaved, not that auth failed.
+    return "child-failed";
+  }
   return provider === "grok" && !value.includes(model)
     ? "unavailable-model"
     : "unauthenticated";
@@ -451,6 +475,16 @@ function modelProof(
     };
   }
   if (provider === "codex" && reported === null) {
+    return {
+      reportedModel: null,
+      modelVerified: false,
+      modelEvidence: "pinned-argv",
+    };
+  }
+  if (isGatewayProvider(provider) && reported === null) {
+    // Third-party Anthropic-compatible endpoints do not reliably echo the
+    // requested model slug. A reported mismatch is a failure, since some
+    // gateways silently substitute a default model for unknown slugs.
     return {
       reportedModel: null,
       modelVerified: false,
@@ -534,7 +568,7 @@ async function executeLane(
 ): Promise<RunResult> {
   const startedAt = new Date(started).toISOString();
   const prompt = readFileSync(options.promptPath, "utf8");
-  const env = childEnvironment(options.provider);
+  const env = childEnvironment(options.provider, process.env, options.model);
   const executable = Bun.which(invocation.command, {
     PATH: env.PATH,
     cwd: options.cwd,
@@ -587,6 +621,37 @@ async function executeLane(
   }
   if (deadlineAt !== null && Date.now() >= deadlineAt) {
     return finishWithoutChild("timed-out", "before authentication preflight");
+  }
+
+  if (isGatewayProvider(options.provider)) {
+    const refusal = gatewayGuard(options.provider);
+    if (refusal !== null) {
+      const completed = Date.now();
+      receipt = completeReceipt(options, {
+        status: "unauthenticated",
+        startedAt,
+        completedAt: new Date(completed).toISOString(),
+        elapsedMs: completed - started,
+        executable,
+        preflight: preflightState,
+        argv: [executable ?? invocation.command, ...invocation.args],
+        exitCode: null,
+        signal: null,
+        reportedModel: null,
+        modelVerified: false,
+        modelEvidence: null,
+        sessionId: null,
+        usage: null,
+        costUsd: null,
+        error: {
+          message: refusal.message,
+          evidence: refusal.evidence,
+        },
+      });
+      removeIfExists(options.outputPath);
+      writeReceipt(options.receiptPath, receipt);
+      return { exitCode: statusExitCode("unauthenticated"), receipt };
+    }
   }
 
   if (executable === null) {
