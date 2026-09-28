@@ -39,6 +39,8 @@ Read the model matrices, stock and flex. Every non-alias value must match `<prov
 
 An unmatched provider/model, out-of-domain effort, duplicate role, or unknown role is inconsistent state. Stop, show the conflicting rows verbatim, and ask for an explicit matrix family or alias replacement. If one or more families have mixed efforts, show every conflicting family and role row, then ask for one normalized effort per family from its Selectable efforts cell. Do not invent a precedence rule. Do not probe or write while any inconsistency is unresolved.
 
+A family is a single `(provider, model)` matrix row. DeepSeek Flash and Pro have independent efforts, as do MiniMax M3 and M3.1 Flash Preview. Never group efforts or deduplicate probes by provider alone.
+
 One distinct effort per family is the current value. A family with no non-alias occurrence is unassigned; use its matrix Default effort as the proposed value and label it unassigned rather than calling it current.
 
 ### 4. Choose role assignments, then collect efforts
@@ -59,8 +61,10 @@ Probe only the assigned families' selected `provider:model@effort` pairs. Run on
 | Sol | Sol matrix row + selected effort | `codex exec` | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
 | Grok | Grok matrix row + selected effort | Grok CLI | Grok CLI | `grok models` must list the requested model; one-turn probe |
 | Opus | Opus matrix row + selected effort | native Agent `pstack-opus-<effort>` | Claude CLI | native one-turn probe or `claude auth status --json` plus one-turn probe |
-| DeepSeek | DeepSeek flex row + selected effort | external runner | external runner | `DEEPSEEK_API_KEY` present; isolated config dir free of OAuth credentials; one-turn probe confirms the endpoint |
-| MiniMax | MiniMax flex row + selected effort | external runner | external runner | `MINIMAX_API_KEY` present; isolated config dir free of OAuth credentials; one-turn probe confirms the endpoint |
+| DeepSeek Flash / Pro | Each assigned DeepSeek flex row + selected effort | external runner | external runner | `DEEPSEEK_API_KEY` present; isolated config dir free of OAuth credentials; one-turn probe confirms the endpoint |
+| MiniMax M3 / M3.1 Flash Preview | Each assigned MiniMax flex row + selected effort | external runner | external runner | `MINIMAX_API_KEY` present; isolated config dir free of OAuth credentials; one-turn probe confirms the endpoint |
+
+For MiniMax M3.1 Flash Preview, disclose the Token Plan requirement before probing. Use the eligible subscription key through `MINIMAX_API_KEY`; do not assume a working M3 key grants preview access. A failed preview probe must not silently select M3. Keep preview thinking enabled and verify requested effort forwarding; distinguish request evidence from hidden applied reasoning depth.
 
 Use a tiny read-only probe that returns a unique marker. A login-status command alone proves credentials, not that the requested model and effort flags run. Record native and external results separately. Never call the external launcher for the parent's own provider. On a Claude parent, the Fable and Opus probes are one-turn runs of the mapped `pstack-<stem>-<effort>` agent. On a Codex parent, the Sol probe is native `spawn_agent` with the selected `reasoning_effort`. Every other pair, flex families always included, uses the external runner with the selected effort flag. A flex probe doubles as the base-URL confirmation: it proves the documented default (or the operator's override) actually serves the lane's model.
 
@@ -74,6 +78,8 @@ Build the new sheet in memory. Do not write it yet.
 - Rerun: start from the normalized complete role map from step 2, preserving each loaded row's lane order and family (or alias) per lane.
 
 The role assignments were already chosen in step 4; do not re-open them here. Require every documented role to remain present and non-empty, `architect runners` to keep at least two entries, and the final role map to contain at least one assigned matrix family. There is no requirement to assign every matrix family. The sheet stores effort only in role descriptors, so an unassigned family's selection cannot persist without adding a second source of truth.
+
+Different models sharing a provider count as one provider, even when their efforts differ.
 
 Validate panel diversity: `arena runners` and `interrogate reviewers` must span at least two distinct providers. A single-provider panel is written only after the operator explicitly confirms the reduced diversity; record that confirmation in the setup report.
 

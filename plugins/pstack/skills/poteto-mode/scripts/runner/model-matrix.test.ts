@@ -366,10 +366,12 @@ describe("model matrix", () => {
       .slice(start + 1, end)
       .map((line) => line.trim())
       .filter((line) => line.startsWith("|"));
-    expect(table.length).toBe(2 + GATEWAY_PROVIDERS.length);
+    expect(table.length).toBeGreaterThan(2 + GATEWAY_PROVIDERS.length);
     expect(splitRow(table[0]).join("|")).toBe(FLEX_MATRIX_HEADER.join("|"));
     expect(isSeparator(splitRow(table[1]))).toBe(true);
-    const seen: GatewayProvider[] = [];
+    const seen = new Set<GatewayProvider>();
+    const families = new Set<string>();
+    const pairs = new Set<string>();
     for (const line of table.slice(2)) {
       const cells = splitRow(line);
       expect(cells.length).toBe(FLEX_MATRIX_HEADER.length);
@@ -377,8 +379,13 @@ describe("model matrix", () => {
         cells;
       expect(GATEWAY_PROVIDERS as readonly string[]).toContain(provider);
       const gateway = provider as GatewayProvider;
-      seen.push(gateway);
-      expect(family).toBe(gateway);
+      seen.add(gateway);
+      expect(/^[a-z0-9-]+$/.test(family)).toBe(true);
+      expect(families.has(family)).toBe(false);
+      families.add(family);
+      const pair = `${provider}:${model}`;
+      expect(pairs.has(pair)).toBe(false);
+      pairs.add(pair);
       expect(/^[A-Za-z0-9.-]+$/.test(model)).toBe(true);
       const selectable = selectableRaw.split(/\s+/).map(asEffort);
       expect(selectable).toContain(asEffort(defaultEffortRaw));
@@ -386,7 +393,15 @@ describe("model matrix", () => {
       expect(baseUrl).toBe(GATEWAY_SPECS[gateway].baseUrlDefault);
       expect(baseUrl.startsWith("https://")).toBe(true);
     }
-    expect(seen).toEqual([...GATEWAY_PROVIDERS]);
+    expect([...seen]).toEqual([...GATEWAY_PROVIDERS]);
+    for (const pair of [
+      "deepseek:deepseek-flash",
+      "deepseek:deepseek-v4-pro",
+      "minimax:MiniMax-M3",
+      "minimax:MiniMax-M3.1-Flash-Preview",
+    ]) expect(pairs.has(pair)).toBe(true);
+    expect(setup).toContain("Never group efforts or deduplicate probes by provider alone.");
+    expect(setup).toContain("Different models sharing a provider count as one provider");
     // The stock quad and first-run sheet must not carry flex descriptors:
     // upstream's own checks parse descriptors with a lowercase-only,
     // three-provider grammar and must never see a flex lane.
