@@ -1,7 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { EFFORTS, type Effort } from "./types.ts";
+import { GATEWAY_SPECS } from "./flex-providers.ts";
+import {
+  EFFORTS,
+  GATEWAY_PROVIDERS,
+  type Effort,
+  type GatewayProvider,
+} from "./types.ts";
 
 const PLUGIN_ROOT = join(import.meta.dir, "../../../..");
 const DISPATCH_PATH = join(
@@ -51,10 +57,20 @@ const SHEET_ROLES = [
 const SETUP_SECTION_ORDER = [
   "### 2. Load current state",
   "### 3. Parse per-family efforts",
-  "### 4. Collect one requested effort per family",
-  "### 5. Probe the four requested pairs",
+  "### 4. Choose role assignments, then collect efforts",
+  "### 5. Probe the assigned pairs",
   "### 6. Render, preserving role families",
   "### 7. Confirm and commit",
+] as const;
+
+const FLEX_MATRIX_HEADER = [
+  "Family",
+  "Provider",
+  "Model",
+  "Default effort",
+  "Selectable efforts",
+  "API key variable",
+  "Base URL default",
 ] as const;
 
 interface MatrixRow {
@@ -317,7 +333,13 @@ describe("model matrix", () => {
     expect(setup).toContain("Do not invent a precedence rule.");
     expect(setup).toContain("Do not probe or write while any inconsistency is unresolved.");
     expect(setup).toContain("A failed probe writes nothing:");
-    expect(setup).toContain("Run one probe per family");
+    expect(setup).toContain("Run one probe per assigned family");
+    expect(setup).toContain("There is no requirement to assign every matrix family.");
+    expect(setup).toContain("`architect runners` to keep at least two entries");
+    expect(setup).toContain("span at least two distinct providers");
+    expect(setup).toContain(
+      "A failed model demands explicit repair or role reassignment before saving."
+    );
     expect(setup).toContain("normalized complete role map from step 2");
     expect(setup).toContain("starts with `claude-fable-` or `claude-opus-`");
     expect(setup).toContain("preserving the provider, effort, role, and lane order");
@@ -326,6 +348,49 @@ describe("model matrix", () => {
     expect(setup).toContain("An effort-only rerun cannot change a role's family.");
     expect(setup).toContain("<!-- pstack:models:begin -->");
     expect(setup).toContain("<!-- pstack:models:end -->");
+  });
+
+  it("keeps the flex matrix additive, parseable, and aligned with the runner", () => {
+    const dispatch = readFileSync(DISPATCH_PATH, "utf8");
+    const lines = dispatch.split(/\r?\n/);
+    const start = lines.findIndex((line) => line.trim() === "## Flex model matrix");
+    expect(start).toBeGreaterThan(-1);
+    let end = lines.length;
+    for (let i = start + 1; i < lines.length; i++) {
+      if (lines[i].startsWith("## ")) {
+        end = i;
+        break;
+      }
+    }
+    const table = lines
+      .slice(start + 1, end)
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("|"));
+    expect(table.length).toBe(2 + GATEWAY_PROVIDERS.length);
+    expect(splitRow(table[0]).join("|")).toBe(FLEX_MATRIX_HEADER.join("|"));
+    expect(isSeparator(splitRow(table[1]))).toBe(true);
+    const seen: GatewayProvider[] = [];
+    for (const line of table.slice(2)) {
+      const cells = splitRow(line);
+      expect(cells.length).toBe(FLEX_MATRIX_HEADER.length);
+      const [family, provider, model, defaultEffortRaw, selectableRaw, keyVar, baseUrl] =
+        cells;
+      expect(GATEWAY_PROVIDERS as readonly string[]).toContain(provider);
+      const gateway = provider as GatewayProvider;
+      seen.push(gateway);
+      expect(family).toBe(gateway);
+      expect(/^[A-Za-z0-9.-]+$/.test(model)).toBe(true);
+      const selectable = selectableRaw.split(/\s+/).map(asEffort);
+      expect(selectable).toContain(asEffort(defaultEffortRaw));
+      expect(keyVar).toBe(GATEWAY_SPECS[gateway].apiKeyVar);
+      expect(baseUrl).toBe(GATEWAY_SPECS[gateway].baseUrlDefault);
+      expect(baseUrl.startsWith("https://")).toBe(true);
+    }
+    expect(seen).toEqual([...GATEWAY_PROVIDERS]);
+    // The stock quad and first-run sheet must not carry flex descriptors:
+    // upstream's own checks parse descriptors with a lowercase-only,
+    // three-provider grammar and must never see a flex lane.
+    expect(firstRunSheet(setup)).not.toMatch(/deepseek:|minimax:/i);
   });
 
   it("binds Claude-native dispatch to the matrix mapping", () => {

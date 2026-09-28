@@ -14,9 +14,11 @@ Open Pstack is an unofficial community project that makes pstack work in Claude 
 
 ## This fork: pstack-flex
 
-**pstack-flex** is a fork of [ericlitman/open-pstack](https://github.com/ericlitman/open-pstack) at v1.4.1. This change adds `deepseek` and `minimax` providers to the external runner. Each provider runs the stock `claude` binary against its Anthropic-compatible endpoint with its own API key. The runner uses an isolated `CLAUDE_CONFIG_DIR`, rejects OAuth credentials found there, and removes inherited Anthropic headers and provider-selection flags before starting the child. Gateway receipts keep token usage but set `costUsd` to null because Claude Code's cost estimate uses Anthropic prices.
+**pstack-flex** is a fork of [ericlitman/open-pstack](https://github.com/ericlitman/open-pstack) at v1.4.1. Setup can assign only the model families you have. The `deepseek:*` and `minimax:*` routes run the stock `claude` binary against each lab's Anthropic-compatible endpoint with that lab's API key. The runner isolates Claude configuration, strips inherited provider routing and Anthropic headers, and rejects OAuth credentials found in the gateway config directory. Gateway receipts keep token usage but set `costUsd` to null because Claude Code's cost estimate uses Anthropic prices.
 
-The stock setup and model matrix remain in place. A follow-up change will add gateway routes to setup and document the lane configurations. The fork's provenance and sync process are recorded in [UPSTREAM-FLEX.md](UPSTREAM-FLEX.md). Anthropic does not support pointing Claude Code at non-Anthropic endpoints; use synthetic data for gateway testing and keep API keys in your local environment.
+The [lane guide](docs/LANES.md) covers setup, costs, and safety notes. The fork's provenance and sync process are recorded in [UPSTREAM-FLEX.md](UPSTREAM-FLEX.md). Anthropic does not support pointing Claude Code at non-Anthropic endpoints; use synthetic data for gateway testing and keep API keys in your local environment.
+
+New here? **[docs/USAGE.md](docs/USAGE.md)** is the walkthrough: diagrams of how work flows through the lanes, three setup configurations (full frontier, hybrid saver, zero-subscription), copy-paste examples for the daily skills, and troubleshooting.
 
 ## What pstack does
 
@@ -45,7 +47,7 @@ You need a current Claude Code or Codex installation. For the full four-model re
 Run these commands inside Claude Code:
 
 ```text
-/plugin marketplace add ericlitman/open-pstack
+/plugin marketplace add thisguymartin/pstack-flex
 /plugin install pstack@open-pstack
 /reload-plugins
 ```
@@ -55,7 +57,7 @@ Run these commands inside Claude Code:
 Run these commands in your shell:
 
 ```shell
-codex plugin marketplace add ericlitman/open-pstack --ref main
+codex plugin marketplace add thisguymartin/pstack-flex --ref main
 codex plugin add pstack@open-pstack
 ```
 

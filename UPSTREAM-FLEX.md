@@ -22,11 +22,11 @@ All flex changes are additive and live in port-owned files so upstream merges st
 
 - `plugins/pstack/skills/poteto-mode/scripts/runner/flex-providers.ts` and `flex-providers.test.ts` (new)
 - Gateway-provider hooks in `runner/{types,commands,run,parse-output,cli}.ts` and their tests
-- This file, the README fork section, and the NOTICE/LICENSE additions
+- The "Flex model matrix" section and route-table columns in `references/provider-dispatch.md`
+- The assignment-first restructure of `skills/setup-pstack/SKILL.md`
+- `docs/LANES.md`, this file, the README fork section, and the NOTICE/LICENSE/CHANGES additions
 
-The follow-up routing and documentation changes will add the flex model matrix, assignment-first setup, and `docs/LANES.md`.
-
-The stock model matrix, the first-run sheet, every upstream skill body, and the static quad invariants are byte-unchanged.
+The stock model matrix, the first-run sheet, every upstream skill body, and the static quad invariants are byte-unchanged. Flex rows and setup instructions are additive.
 
 ## Merge procedure
 
