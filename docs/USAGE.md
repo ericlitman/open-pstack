@@ -231,3 +231,7 @@ Every external lane writes a JSON receipt next to its output. The fields that ma
 | Exit 69 `unavailable-cli` | the `claude` binary isn't on PATH for the runner | install it or fix PATH |
 | A panel ran with fewer lanes than configured | a lane dropped out with a named receipt | read that receipt; pstack proceeds N-1 and never silently substitutes a model |
 | Everything gateway broke after a claude CLI update | Anthropic doesn't support third-party endpoints; compatibility can shift | pin the CLI version on machines that depend on gateway lanes; see [LANES.md](LANES.md#safety-and-policy) |
+
+## Selecting the additional gateway models
+
+Run `/setup-pstack` and assign `deepseek-pro` (`deepseek:deepseek-v4-pro@high`) or `minimax-preview` (`minimax:MiniMax-M3.1-Flash-Preview@high`) to named roles. Existing `deepseek` and `minimax` choices remain available. Each model has its own effort selection and live probe. MiniMax preview requires an eligible Token Plan key in `MINIMAX_API_KEY`; see [model choices and thinking controls](LANES.md#multiple-models-per-provider). No existing assignment changes until setup succeeds and you confirm the rendered sheet.
