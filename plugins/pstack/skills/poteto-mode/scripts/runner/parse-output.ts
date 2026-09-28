@@ -168,6 +168,13 @@ export function parseProviderOutput(
   stderr: string,
   requestedModel: string
 ): ParsedOutput {
+  if (isGatewayProvider(provider)) {
+    // Gateway lanes emit claude-shaped JSON, but the CLI's
+    // total_cost_usd is computed at Anthropic rates and would be
+    // fiction for third-party traffic. Token usage stays; cost is null.
+    const parsed = parseClaude(stdout, requestedModel, provider);
+    return { ...parsed, costUsd: null };
+  }
   switch (provider) {
     case "claude":
       return parseClaude(stdout, requestedModel);
@@ -175,14 +182,6 @@ export function parseProviderOutput(
       return parseCodex(stdout);
     case "grok":
       return parseGrok(stdout, requestedModel);
-    case "deepseek":
-    case "minimax": {
-      // Gateway lanes emit claude-shaped JSON, but the CLI's
-      // total_cost_usd is computed at Anthropic rates and would be
-      // fiction for third-party traffic. Token usage stays; cost is null.
-      const parsed = parseClaude(stdout, requestedModel, provider);
-      return { ...parsed, costUsd: null };
-    }
   }
 }
 

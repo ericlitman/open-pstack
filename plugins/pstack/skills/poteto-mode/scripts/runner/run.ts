@@ -362,6 +362,9 @@ async function waitForGrokPreflightRetry(
 
 function preflightPassed(provider: Provider, model: string, result: ProcessResult): boolean {
   if (result.exitCode !== 0 || result.timedOut) return false;
+  // `claude --version` succeeded; gateway credentials were already verified
+  // in-process by the gateway guard before any subprocess ran.
+  if (isGatewayProvider(provider)) return true;
   const combined = `${result.stdout}\n${result.stderr}`;
   switch (provider) {
     case "claude": {
@@ -380,11 +383,6 @@ function preflightPassed(provider: Provider, model: string, result: ProcessResul
       return /logged in/i.test(combined);
     case "grok":
       return /logged in/i.test(combined) && combined.includes(model);
-    case "deepseek":
-    case "minimax":
-      // `claude --version` succeeded; credentials were already verified
-      // in-process by the gateway guard before any subprocess ran.
-      return true;
   }
 }
 

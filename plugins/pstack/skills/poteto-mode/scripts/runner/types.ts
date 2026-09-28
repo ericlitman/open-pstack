@@ -1,8 +1,9 @@
 export const PARENTS = ["claude", "codex"] as const;
-export const PROVIDERS = ["claude", "codex", "grok", "deepseek", "minimax"] as const;
 // pstack-flex: gateway providers run the stock `claude` binary against a
-// third-party Anthropic-compatible endpoint with injected environment.
+// third-party Anthropic-compatible endpoint with injected environment. Adding
+// one here requires a matching row in flex-providers.ts GATEWAY_SPECS.
 export const GATEWAY_PROVIDERS = ["deepseek", "minimax"] as const;
+export const PROVIDERS = ["claude", "codex", "grok", ...GATEWAY_PROVIDERS] as const;
 export const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
 export const ACCESS_MODES = ["read-only", "isolated-write"] as const;
 
