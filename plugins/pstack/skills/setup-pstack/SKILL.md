@@ -5,7 +5,7 @@ description: Configure pstack's provider-qualified models, per-family requested 
 
 # Setup pstack
 
-Configure one portable model sheet for the current parent harness. Read [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md) before probing or writing anything. Its model matrices (stock, additional, and flex), descriptor grammar, and route table are the contract. Role assignments are selected first; then choose one requested effort per assigned matrix family. Do not add a second configuration file, a runtime resolver, or a weaker-model fallback.
+Configure one portable model sheet for the current parent harness. Read [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md) before probing or writing anything. Its model matrices (stock and flex), descriptor grammar, and route table are the contract. Role assignments are selected first; then choose one requested effort per assigned matrix family. Do not add a second configuration file, a runtime resolver, or a weaker-model fallback.
 
 Claude Code writes `~/.claude/pstack-models.md` and loads it from `~/.claude/CLAUDE.md` with:
 
@@ -35,7 +35,7 @@ Treat the normalized values as current role-to-family assignments. Overlay those
 
 ### 3. Parse per-family efforts
 
-Read the model matrices, stock, additional, and flex. Every non-alias value must match `<provider>:<model>@<effort>`. Map it to exactly one matrix family by `(provider, model)`, require its effort to appear in that row's Selectable efforts cell, and collect the effort. `inherit-parent` and `auto` rows carry no family effort.
+Read the model matrices, stock and flex. Every non-alias value must match `<provider>:<model>@<effort>`. Map it to exactly one matrix family by `(provider, model)`, require its effort to appear in that row's Selectable efforts cell, and collect the effort. `inherit-parent` and `auto` rows carry no family effort.
 
 An unmatched provider/model, out-of-domain effort, duplicate role, or unknown role is inconsistent state. Stop, show the conflicting rows verbatim, and ask for an explicit matrix family or alias replacement. If one or more families have mixed efforts, show every conflicting family and role row, then ask for one normalized effort per family from its Selectable efforts cell. Do not invent a precedence rule. Do not probe or write while any inconsistency is unresolved.
 
@@ -45,9 +45,9 @@ One distinct effort per family is the current value. A family with no non-alias 
 
 ### 4. Choose role assignments, then collect efforts
 
-Role assignments come first. Show the current role-to-family map (loaded and normalized from step 2, or the first-run map from step 7) and ask whether to keep it or change named roles. Keeping it is the default. A changed role may use any stock, additional, or flex matrix family, `inherit-parent`, or `auto`. Apply only role changes the operator names; never offer a reset of a customized sheet to the first-run assignments.
+Role assignments come first. Show the current role-to-family map (loaded and normalized from step 2, or the first-run map from step 7) and ask whether to keep it or change named roles. Keeping it is the default. A changed role may use any stock or flex matrix family, `inherit-parent`, or `auto`. Apply only role changes the operator names; never offer a reset of a customized sheet to the first-run assignments.
 
-Offer Astra, GPT-6 Sol, and Luna from the additional matrix when changing `architect runners` or another configurable role. Read each model, proposed effort, and selectable efforts from its row. The additional families and stock Sol are separate families even though they share the Codex provider; changing one family's effort does not change another's. GPT-6 Sol uses the `sol-6` family; the stock `sol` family keeps GPT-5.6 Sol.
+Offer every stock family, including Astra, GPT-6 Sol, and Luna, when changing `architect runners` or another configurable role. Read each model, proposed effort, and selectable efforts from its row. The Codex families are separate families even though they share the Codex provider; changing one family's effort does not change another's. GPT-6 Sol uses the `sol-6` family; the `sol` family keeps GPT-5.6 Sol for sheets that still assign it.
 
 The assigned families are exactly the matrix families that appear in the resulting role map. An unassigned family gets no effort question and no probe. There is no requirement to assign every matrix family.
 
@@ -61,9 +61,9 @@ Probe only the assigned families' selected `provider:model@effort` pairs. Run on
 |---|---|---|---|---|
 | Fable | Fable matrix row + selected effort | native Agent `pstack-fable-<effort>` | Claude CLI | native one-turn probe or `claude auth status --json` plus one-turn probe |
 | Sol | Sol matrix row + selected effort | `codex exec` | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
-| Astra | Astra additional row + selected effort | external runner | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
-| GPT-6 Sol | sol-6 additional row + selected effort | external runner | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
-| Luna | Luna additional row + selected effort | external runner | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
+| Astra | Astra matrix row + selected effort | external runner | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
+| GPT-6 Sol | sol-6 matrix row + selected effort | external runner | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
+| Luna | Luna matrix row + selected effort | external runner | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
 | Grok | Grok matrix row + selected effort | Grok CLI | Grok CLI | `grok models` must list the requested model; one-turn probe |
 | Opus | Opus matrix row + selected effort | native Agent `pstack-opus-<effort>` | Claude CLI | native one-turn probe or `claude auth status --json` plus one-turn probe |
 | DeepSeek Flash / Pro | Each assigned DeepSeek flex row + selected effort | external runner | external runner | `DEEPSEEK_API_KEY` present; isolated config dir free of OAuth credentials; one-turn probe confirms the endpoint |
@@ -88,7 +88,7 @@ Different models sharing a provider count as one provider, even when their effor
 
 Validate panel diversity: `arena runners` and `interrogate reviewers` must span at least two distinct providers. A single-provider panel is written only after the operator explicitly confirms the reduced diversity; record that confirmation in the setup report.
 
-Rewrite every matrix-family descriptor to `provider:model@<requested effort for that family>`. Leave `inherit-parent` and `auto` unchanged. An effort-only rerun cannot change a role's family. Changing Grok's effort updates every Grok occurrence and does not move a Sol role onto Grok. Refuse an unqualified slug, an unavailable route, a model outside the stock, additional, and flex matrix families, or a provider/model mismatch.
+Rewrite every matrix-family descriptor to `provider:model@<requested effort for that family>`. Leave `inherit-parent` and `auto` unchanged. An effort-only rerun cannot change a role's family. Changing Grok's effort updates every Grok occurrence and does not move a Sol role onto Grok. Refuse an unqualified slug, an unavailable route, a model outside the stock and flex matrix families, or a provider/model mismatch.
 
 ### 7. Confirm and commit
 
@@ -105,21 +105,21 @@ After the operator confirms, write the in-memory render from step 6. Never paste
 
 Provider-qualified per-role choices. Read the installed pstack provider-dispatch reference before dispatching a configured role. Every documented role remains present. `inherit-parent` and `auto` use the parent model natively and still count as one panel lane.
 
-feature, refactoring: grok:grok-4.6@xhigh
-bug-fix: codex:gpt-5.6-sol@max
-perf-issue: codex:gpt-5.6-sol@max
-hillclimb: codex:gpt-5.6-sol@max
+feature, refactoring: codex:gpt-6-sol@high
+bug-fix: codex:gpt-6-sol@high
+perf-issue: codex:gpt-6-sol@high
+hillclimb: codex:gpt-6-sol@high
 judgment and prose: claude:fable@max
 hardest tasks: claude:fable@max
-how explorer: grok:grok-4.6@xhigh
+how explorer: codex:gpt-6-luna@high
 how explainer: claude:fable@max
 why investigators, synthesizer: inherit-parent
 reflect tooling, judgment, divergent, synthesizer: inherit-parent
-arena runners: claude:fable@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:opus@xhigh
-arena cross-judge pool: claude:fable@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:opus@xhigh
-swarm workers: grok:grok-4.6@xhigh
-architect runners: claude:fable@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:opus@xhigh
-interrogate reviewers: claude:fable@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:opus@xhigh
+arena runners: claude:fable@max, codex:gpt-6-astra@high, grok:grok-4.6@xhigh, claude:opus@xhigh
+arena cross-judge pool: claude:fable@max, codex:gpt-6-astra@high, grok:grok-4.6@xhigh, claude:opus@xhigh
+swarm workers: codex:gpt-6-luna@high
+architect runners: claude:fable@max, codex:gpt-6-astra@high, grok:grok-4.6@xhigh, claude:opus@xhigh
+interrogate reviewers: claude:fable@max, codex:gpt-6-astra@high, grok:grok-4.6@xhigh, claude:opus@xhigh
 ```
 
 ### 8. Wire it in

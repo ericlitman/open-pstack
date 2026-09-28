@@ -39,7 +39,7 @@ Start all reviewers in one fan-out phase. Use `interrogate reviewers` from the c
 | Subagent | Default model |
 |----------|---------------|
 | Reviewer A | `claude:fable@max` |
-| Reviewer B | `codex:gpt-5.6-sol@max` |
+| Reviewer B | `codex:gpt-6-astra@high` |
 | Reviewer C | `grok:grok-4.6@xhigh` |
 | Reviewer D | `claude:opus@xhigh` |
 

@@ -73,32 +73,15 @@ else
 fi
 
 # Static invariant (CHANGES maintenance note): provider-dispatch owns the default
-# provider/model quad and the three panel skills plus setup-pstack copy it verbatim.
+# panel quad (its "## Default panel" line) and the three panel skills plus setup-pstack copy it verbatim.
 setup="$repo/plugins/pstack/skills/setup-pstack/SKILL.md"
 dispatch="$repo/plugins/pstack/skills/poteto-mode/references/provider-dispatch.md"
 quad_of() { { grep -oE '(claude|codex|grok):[a-z0-9.-]+@(low|medium|high|xhigh|max)' || true; } | tr '\n' ' ' | sed 's/ $//'; }
 canon_quad="$(awk '
-  $0 == "## Model matrix" { in_matrix = 1; next }
-  in_matrix && /^## / { exit }
-  in_matrix && /^\|/ {
-    line = $0
-    sub(/^\|/, "", line)
-    sub(/\|$/, "", line)
-    n = split(line, cells, "|")
-    for (i = 1; i <= n; i++) {
-      gsub(/^ +| +$/, "", cells[i])
-      gsub(/`/, "", cells[i])
-    }
-    family = cells[1]
-    if (family == "Family" || family ~ /^:?-+:?$/) next
-    provider = cells[3]
-    model = cells[4]
-    effort = cells[5]
-    if (out != "") out = out " "
-    out = out provider ":" model "@" effort
-  }
-  END { print out }
-' "$dispatch")"
+  $0 == "## Default panel" { in_panel = 1; next }
+  in_panel && /^## / { exit }
+  in_panel && /^`/ { print; exit }
+' "$dispatch" | quad_of)"
 quad_bad=""
 [ -n "$canon_quad" ] || quad_bad="could not read the canonical quad from $dispatch"$'\n'
 # Anchor on the quad's last slug rather than a hard-coded one, so a model swap in
@@ -350,14 +333,14 @@ else
 fi
 
 sol_descriptor="$(awk -F '|' '
-  $2 ~ /^[[:space:]]*sol[[:space:]]*$/ {
+  $2 ~ /^[[:space:]]*sol-6[[:space:]]*$/ {
     for (i = 4; i <= 6; i++) gsub(/^[[:space:]]+|[[:space:]]+$/, "", $i)
     print $4 ":" $5 "@" $6
   }
 ' "$dispatch")"
 solo_code_bad=""
 if [ -z "$sol_descriptor" ]; then
-  solo_code_bad="could not read the sol row from $dispatch"$'\n'
+  solo_code_bad="could not read the sol-6 row from $dispatch"$'\n'
 fi
 for role in bug-fix perf-issue hillclimb; do
   setup_descriptor="$(sed -n "s/^${role}: //p" "$setup")"
@@ -371,11 +354,11 @@ for role in bug-fix perf-issue hillclimb; do
   fi
 done
 if [ -n "$solo_code_bad" ]; then
-  note "FAIL: solo code roles must use the sol row:"
+  note "FAIL: solo code roles must use the sol-6 row:"
   note "$solo_code_bad"
   fail=1
 else
-  note "ok: solo code roles stay on the sol row ($sol_descriptor)"
+  note "ok: solo code roles stay on the sol-6 row ($sol_descriptor)"
 fi
 
 codex_manifest="$plugin/.codex-plugin/plugin.json"

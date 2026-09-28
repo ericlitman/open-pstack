@@ -14,26 +14,27 @@ pstack model choices are provider-qualified descriptors:
 | sol | gpt-5.6-sol-max | codex | gpt-5.6-sol | max | low medium high xhigh max | - |
 | grok | grok-4.6-fast-xhigh | grok | grok-4.6 | xhigh | low medium high xhigh max | - |
 | opus | opus | claude | opus | xhigh | low medium high xhigh max | opus |
-
-The allowed effort universe is exactly `low`, `medium`, `high`, `xhigh`, `max`. First-run requested efforts are the Default effort cell of each row. A Claude-native agent stem of `-` means the family has no Claude-native agent. Otherwise the shipped agent name is `pstack-<stem>-<effort>`.
-
-`fable` and `opus` are Claude Code's rolling aliases. Claude resolves each alias to the latest available family revision. A runner receipt keeps the requested alias in `model` and the concrete provider-reported revision in `reportedModel`; verification accepts only a numeric `claude-fable-*` or `claude-opus-*` revision from the matching family.
-
-## Additional model matrix
-
-pstack-flex additions using the existing provider routes. These optional families do not change the stock matrix or first-run role assignments. Default effort is pstack's proposed requested effort when assigning a family, not the provider's default. `-` in Upstream pstack choice means there is no upstream default to replace.
-
-| Family | Upstream pstack choice | Provider | Model | Default effort | Selectable efforts | Claude-native agent stem |
-|---|---|---|---|---|---|---|
 | astra | - | codex | gpt-6-astra | high | low medium high xhigh max | - |
 | sol-6 | - | codex | gpt-6-sol | high | low medium high xhigh max | - |
 | luna | - | codex | gpt-6-luna | high | low medium high xhigh max | - |
 
-These Codex families use native `spawn_agent` under a Codex parent and the external Codex runner under a Claude Code parent. Setup may assign them to any configurable role, including `architect runners`, after each requested model and effort passes the parent-specific probe. The `sol-6` family is independent of the stock `sol` family; existing GPT-5.6 Sol assignments stay unchanged.
+The allowed effort universe is exactly `low`, `medium`, `high`, `xhigh`, `max`. First-run requested efforts are the Default effort cell of each row. A Claude-native agent stem of `-` means the family has no Claude-native agent. Otherwise the shipped agent name is `pstack-<stem>-<effort>`. `-` in Upstream pstack choice means Cursor's pstack has no default for that family; the row is fork-owned.
+
+`fable` and `opus` are Claude Code's rolling aliases. Claude resolves each alias to the latest available family revision. A runner receipt keeps the requested alias in `model` and the concrete provider-reported revision in `reportedModel`; verification accepts only a numeric `claude-fable-*` or `claude-opus-*` revision from the matching family.
+
+The `astra`, `sol-6`, and `luna` rows are the GPT-6 Codex families (pstack-flex addition). These Codex families use native `spawn_agent` under a Codex parent and the external Codex runner under a Claude Code parent. Each is its own family with its own requested effort and probe; `sol-6` is independent of `sol`, so an existing GPT-5.6 Sol assignment stays unchanged until setup reassigns the role. All Codex families count as one provider for panel diversity.
+
+## Default panel
+
+The first-run panel roles (`arena runners`, `arena cross-judge pool`, `architect runners`, `interrogate reviewers`) use these four lanes, one per entry, at each family's default effort:
+
+`claude:fable@max, codex:gpt-6-astra@high, grok:grok-4.6@xhigh, claude:opus@xhigh`
+
+This line is the single source for the panel default. `setup-pstack`'s first-run sheet and the `arena`, `architect`, and `interrogate` skills copy it verbatim; the static invariant check fails when they drift. Solo code-writing roles (`feature, refactoring`, `bug-fix`, `perf-issue`, `hillclimb`) default to the `sol-6` row; exploration and swarm roles default to the `luna` row.
 
 ## Flex model matrix
 
-pstack-flex addition. The stock matrix above is upstream-owned and unchanged; these lanes are additive. A flex lane runs the stock `claude` binary env-pointed at the provider's Anthropic-compatible endpoint, with the provider's own API key and an isolated `CLAUDE_CONFIG_DIR`, so it uses no Anthropic account, no claude.ai login, and no subscription.
+pstack-flex addition. These lanes are additive. A flex lane runs the stock `claude` binary env-pointed at the provider's Anthropic-compatible endpoint, with the provider's own API key and an isolated `CLAUDE_CONFIG_DIR`, so it uses no Anthropic account, no claude.ai login, and no subscription.
 
 | Family | Provider | Model | Default effort | Selectable efforts | API key variable | Base URL default |
 |---|---|---|---|---|---|---|

@@ -30,7 +30,8 @@ const MATRIX_HEADER = [
   "Claude-native agent stem",
 ] as const;
 
-const FAMILY_ORDER = ["fable", "sol", "grok", "opus"] as const;
+const FAMILY_ORDER = ["fable", "sol", "grok", "opus", "astra", "sol-6", "luna"] as const;
+const GPT6_FAMILIES = ["astra", "sol-6", "luna"] as const;
 const PROVIDERS = ["claude", "codex", "grok"] as const;
 const DESCRIPTOR_RE =
   /(claude|codex|grok):[a-z0-9.-]+@(low|medium|high|xhigh|max)/g;
@@ -182,10 +183,25 @@ function parseModelMatrix(
   });
 }
 
-function defaultDescriptors(rows: MatrixRow[]): string[] {
-  return rows.map(
-    (row) => `${row.provider}:${row.model}@${row.defaultEffort}`
-  );
+function defaultDescriptor(row: MatrixRow): string {
+  return `${row.provider}:${row.model}@${row.defaultEffort}`;
+}
+
+function parseDefaultPanel(markdown: string): string[] {
+  const lines = markdown.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === "## Default panel");
+  if (start < 0) {
+    throw new Error("missing ## Default panel");
+  }
+  for (let i = start + 1; i < lines.length; i++) {
+    if (lines[i].startsWith("## ")) {
+      break;
+    }
+    if (lines[i].startsWith("`")) {
+      return lines[i].match(DESCRIPTOR_RE) ?? [];
+    }
+  }
+  throw new Error("## Default panel has no descriptor line");
 }
 
 function parseFrontmatter(text: string): {
@@ -223,9 +239,8 @@ function firstRunSheet(setup: string): string {
 describe("model matrix", () => {
   const dispatch = readFileSync(DISPATCH_PATH, "utf8");
   const rows = parseModelMatrix(dispatch);
-  const additionalRows = parseModelMatrix(dispatch, "## Additional model matrix", 3);
   const setup = readFileSync(SETUP_PATH, "utf8");
-  const quad = defaultDescriptors(rows);
+  const panel = parseDefaultPanel(dispatch);
 
   it("owns the effort universe and first-run defaults", () => {
     expect([...EFFORTS]).toEqual(["low", "medium", "high", "xhigh", "max"]);
@@ -245,6 +260,9 @@ describe("model matrix", () => {
       ["sol", "max"],
       ["grok", "xhigh"],
       ["opus", "xhigh"],
+      ["astra", "high"],
+      ["sol-6", "high"],
+      ["luna", "high"],
     ]);
     expect(
       rows
@@ -259,7 +277,7 @@ describe("model matrix", () => {
   it("ships exactly the declared Claude-native frontier agents", () => {
     const expected = new Set<string>();
     const familyBodies = new Map<string, string>();
-    for (const row of [...rows, ...additionalRows]) {
+    for (const row of rows) {
       const stem = row.claudeNativeAgentStem;
       if (stem === null) {
         continue;
@@ -300,47 +318,76 @@ describe("model matrix", () => {
     expect(shipped).toEqual([...expected].sort());
   });
 
-  it("adds GPT-6 families without changing the stock matrix or first-run assignments", () => {
-    expect(additionalRows.map((row) => [row.family, row.model])).toEqual([
+  it("ships the GPT-6 Codex families as stock rows and puts them in the first-run sheet", () => {
+    const gpt6Rows = rows.filter((row) =>
+      (GPT6_FAMILIES as readonly string[]).includes(row.family)
+    );
+    expect(gpt6Rows.map((row) => [row.family, row.model])).toEqual([
       ["astra", "gpt-6-astra"],
       ["sol-6", "gpt-6-sol"],
       ["luna", "gpt-6-luna"],
     ]);
-    for (const row of additionalRows) {
+    const sheet = firstRunSheet(setup);
+    for (const row of gpt6Rows) {
       expect(row.upstreamChoice).toBe("-");
       expect(row.provider).toBe("codex");
       expect(row.defaultEffort).toBe("high");
       expect(row.selectableEfforts).toEqual([...EFFORTS]);
       expect(row.claudeNativeAgentStem).toBeNull();
-      expect(firstRunSheet(setup)).not.toContain(row.model);
+      expect(sheet).toContain(defaultDescriptor(row));
     }
-    const allRows = [...rows, ...additionalRows];
-    expect(new Set(allRows.map((row) => row.family)).size).toBe(allRows.length);
-    expect(new Set(allRows.map((row) => `${row.provider}:${row.model}`)).size)
-      .toBe(allRows.length);
-    expect(setup).toContain("Its model matrices (stock, additional, and flex)");
-    expect(setup).toContain("Read the model matrices, stock, additional, and flex.");
-    expect(setup).toContain("any stock, additional, or flex matrix family");
-    expect(setup).toContain("Offer Astra, GPT-6 Sol, and Luna from the additional matrix when changing `architect runners`");
+    expect(new Set(rows.map((row) => row.family)).size).toBe(rows.length);
+    expect(new Set(rows.map((row) => `${row.provider}:${row.model}`)).size)
+      .toBe(rows.length);
+    // Solo code roles ride the sol-6 row; exploration and swarm ride luna.
+    const sol6 = defaultDescriptor(rows.find((row) => row.family === "sol-6")!);
+    const luna = defaultDescriptor(rows.find((row) => row.family === "luna")!);
+    for (const role of ["feature, refactoring", "bug-fix", "perf-issue", "hillclimb"]) {
+      expect(sheet).toContain(`${role}: ${sol6}\n`);
+    }
+    for (const role of ["how explorer", "swarm workers"]) {
+      expect(sheet).toContain(`${role}: ${luna}\n`);
+    }
+    expect(setup).toContain("Its model matrices (stock and flex)");
+    expect(setup).toContain("Read the model matrices, stock and flex.");
+    expect(setup).toContain("any stock or flex matrix family");
+    expect(setup).toContain("Offer every stock family, including Astra, GPT-6 Sol, and Luna, when changing `architect runners`");
     expect(setup).toContain("Read each model, proposed effort, and selectable efforts from its row.");
-    expect(setup).toContain("outside the stock, additional, and flex matrix families");
+    expect(setup).toContain("outside the stock and flex matrix families");
     expect(setup).toContain(
-      "| Astra | Astra additional row + selected effort | external runner | native `spawn_agent` |"
+      "| Astra | Astra matrix row + selected effort | external runner | native `spawn_agent` |"
     );
     expect(setup).toContain(
-      "| GPT-6 Sol | sol-6 additional row + selected effort | external runner | native `spawn_agent` |"
+      "| GPT-6 Sol | sol-6 matrix row + selected effort | external runner | native `spawn_agent` |"
     );
     expect(setup).toContain(
-      "| Luna | Luna additional row + selected effort | external runner | native `spawn_agent` |"
+      "| Luna | Luna matrix row + selected effort | external runner | native `spawn_agent` |"
     );
     expect(setup).toContain("each assigned Codex family gets a native `spawn_agent` probe");
+    expect(setup).not.toContain("additional matrix");
+    expect(dispatch).not.toContain("## Additional model matrix");
     expect(dispatch).toContain(
       "These Codex families use native `spawn_agent` under a Codex parent and the external Codex runner under a Claude Code parent."
     );
   });
 
-  it("passes each additional family's selected model and effort to the existing runner", () => {
-    for (const row of additionalRows) {
+  it("owns the default panel: four lanes, three providers, matrix default efforts", () => {
+    expect(panel).toEqual([
+      "claude:fable@max",
+      "codex:gpt-6-astra@high",
+      "grok:grok-4.6@xhigh",
+      "claude:opus@xhigh",
+    ]);
+    const byDescriptor = new Set(rows.map(defaultDescriptor));
+    for (const descriptor of panel) {
+      expect(byDescriptor.has(descriptor)).toBe(true);
+    }
+    const providers = new Set(panel.map((descriptor) => descriptor.split(":")[0]));
+    expect(providers.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it("passes each GPT-6 family's selected model and effort to the existing runner", () => {
+    for (const row of rows.filter((row) => (GPT6_FAMILIES as readonly string[]).includes(row.family))) {
       for (const effort of row.selectableEfforts) {
         const options = parseArgs([
           "--parent", "claude",
@@ -390,7 +437,7 @@ describe("model matrix", () => {
       }
       expect(effort).toBe(row.defaultEffort);
     }
-    const expectedPanel = quad.join(", ");
+    const expectedPanel = panel.join(", ");
     for (const role of PANEL_ROLES) {
       const line = sheet
         .split("\n")
