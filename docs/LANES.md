@@ -98,6 +98,16 @@ Quality note: this trades peak capability for cost control. The hardest-task rol
 - **OpenRouter (off by default).** OpenRouter has no Anthropic-format endpoint, so a lane needs a local translator that serves `/v1/messages` — musistudio/claude-code-router or a version-pinned LiteLLM — with `ANTHROPIC_BASE_URL` pointed at it. That is one extra long-running local process, which is why it is documented rather than shipped. Expect roughly a 5.5% credit fee on top of provider list prices. If you build it, model it as another gateway provider in `flex-providers.ts`.
 - **Local via Ollama (planned).** Ollama serves an Anthropic-compatible API since v0.14, so a `local` gateway provider pointed at it is the natural next lane: full compute control, zero per-token cost, your hardware. Not wired in yet.
 
+## Adding a gateway provider
+
+Any lab that serves an Anthropic-compatible `/v1/messages` endpoint can become a gateway lane. The runner, parser, and preflight branch on `isGatewayProvider`, so no `switch` needs a new case.
+
+1. Add the provider name to `GATEWAY_PROVIDERS` in `plugins/pstack/skills/poteto-mode/scripts/runner/types.ts`.
+2. Add its row to `GATEWAY_SPECS` in `runner/flex-providers.ts`: API key variable, base URL default, override variables, and context-window default. Typecheck fails until this row exists.
+3. Add its row to the "Flex model matrix" in `plugins/pstack/skills/poteto-mode/references/provider-dispatch.md`. `model-matrix.test.ts` fails until the key variable and base URL match the spec.
+4. Add its probe row to the table in `plugins/pstack/skills/setup-pstack/SKILL.md`, its variables to the gateway environment reference above, and its prices to the price table.
+5. Run the live validation checklist below for the new lane before merging.
+
 ## Live validation checklist (post-merge, real keys, never in CI)
 
 - V1: one DeepSeek probe through the runner (`--provider deepseek --model deepseek-flash --effort high`, read-only). Expect a `complete` receipt with `costUsd: null`; record the `reportedModel` string and confirm the base-URL default against DeepSeek's current guide; confirm `--effort` is accepted end-to-end.
