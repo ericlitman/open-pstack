@@ -4,7 +4,7 @@ This plugin is a port of upstream MIT-licensed work. All upstream copyright noti
 
 ## pstack-flex provenance
 
-This repository, **pstack-flex** (Martin Patino), is a fork of [ericlitman/open-pstack](https://github.com/ericlitman/open-pstack) at v1.4.1 (`de67e6b40511814171e5e4c8ad7af3b79f07c9ee`), which ports [Lauren Tan's pstack](https://github.com/cursor/plugins/tree/main/pstack) (Cursor) to Claude Code and Codex. Provenance chain: pstack-flex <- ericlitman/open-pstack <- cursor/plugins/pstack. All licenses remain MIT; every upstream license and notice file is preserved. The flex gateway additions and their tests are (c) 2026 Martin Patino, MIT, and are inventoried in [UPSTREAM-FLEX.md](UPSTREAM-FLEX.md).
+This repository, **pstack-flex** (Martin Patino), is a fork of [ericlitman/open-pstack](https://github.com/ericlitman/open-pstack) at v1.4.1 (`de67e6b40511814171e5e4c8ad7af3b79f07c9ee`), which ports [Lauren Tan's pstack](https://github.com/cursor/plugins/tree/main/pstack) (Cursor) to Claude Code and Codex. Provenance chain: pstack-flex <- ericlitman/open-pstack <- cursor/plugins/pstack. All licenses remain MIT; every upstream license and notice file is preserved. The flex gateway providers, optional families, docs, and tests are (c) 2026 Martin Patino, MIT, and are inventoried in [UPSTREAM-FLEX.md](UPSTREAM-FLEX.md).
 
 ## Upstream sources
 

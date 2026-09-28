@@ -24,7 +24,7 @@ Set by you:
 | `PSTACK_FLEX_DEEPSEEK_CONFIG_DIR` / `PSTACK_FLEX_MINIMAX_CONFIG_DIR` | no | config-dir override; default `~/.pstack-flex/<provider>` |
 | `DEEPSEEK_MAX_CONTEXT_TOKENS` / `MINIMAX_MAX_CONTEXT_TOKENS` | no | context-cap override for the claude CLI |
 
-Injected by the runner at spawn time (never written to disk, never in receipts): `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, the model pins (`ANTHROPIC_MODEL`, the opus/sonnet/haiku alias defaults, `CLAUDE_CODE_SUBAGENT_MODEL`), `CLAUDE_CODE_ATTRIBUTION_HEADER=0`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, and `CLAUDE_CONFIG_DIR`. Any inherited `ANTHROPIC_*` value from the parent session is deleted first.
+Injected by the runner at spawn time (never written to disk, never in receipts): `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, the model pins (`ANTHROPIC_MODEL`, the opus/sonnet/haiku alias defaults, `CLAUDE_CODE_SUBAGENT_MODEL`), `CLAUDE_CODE_ATTRIBUTION_HEADER=0`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, and `CLAUDE_CONFIG_DIR`. The runner first removes inherited `ANTHROPIC_*` values and Claude Code cloud-provider flags from the parent session.
 
 ## Storing keys
 
@@ -91,7 +91,7 @@ Quality note: this trades peak capability for cost control. The hardest-task rol
 - **Unsupported, not prohibited.** Anthropic's docs state that routing Claude Code to non-Claude models through gateways is not supported. No terms clause or enforcement against pointing the unmodified binary at a third-party endpoint was found (2026-09-25), but a CLI update can break compatibility without notice. Pin the claude CLI version on machines that depend on gateway lanes and bump it deliberately.
 - **Never a claude.ai login on a gateway path.** Do not run `claude login` or `claude setup-token` inside any `~/.pstack-flex/` config dir. The runner enforces this: a gateway lane refuses to start when its config dir carries an OAuth credentials file. Caveat: on macOS the CLI may store credentials in the Keychain where the file check cannot see them — the rule above is the real defense; the check is a backstop.
 - **Privacy: gateway lanes are opt-in per project.** Do not send client or customer code to third-party providers by default. Keep sensitive repositories on subscription lanes, and enable gateway lanes deliberately, per project.
-- **No silent substitution, ever.** A failed gateway lane is a named dropout receipt like any other lane. Nothing falls back to a weaker or different model.
+- **No runner fallback.** A failed gateway lane is a named dropout receipt. A reported model mismatch fails the lane. If the endpoint reports no model, the receipt says `modelVerified: false` and `modelEvidence: "pinned-argv"`; this cannot prove which model the gateway served. Confirm supported model slugs during the live probe.
 
 ## Optional lanes
 
