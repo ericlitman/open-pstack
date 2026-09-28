@@ -1,7 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseArgs } from "./cli.ts";
+import { invocationCommand } from "./commands.ts";
 import { GATEWAY_SPECS } from "./flex-providers.ts";
+import { validateOptions } from "./run.ts";
 import {
   EFFORTS,
   GATEWAY_PROVIDERS,
@@ -105,11 +108,15 @@ function asEffort(value: string): Effort {
   throw new Error(`not an effort: ${value}`);
 }
 
-function parseModelMatrix(markdown: string): MatrixRow[] {
+function parseModelMatrix(
+  markdown: string,
+  heading = "## Model matrix",
+  rowCount: number = FAMILY_ORDER.length
+): MatrixRow[] {
   const lines = markdown.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trim() === "## Model matrix");
+  const start = lines.findIndex((line) => line.trim() === heading);
   if (start < 0) {
-    throw new Error("missing ## Model matrix");
+    throw new Error(`missing ${heading}`);
   }
   let end = lines.length;
   for (let i = start + 1; i < lines.length; i++) {
@@ -122,9 +129,9 @@ function parseModelMatrix(markdown: string): MatrixRow[] {
     .slice(start + 1, end)
     .map((line) => line.trim())
     .filter((line) => line.startsWith("|"));
-  if (table.length !== 6) {
+  if (table.length !== rowCount + 2) {
     throw new Error(
-      `model matrix must be header, separator, and 4 data rows, got ${table.length}`
+      `${heading} must be header, separator, and ${rowCount} data rows, got ${table.length}`
     );
   }
   const header = splitRow(table[0]);
@@ -214,7 +221,9 @@ function firstRunSheet(setup: string): string {
 }
 
 describe("model matrix", () => {
-  const rows = parseModelMatrix(readFileSync(DISPATCH_PATH, "utf8"));
+  const dispatch = readFileSync(DISPATCH_PATH, "utf8");
+  const rows = parseModelMatrix(dispatch);
+  const additionalRows = parseModelMatrix(dispatch, "## Additional model matrix", 3);
   const setup = readFileSync(SETUP_PATH, "utf8");
   const quad = defaultDescriptors(rows);
 
@@ -250,7 +259,7 @@ describe("model matrix", () => {
   it("ships exactly the declared Claude-native frontier agents", () => {
     const expected = new Set<string>();
     const familyBodies = new Map<string, string>();
-    for (const row of rows) {
+    for (const row of [...rows, ...additionalRows]) {
       const stem = row.claudeNativeAgentStem;
       if (stem === null) {
         continue;
@@ -289,6 +298,76 @@ describe("model matrix", () => {
       .filter((name) => name.startsWith("pstack-") && name.endsWith(".md"))
       .sort();
     expect(shipped).toEqual([...expected].sort());
+  });
+
+  it("adds GPT-6 families without changing the stock matrix or first-run assignments", () => {
+    expect(additionalRows.map((row) => [row.family, row.model])).toEqual([
+      ["astra", "gpt-6-astra"],
+      ["sol-6", "gpt-6-sol"],
+      ["luna", "gpt-6-luna"],
+    ]);
+    for (const row of additionalRows) {
+      expect(row.upstreamChoice).toBe("-");
+      expect(row.provider).toBe("codex");
+      expect(row.defaultEffort).toBe("high");
+      expect(row.selectableEfforts).toEqual([...EFFORTS]);
+      expect(row.claudeNativeAgentStem).toBeNull();
+      expect(firstRunSheet(setup)).not.toContain(row.model);
+    }
+    const allRows = [...rows, ...additionalRows];
+    expect(new Set(allRows.map((row) => row.family)).size).toBe(allRows.length);
+    expect(new Set(allRows.map((row) => `${row.provider}:${row.model}`)).size)
+      .toBe(allRows.length);
+    expect(setup).toContain("Its model matrices (stock, additional, and flex)");
+    expect(setup).toContain("Read the model matrices, stock, additional, and flex.");
+    expect(setup).toContain("any stock, additional, or flex matrix family");
+    expect(setup).toContain("Offer Astra, GPT-6 Sol, and Luna from the additional matrix when changing `architect runners`");
+    expect(setup).toContain("Read each model, proposed effort, and selectable efforts from its row.");
+    expect(setup).toContain("outside the stock, additional, and flex matrix families");
+    expect(setup).toContain(
+      "| Astra | Astra additional row + selected effort | external runner | native `spawn_agent` |"
+    );
+    expect(setup).toContain(
+      "| GPT-6 Sol | sol-6 additional row + selected effort | external runner | native `spawn_agent` |"
+    );
+    expect(setup).toContain(
+      "| Luna | Luna additional row + selected effort | external runner | native `spawn_agent` |"
+    );
+    expect(setup).toContain("each assigned Codex family gets a native `spawn_agent` probe");
+    expect(dispatch).toContain(
+      "These Codex families use native `spawn_agent` under a Codex parent and the external Codex runner under a Claude Code parent."
+    );
+  });
+
+  it("passes each additional family's selected model and effort to the existing runner", () => {
+    for (const row of additionalRows) {
+      for (const effort of row.selectableEfforts) {
+        const options = parseArgs([
+          "--parent", "claude",
+          "--provider", row.provider,
+          "--model", row.model,
+          "--effort", effort,
+          "--mode", "read-only",
+          "--prompt", DISPATCH_PATH,
+          "--cwd", PLUGIN_ROOT,
+          "--output", join(PLUGIN_ROOT, `${row.family}-probe.md`),
+          "--receipt", join(PLUGIN_ROOT, `${row.family}-probe.json`),
+        ]);
+        if (options === null) {
+          throw new Error("model probe arguments must produce runner options");
+        }
+        validateOptions(options);
+        expect(options.timeoutMs).toBeNull();
+        const command = invocationCommand(options);
+        expect(command.command).toBe("codex");
+        expect(command.args.slice(0, 5)).toEqual([
+          "exec", "--model", row.model,
+          "--config", `model_reasoning_effort="${effort}"`,
+        ]);
+        expect(() => validateOptions({ ...options, parent: "codex" }))
+          .toThrow("provider codex is native to parent codex");
+      }
+    }
   });
 
   it("keeps setup's first-run default panel copy aligned with the matrix", () => {
@@ -387,9 +466,6 @@ describe("model matrix", () => {
       expect(baseUrl.startsWith("https://")).toBe(true);
     }
     expect(seen).toEqual([...GATEWAY_PROVIDERS]);
-    // The stock quad and first-run sheet must not carry flex descriptors:
-    // upstream's own checks parse descriptors with a lowercase-only,
-    // three-provider grammar and must never see a flex lane.
     expect(firstRunSheet(setup)).not.toMatch(/deepseek:|minimax:/i);
   });
 

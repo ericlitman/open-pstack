@@ -5,7 +5,7 @@ description: Configure pstack's provider-qualified models, per-family requested 
 
 # Setup pstack
 
-Configure one portable model sheet for the current parent harness. Read [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md) before probing or writing anything. Its model matrices (stock and flex), descriptor grammar, and route table are the contract. Role assignments are selected first; then choose one requested effort per assigned matrix family. Do not add a second configuration file, a runtime resolver, or a weaker-model fallback.
+Configure one portable model sheet for the current parent harness. Read [`provider-dispatch.md`](../poteto-mode/references/provider-dispatch.md) before probing or writing anything. Its model matrices (stock, additional, and flex), descriptor grammar, and route table are the contract. Role assignments are selected first; then choose one requested effort per assigned matrix family. Do not add a second configuration file, a runtime resolver, or a weaker-model fallback.
 
 Claude Code writes `~/.claude/pstack-models.md` and loads it from `~/.claude/CLAUDE.md` with:
 
@@ -35,7 +35,7 @@ Treat the normalized values as current role-to-family assignments. Overlay those
 
 ### 3. Parse per-family efforts
 
-Read the model matrices, stock and flex. Every non-alias value must match `<provider>:<model>@<effort>`. Map it to exactly one matrix family by `(provider, model)`, require its effort to appear in that row's Selectable efforts cell, and collect the effort. `inherit-parent` and `auto` rows carry no family effort.
+Read the model matrices, stock, additional, and flex. Every non-alias value must match `<provider>:<model>@<effort>`. Map it to exactly one matrix family by `(provider, model)`, require its effort to appear in that row's Selectable efforts cell, and collect the effort. `inherit-parent` and `auto` rows carry no family effort.
 
 An unmatched provider/model, out-of-domain effort, duplicate role, or unknown role is inconsistent state. Stop, show the conflicting rows verbatim, and ask for an explicit matrix family or alias replacement. If one or more families have mixed efforts, show every conflicting family and role row, then ask for one normalized effort per family from its Selectable efforts cell. Do not invent a precedence rule. Do not probe or write while any inconsistency is unresolved.
 
@@ -43,7 +43,9 @@ One distinct effort per family is the current value. A family with no non-alias 
 
 ### 4. Choose role assignments, then collect efforts
 
-Role assignments come first. Show the current role-to-family map (loaded and normalized from step 2, or the first-run map from step 7) and ask whether to keep it or change named roles. Keeping it is the default. A changed role may use any stock or flex matrix family, `inherit-parent`, or `auto`. Apply only role changes the operator names; never offer a reset of a customized sheet to the first-run assignments.
+Role assignments come first. Show the current role-to-family map (loaded and normalized from step 2, or the first-run map from step 7) and ask whether to keep it or change named roles. Keeping it is the default. A changed role may use any stock, additional, or flex matrix family, `inherit-parent`, or `auto`. Apply only role changes the operator names; never offer a reset of a customized sheet to the first-run assignments.
+
+Offer Astra, GPT-6 Sol, and Luna from the additional matrix when changing `architect runners` or another configurable role. Read each model, proposed effort, and selectable efforts from its row. The additional families and stock Sol are separate families even though they share the Codex provider; changing one family's effort does not change another's. GPT-6 Sol uses the `sol-6` family; the stock `sol` family keeps GPT-5.6 Sol.
 
 The assigned families are exactly the matrix families that appear in the resulting role map. An unassigned family gets no effort question and no probe. There is no requirement to assign every matrix family.
 
@@ -57,12 +59,15 @@ Probe only the assigned families' selected `provider:model@effort` pairs. Run on
 |---|---|---|---|---|
 | Fable | Fable matrix row + selected effort | native Agent `pstack-fable-<effort>` | Claude CLI | native one-turn probe or `claude auth status --json` plus one-turn probe |
 | Sol | Sol matrix row + selected effort | `codex exec` | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
+| Astra | Astra additional row + selected effort | external runner | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
+| GPT-6 Sol | sol-6 additional row + selected effort | external runner | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
+| Luna | Luna additional row + selected effort | external runner | native `spawn_agent` | `codex login status` plus one-turn probe or native one-turn probe |
 | Grok | Grok matrix row + selected effort | Grok CLI | Grok CLI | `grok models` must list the requested model; one-turn probe |
 | Opus | Opus matrix row + selected effort | native Agent `pstack-opus-<effort>` | Claude CLI | native one-turn probe or `claude auth status --json` plus one-turn probe |
 | DeepSeek | DeepSeek flex row + selected effort | external runner | external runner | `DEEPSEEK_API_KEY` present; isolated config dir free of OAuth credentials; one-turn probe confirms the endpoint |
 | MiniMax | MiniMax flex row + selected effort | external runner | external runner | `MINIMAX_API_KEY` present; isolated config dir free of OAuth credentials; one-turn probe confirms the endpoint |
 
-Use a tiny read-only probe that returns a unique marker. A login-status command alone proves credentials, not that the requested model and effort flags run. Record native and external results separately. Never call the external launcher for the parent's own provider. On a Claude parent, the Fable and Opus probes are one-turn runs of the mapped `pstack-<stem>-<effort>` agent. On a Codex parent, the Sol probe is native `spawn_agent` with the selected `reasoning_effort`. Every other pair, flex families always included, uses the external runner with the selected effort flag. A flex probe doubles as the base-URL confirmation: it proves the documented default (or the operator's override) actually serves the lane's model.
+Use a tiny read-only probe that returns a unique marker. A login-status command alone proves credentials, not that the requested model and effort flags run. Record native and external results separately. Never call the external launcher for the parent's own provider. On a Claude parent, the Fable and Opus probes are one-turn runs of the mapped `pstack-<stem>-<effort>` agent. On a Codex parent, each assigned Codex family gets a native `spawn_agent` probe with its matrix model and selected `reasoning_effort`. Every other pair, flex families always included, uses the external runner with the selected effort flag. A flex probe doubles as the base-URL confirmation: it proves the documented default (or the operator's override) actually serves the lane's model.
 
 Receipts and native transcripts prove the requested effort and the route. They do not prove a provider's hidden applied reasoning depth. There is no implicit timeout, weaker-model fallback, same-provider external fallback, or second mutable configuration source.
 
@@ -77,7 +82,7 @@ The role assignments were already chosen in step 4; do not re-open them here. Re
 
 Validate panel diversity: `arena runners` and `interrogate reviewers` must span at least two distinct providers. A single-provider panel is written only after the operator explicitly confirms the reduced diversity; record that confirmation in the setup report.
 
-Rewrite every matrix-family descriptor to `provider:model@<requested effort for that family>`. Leave `inherit-parent` and `auto` unchanged. An effort-only rerun cannot change a role's family. Changing Grok's effort updates every Grok occurrence and does not move a Sol role onto Grok. Refuse an unqualified slug, an unavailable route, a model outside the stock and flex matrix families, or a provider/model mismatch.
+Rewrite every matrix-family descriptor to `provider:model@<requested effort for that family>`. Leave `inherit-parent` and `auto` unchanged. An effort-only rerun cannot change a role's family. Changing Grok's effort updates every Grok occurrence and does not move a Sol role onto Grok. Refuse an unqualified slug, an unavailable route, a model outside the stock, additional, and flex matrix families, or a provider/model mismatch.
 
 ### 7. Confirm and commit
 
