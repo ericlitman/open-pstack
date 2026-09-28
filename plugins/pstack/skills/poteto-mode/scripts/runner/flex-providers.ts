@@ -36,16 +36,15 @@ export const GATEWAY_SPECS: Record<GatewayProvider, GatewaySpec> = {
   },
 };
 
-// A parent session's own Anthropic credentials, endpoint, or model pins must
-// never bleed into a gateway child. These are deleted before injection.
+// Provider selection and Claude configuration from the parent must not
+// override the gateway's endpoint, token, or isolated config directory.
 export const GATEWAY_INHERITED_CONFLICTS = [
-  "ANTHROPIC_API_KEY",
-  "ANTHROPIC_AUTH_TOKEN",
-  "ANTHROPIC_BASE_URL",
-  "ANTHROPIC_MODEL",
-  "ANTHROPIC_DEFAULT_OPUS_MODEL",
-  "ANTHROPIC_DEFAULT_SONNET_MODEL",
-  "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+  "CLAUDE_CODE_USE_ANTHROPIC_AWS",
+  "CLAUDE_CODE_USE_BEDROCK",
+  "CLAUDE_CODE_USE_FOUNDRY",
+  "CLAUDE_CODE_USE_MANTLE",
+  "CLAUDE_CODE_USE_VERTEX",
+  "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
   "CLAUDE_CODE_SUBAGENT_MODEL",
   "CLAUDE_CODE_MAX_CONTEXT_TOKENS",
   "CLAUDE_CONFIG_DIR",

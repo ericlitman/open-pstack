@@ -147,6 +147,9 @@ export function childEnvironment(
       : [...CODEX_IDENTITY, ...CLAUDE_IDENTITY];
   for (const key of remove) delete result[key];
   if (isGatewayProvider(provider)) {
+    for (const key of Object.keys(result)) {
+      if (key.startsWith("ANTHROPIC_")) delete result[key];
+    }
     for (const key of GATEWAY_INHERITED_CONFLICTS) delete result[key];
     Object.assign(result, gatewayEnvironment(provider, model, source));
   }
@@ -478,12 +481,12 @@ function modelProof(
       modelEvidence: "pinned-argv",
     };
   }
-  if (isGatewayProvider(provider)) {
+  if (isGatewayProvider(provider) && reported === null) {
     // Third-party Anthropic-compatible endpoints do not reliably echo the
-    // requested model slug; fall back to the pinned argv as evidence, the
-    // same posture Codex lanes already use.
+    // requested model slug. A reported mismatch is a failure, since some
+    // gateways silently substitute a default model for unknown slugs.
     return {
-      reportedModel: reported,
+      reportedModel: null,
       modelVerified: false,
       modelEvidence: "pinned-argv",
     };

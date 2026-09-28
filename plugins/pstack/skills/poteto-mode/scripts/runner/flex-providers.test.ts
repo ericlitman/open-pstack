@@ -104,15 +104,18 @@ describe("gatewayEnvironment", () => {
     expect(values).not.toContain("do-not-copy");
   });
 
-  it("lists every injected credential-bearing variable as an inherited conflict", () => {
-    // Whatever the parent had for these must be deleted before injection.
+  it("lists every alternative Claude provider selector as an inherited conflict", () => {
+    const conflicts = new Set<string>(GATEWAY_INHERITED_CONFLICTS);
     for (const key of [
-      "ANTHROPIC_API_KEY",
-      "ANTHROPIC_AUTH_TOKEN",
-      "ANTHROPIC_BASE_URL",
+      "CLAUDE_CODE_USE_ANTHROPIC_AWS",
+      "CLAUDE_CODE_USE_BEDROCK",
+      "CLAUDE_CODE_USE_FOUNDRY",
+      "CLAUDE_CODE_USE_MANTLE",
+      "CLAUDE_CODE_USE_VERTEX",
+      "CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST",
       "CLAUDE_CONFIG_DIR",
     ]) {
-      expect(GATEWAY_INHERITED_CONFLICTS as readonly string[]).toContain(key);
+      expect(conflicts.has(key)).toBe(true);
     }
   });
 });

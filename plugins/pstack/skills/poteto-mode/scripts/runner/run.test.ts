@@ -126,7 +126,7 @@ if (stage === "model" && process.env.FAKE_SELF_SIGNAL) {
   await Bun.sleep(5_000);
 }
 if (name === "claude") {
-  console.log(JSON.stringify({result:"CLAUDE_OK",session_id:"c1",usage:{input_tokens:10,output_tokens:2},total_cost_usd:0.01,modelUsage:{[reportedModel]:{}}}));
+  console.log(JSON.stringify({result:"CLAUDE_OK",session_id:"c1",usage:{input_tokens:10,output_tokens:2},total_cost_usd:0.01,...(process.env.FAKE_OMIT_MODEL_USAGE === "1" ? {} : {modelUsage:{[reportedModel]:{}}})}));
 } else if (name === "codex") {
   console.log(JSON.stringify({type:"thread.started",thread_id:"o1"}));
   console.log(JSON.stringify({type:"item.completed",item:{type:"agent_message",text:"CODEX_OK"}}));
@@ -924,9 +924,12 @@ describe("gateway lanes", () => {
     "PSTACK_FLEX_DEEPSEEK_CONFIG_DIR",
     "PSTACK_FLEX_MINIMAX_CONFIG_DIR",
     "ANTHROPIC_API_KEY",
+    "ANTHROPIC_CUSTOM_HEADERS",
+    "CLAUDE_CODE_USE_BEDROCK",
     "FAKE_DUMP_ENV_PATH",
     "FAKE_AUTH_ERROR",
     "FAKE_REPORT_MODEL",
+    "FAKE_OMIT_MODEL_USAGE",
   ] as const;
 
   function gatewayOptions(
@@ -990,6 +993,8 @@ describe("gateway lanes", () => {
 
   it("injects the gateway environment and never the parent's Anthropic identity", async () => {
     process.env.ANTHROPIC_API_KEY = "parent-anthropic-secret";
+    process.env.ANTHROPIC_CUSTOM_HEADERS = "Authorization: Bearer parent-header-secret";
+    process.env.CLAUDE_CODE_USE_BEDROCK = "1";
     const dumpPath = join(scratch, "env-dump.json");
     process.env.FAKE_DUMP_ENV_PATH = dumpPath;
     const input = gatewayOptions("deepseek", "env-dump");
@@ -1005,6 +1010,8 @@ describe("gateway lanes", () => {
     expect(child.CLAUDE_CODE_MAX_CONTEXT_TOKENS).toBe("128000");
     expect(child.CLAUDE_CONFIG_DIR).toBe(join(scratch, "flex-deepseek"));
     expect(child.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(child.ANTHROPIC_CUSTOM_HEADERS).toBeUndefined();
+    expect(child.CLAUDE_CODE_USE_BEDROCK).toBeUndefined();
     expect(child.CLAUDECODE).toBeUndefined();
   });
 
@@ -1036,13 +1043,27 @@ describe("gateway lanes", () => {
     expect(written.reportedModel).toBe("minimax-m3");
   });
 
-  it("falls back to pinned argv when the endpoint reports another slug", async () => {
+  it("fails when the endpoint reports a different model", async () => {
     process.env.FAKE_REPORT_MODEL = "unrelated-model";
     const input = gatewayOptions("minimax", "pinned");
+    const result = await runLane(input);
+    expect(result.exitCode).toBe(65);
+    const written = receipt(input.receiptPath);
+    expect(written.status).toBe("malformed-output");
+    expect(written.modelVerified).toBe(false);
+    expect(written.modelEvidence).toBeNull();
+    expect(written.error?.message).toContain("requested model MiniMax-M3 was not reported");
+    expect(existsSync(input.outputPath)).toBe(false);
+  });
+
+  it("uses the pinned argv only when the endpoint reports no model", async () => {
+    process.env.FAKE_OMIT_MODEL_USAGE = "1";
+    const input = gatewayOptions("minimax", "unreported-model");
     const result = await runLane(input);
     expect(result.exitCode).toBe(0);
     const written = receipt(input.receiptPath);
     expect(written.status).toBe("complete");
+    expect(written.reportedModel).toBeNull();
     expect(written.modelVerified).toBe(false);
     expect(written.modelEvidence).toBe("pinned-argv");
   });
@@ -1064,6 +1085,10 @@ describe("childEnvironment", () => {
       CODEX_CI: "1",
       ANTHROPIC_API_KEY: "parent-secret",
       ANTHROPIC_BASE_URL: "https://api.anthropic.com",
+      ANTHROPIC_CUSTOM_HEADERS: "Authorization: Bearer parent-secret",
+      ANTHROPIC_BEDROCK_BASE_URL: "https://parent-bedrock.example",
+      CLAUDE_CODE_USE_BEDROCK: "1",
+      CLAUDE_CODE_USE_VERTEX: "1",
       DEEPSEEK_API_KEY: "sk-test",
       PSTACK_FLEX_DEEPSEEK_CONFIG_DIR: "/tmp/flex-deepseek",
       KEEP_ME: "yes",
@@ -1072,6 +1097,10 @@ describe("childEnvironment", () => {
     expect(env.CLAUDECODE).toBeUndefined();
     expect(env.CODEX_CI).toBeUndefined();
     expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(env.ANTHROPIC_CUSTOM_HEADERS).toBeUndefined();
+    expect(env.ANTHROPIC_BEDROCK_BASE_URL).toBeUndefined();
+    expect(env.CLAUDE_CODE_USE_BEDROCK).toBeUndefined();
+    expect(env.CLAUDE_CODE_USE_VERTEX).toBeUndefined();
     expect(env.ANTHROPIC_BASE_URL).toBe("https://api.deepseek.com/anthropic");
     expect(env.ANTHROPIC_AUTH_TOKEN).toBe("sk-test");
     expect(env.CLAUDE_CONFIG_DIR).toBe("/tmp/flex-deepseek");

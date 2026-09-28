@@ -14,15 +14,9 @@ Open Pstack is an unofficial community project that makes pstack work in Claude 
 
 ## This fork: pstack-flex
 
-**pstack-flex** is a friendly fork of [ericlitman/open-pstack](https://github.com/ericlitman/open-pstack) (fork point: v1.4.1). A stock install behaves exactly like upstream. On top of that it adds model freedom and cost control:
+**pstack-flex** is a fork of [ericlitman/open-pstack](https://github.com/ericlitman/open-pstack) at v1.4.1. This change adds `deepseek` and `minimax` providers to the external runner. Each provider runs the stock `claude` binary against its Anthropic-compatible endpoint with its own API key. The runner uses an isolated `CLAUDE_CONFIG_DIR`, rejects OAuth credentials found there, and removes inherited Anthropic headers and provider-selection flags before starting the child. Gateway receipts keep token usage but set `costUsd` to null because Claude Code's cost estimate uses Anthropic prices.
 
-- **Optional model families.** Setup no longer requires all four frontier families. Assign the families you actually have; unassigned families get no effort question and no probe.
-- **Gateway lanes for DeepSeek and MiniMax.** New `deepseek:*` and `minimax:*` descriptors run the stock `claude` binary against each lab's Anthropic-compatible endpoint with that lab's API key — no Anthropic account, no subscription, pay per token. See the flex model matrix in [provider-dispatch.md](plugins/pstack/skills/poteto-mode/references/provider-dispatch.md).
-- **Zero-subscription mode.** The whole stack can run on nothing but `DEEPSEEK_API_KEY` and `MINIMAX_API_KEY`; two labs are two model families, so adversarial panels keep real diversity. Walkthrough in [docs/LANES.md](docs/LANES.md).
-- **Credential isolation by construction.** Gateway lanes use an isolated `CLAUDE_CONFIG_DIR` and refuse to start if a claude.ai OAuth login is present there, so a claude.ai credential can never be sent to a third-party endpoint.
-- **Honest cost reporting.** Gateway receipts force `costUsd` to null instead of reporting Anthropic-rate fiction; real prices (including DeepSeek's off-peak discount window) live in [docs/LANES.md](docs/LANES.md).
-
-What does not change: pstack's skills and playbooks, the four stock lanes and their defaults, the no-fallback and no-implicit-timeout contracts, and upstream's sync process. The flex delta is documented in [UPSTREAM-FLEX.md](UPSTREAM-FLEX.md). Anthropic does not support pointing Claude Code at non-Anthropic endpoints (unsupported is not prohibited); read the safety notes in [docs/LANES.md](docs/LANES.md) before enabling a gateway lane.
+The stock setup and model matrix remain in place. A follow-up change will add gateway routes to setup and document the lane configurations. The fork's provenance and sync process are recorded in [UPSTREAM-FLEX.md](UPSTREAM-FLEX.md). Anthropic does not support pointing Claude Code at non-Anthropic endpoints; use synthetic data for gateway testing and keep API keys in your local environment.
 
 ## What pstack does
 
