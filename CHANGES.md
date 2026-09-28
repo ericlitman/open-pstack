@@ -1,5 +1,11 @@
 # CHANGES — applied substitutions
 
+## Unreleased: multiple gateway model choices
+
+- Add DeepSeek V4 Pro and MiniMax M3.1 Flash Preview as independent setup families alongside existing Flash and M3 choices. Keep provider-owned routing and existing descriptors.
+- Validate unique model families and provider/model pairs instead of requiring one row per provider; cover both parent routes and substituted-model rejection.
+- Document preview Token Plan access, model-specific thinking semantics, and required installed live validation. Tracked in [pstack-flex #5](https://github.com/thisguymartin/pstack-flex/issues/5).
+
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
 ## pstack-flex (unreleased) — gateway lanes and optional families

@@ -9,9 +9,28 @@ Prices and endpoints below were verified 2026-09-25 and drift. Re-verify against
 | Kind | Lanes | Auth | Billing | Route |
 | --- | --- | --- | --- | --- |
 | Subscription | `claude:fable`, `claude:opus`, `codex:gpt-5.6-sol`, `grok:grok-4.6` | each CLI's own login | that CLI's plan | native or external per the route table |
-| Gateway (flex) | `deepseek:deepseek-flash`, `minimax:MiniMax-M3` | API key in the environment | pay per token on the lab's key | always the external runner |
+| Gateway (flex) | DeepSeek Flash / V4 Pro; MiniMax M3 / M3.1 Flash Preview | API key in the environment | provider billing; preview requires Token Plan | always the external runner |
 
 A gateway lane is the stock `claude` binary env-pointed at the lab's Anthropic-compatible endpoint. There is no custom agent loop and no separate harness: the same runner that spawns Codex and Grok lanes spawns gateway lanes with injected environment. Both labs document this Claude Code setup themselves (DeepSeek: `deepseek-ai/awesome-deepseek-agent`, `docs/claude_code.md`; MiniMax: platform.minimax.io, Claude Code guide).
+
+## Multiple models per provider
+
+The flex matrix now includes four independently assignable model families:
+
+| Family | Descriptor at default requested effort | Selection guidance |
+| --- | --- | --- |
+| deepseek | `deepseek:deepseek-flash@high` | Existing everyday option |
+| deepseek-pro | `deepseek:deepseek-v4-pro@high` | Candidate for difficult debugging, architecture, and review |
+| minimax | `minimax:MiniMax-M3@high` | Existing MiniMax option |
+| minimax-preview | `minimax:MiniMax-M3.1-Flash-Preview@high` | Preview coding option with tunable thinking |
+
+These are choices, not automatic replacements or a performance ranking. Existing sheets keep their assignments. In `/setup-pstack`, assign named roles to the desired model family; efforts and probes are independent per model, even for models sharing a key. Two models from one provider count as one provider for panel diversity. No runtime routing change or new configuration file is needed.
+
+As of 2026-09-27, [MiniMax's model guide](https://platform.minimax.io/docs/guides/models-intro) restricts M3.1 Flash Preview to Token Plan and MiniMax Code. For gateway access, supply the eligible Token Plan key as `MINIMAX_API_KEY`; the live probe must confirm entitlement. It is not a zero-subscription option. A working M3 call does not establish preview access.
+
+[MiniMax's Anthropic API](https://platform.minimax.io/docs/api-reference/text-anthropic-api) documents always-on thinking for the preview and `output_config.effort` from `low` to `max`. Higher effort increases thinking latency; the matrix proposes `high`, while the API defaults to `max` when omitted. M3 defaults to thinking off at the API and needs adaptive thinking to enable it. Its requested effort flag is not evidence of the preview's depth controls. Verify the installed CLI forwards the intended parameters; receipts prove requested effort, not hidden applied depth. [DeepSeek documents V4 Pro through its Anthropic endpoint](https://api-docs.deepseek.com/guides/anthropic_api).
+
+Before recommending a fastest or strongest default, compare the same synthetic coding tasks for correctness, completion time, tool-call reliability, token usage, and actual provider billing. Preview pricing and plan limits must be checked against the active plan rather than inferred from M3 rates.
 
 ## Gateway environment reference
 
@@ -108,10 +127,11 @@ Any lab that serves an Anthropic-compatible `/v1/messages` endpoint can become a
 4. Add its probe row to the table in `plugins/pstack/skills/setup-pstack/SKILL.md`, its variables to the gateway environment reference above, and its prices to the price table.
 5. Run the live validation checklist below for the new lane before merging.
 
-## Live validation checklist (post-merge, real keys, never in CI)
+## Live validation checklist (before merge or rollout, real keys, never in CI)
 
 - V1: one DeepSeek probe through the runner (`--provider deepseek --model deepseek-flash --effort high`, read-only). Expect a `complete` receipt with `costUsd: null`; record the `reportedModel` string and confirm the base-URL default against DeepSeek's current guide; confirm `--effort` is accepted end-to-end.
 - V2: same for MiniMax (`MiniMax-M3`); record the served-model casing.
+- New-model gate: install the exact candidate and run `/setup-pstack` from both real Claude Code and Codex surfaces. Select Flash plus Pro and M3 plus Preview, verify independent efforts and probes, then run a read-only mixed panel. Record installed version/commit, surface, action, requested model/effort, served model, and observed result. Verify a failed preview entitlement probe leaves the sheet unchanged and does not select M3. A fake CLI regression test is not this gate.
 - V3: run `claude auth status --json` inside a fresh flex config dir with `ANTHROPIC_AUTH_TOKEN` set and record the output here. On macOS, confirm whether `claude login` under an explicit `CLAUDE_CONFIG_DIR` writes `.credentials.json` or the Keychain.
 - V4: the zero-subscription walkthrough above, end to end, on a machine with no stored provider logins.
 - V5: OAuth guard live: `claude login` inside a scratch flex config dir, run a lane, confirm the refusal receipt, then delete that login.

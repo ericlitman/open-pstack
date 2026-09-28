@@ -38,7 +38,13 @@ pstack-flex addition. The stock matrix above is upstream-owned and unchanged; th
 | Family | Provider | Model | Default effort | Selectable efforts | API key variable | Base URL default |
 |---|---|---|---|---|---|---|
 | deepseek | deepseek | deepseek-flash | high | low medium high xhigh max | DEEPSEEK_API_KEY | https://api.deepseek.com/anthropic |
+| deepseek-pro | deepseek | deepseek-v4-pro | high | low medium high xhigh max | DEEPSEEK_API_KEY | https://api.deepseek.com/anthropic |
 | minimax | minimax | MiniMax-M3 | high | low medium high xhigh max | MINIMAX_API_KEY | https://api.minimax.io/anthropic |
+| minimax-preview | minimax | MiniMax-M3.1-Flash-Preview | high | low medium high xhigh max | MINIMAX_API_KEY | https://api.minimax.io/anthropic |
+
+A family identifies one `(provider, model)` pair, not an entire provider. The existing `deepseek` and `minimax` family names and descriptors remain valid. `deepseek-pro` and `minimax-preview` are additional choices with independent requested efforts. Multiple models from one provider still count as one provider for panel diversity.
+
+MiniMax preview requires Token Plan access; set `MINIMAX_API_KEY` to the eligible subscription key. A pay-as-you-go key is not proof of preview access. The preview always thinks and supports `low` through `max`; do not disable thinking. M3 thinking is off by default at the API and requires adaptive thinking to enable it; its effort flag does not imply preview-style depth control. Selectable efforts are runner requests, not a claim that every provider applies five distinct reasoning levels. Verify CLI forwarding and model access with live probes. Sources: [MiniMax models](https://platform.minimax.io/docs/guides/models-intro), [MiniMax thinking controls](https://platform.minimax.io/docs/api-reference/text-anthropic-api), [DeepSeek Anthropic compatibility](https://api-docs.deepseek.com/guides/anthropic_api) (checked 2026-09-27).
 
 Flex lanes have no Claude-native agent stem and always take the external runner in both parents. The base URL is a documented default; override it with `DEEPSEEK_BASE_URL` or `MINIMAX_BASE_URL`, and confirm it against the provider's current Claude Code guide during setup's live probe. The config dir defaults to `~/.pstack-flex/<provider>` (override: `PSTACK_FLEX_<PROVIDER>_CONFIG_DIR`). Secrets stay in the environment: nothing in the sheet, the receipts, or this repository carries a key.
 

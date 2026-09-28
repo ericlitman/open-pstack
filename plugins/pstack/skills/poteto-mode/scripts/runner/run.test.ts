@@ -1032,6 +1032,46 @@ describe("gateway lanes", () => {
     expect(readFileSync(input.outputPath, "utf8")).toBe("CLAUDE_OK");
   });
 
+  for (const parent of ["claude", "codex"] as const) {
+    for (const [provider, model] of [
+      ["deepseek", "deepseek-v4-pro"],
+      ["minimax", "MiniMax-M3.1-Flash-Preview"],
+    ] as const) {
+      it(`pins ${model} and effort through the ${parent} parent route`, async () => {
+        const dumpPath = join(scratch, "new-model-env.json");
+        process.env.FAKE_DUMP_ENV_PATH = dumpPath;
+        process.env.FAKE_REPORT_MODEL = model.toLowerCase();
+        const input: RunnerOptions = {
+          ...gatewayOptions(provider, "new-model"), parent, model, effort: "max",
+        };
+        expect((await runLane(input)).exitCode).toBe(0);
+        const written = receipt(input.receiptPath);
+        expect(written).toMatchObject({
+          status: "complete", parent, provider, model, effort: "max",
+          modelVerified: true, modelEvidence: "provider-report", costUsd: null,
+        });
+        expect(written.argv[written.argv.indexOf("--model") + 1]).toBe(model);
+        expect(written.argv[written.argv.indexOf("--effort") + 1]).toBe("max");
+        const child = JSON.parse(readFileSync(dumpPath, "utf8"));
+        for (const key of [
+          "ANTHROPIC_MODEL", "ANTHROPIC_DEFAULT_OPUS_MODEL",
+          "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+          "CLAUDE_CODE_SUBAGENT_MODEL",
+        ]) expect(child[key]).toBe(model);
+      });
+
+      it(`rejects a substituted ${model} in the ${parent} parent route`, async () => {
+        const input: RunnerOptions = {
+          ...gatewayOptions(provider, "substituted-model"), parent, model,
+        };
+        process.env.FAKE_REPORT_MODEL = provider === "deepseek" ? "deepseek-flash" : "MiniMax-M3";
+        expect((await runLane(input)).exitCode).toBe(65);
+        expect(receipt(input.receiptPath).status).toBe("malformed-output");
+        expect(existsSync(input.outputPath)).toBe(false);
+      });
+    }
+  }
+
   it("verifies a case-shifted served model for MiniMax", async () => {
     process.env.FAKE_REPORT_MODEL = "minimax-m3";
     const input = gatewayOptions("minimax", "case-shift");
