@@ -19,7 +19,7 @@ flowchart TD
     PB --> S[Skills fire per step<br/>how, tdd, interrogate, arena, ...]
     S --> F{Lane fan-out}
     F --> N1["claude:fable / claude:opus<br/>native Agent (Claude sub)"]
-    F --> N2["codex:gpt-5.6-sol<br/>native or codex CLI (ChatGPT sub)"]
+    F --> N2["codex:gpt-6-astra / gpt-6-sol / gpt-6-luna<br/>native or codex CLI (ChatGPT sub)"]
     F --> N3["grok:grok-4.6<br/>grok CLI (Grok sub)"]
     F --> G1["deepseek:deepseek-flash<br/>runner + env -> DeepSeek API (key)"]
     F --> G2["minimax:MiniMax-M3<br/>runner + env -> MiniMax API (key)"]
@@ -83,10 +83,14 @@ Daily flow: `pstack-keys -> claude -> /pstack:poteto-mode`. Alternatives, the th
 
 Setup is assignment-first: pick which roles run on which families, answer one effort question per **assigned** family, and only assigned families get probed. Unassigned families are skipped, not errors. Every probe is a real one-turn run — a failed probe writes nothing. Three configurations that make sense:
 
-**A. Full frontier** (Claude + ChatGPT + Grok subs) — accept the defaults; behaves exactly like stock upstream:
+**A. Full frontier** (Claude + ChatGPT + Grok subs) — accept the defaults. GPT-6 Sol writes code, Luna explores and verifies, and the panel spans three providers:
 
 ```text
-arena runners: claude:fable@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:opus@xhigh
+feature, refactoring: codex:gpt-6-sol@high
+bug-fix: codex:gpt-6-sol@high
+how explorer: codex:gpt-6-luna@high
+swarm workers: codex:gpt-6-luna@high
+arena runners: claude:fable@max, codex:gpt-6-astra@high, grok:grok-4.6@xhigh, claude:opus@xhigh
 ```
 
 **B. Hybrid saver** (Claude sub + two API keys) — frontier judgment, cheap volume:
@@ -232,14 +236,14 @@ Every external lane writes a JSON receipt next to its output. The fields that ma
 | A panel ran with fewer lanes than configured | a lane dropped out with a named receipt | read that receipt; pstack proceeds N-1 and never silently substitutes a model |
 | Everything gateway broke after a claude CLI update | Anthropic doesn't support third-party endpoints; compatibility can shift | pin the CLI version on machines that depend on gateway lanes; see [LANES.md](LANES.md#safety-and-policy) |
 
-## Selecting the GPT-6 Codex models
+## The GPT-6 Codex models
 
-Run `/setup-pstack` and assign `astra` (`codex:gpt-6-astra@high`), `sol-6` (`codex:gpt-6-sol@high`), or `luna` (`codex:gpt-6-luna@high`) to named roles, such as `architect runners`. Every role you do not change keeps its current descriptor, including the stock `codex:gpt-5.6-sol@max` defaults. Each GPT-6 family gets its own effort question and live probe. They need only your Codex login. See [optional GPT-6 Codex families](LANES.md#optional-gpt-6-codex-families).
+`astra` (`codex:gpt-6-astra@high`), `sol-6` (`codex:gpt-6-sol@high`), and `luna` (`codex:gpt-6-luna@high`) are stock families and the first-run defaults: Astra on every panel, GPT-6 Sol on the solo code-writing roles, Luna on exploration and swarm work. They need only your Codex login. Each gets its own effort question and live probe. See [GPT-6 Codex families](LANES.md#gpt-6-codex-families).
 
-For example, this row puts Astra on the architect panel and keeps the other providers:
+A sheet written before this release keeps its assignments. To move a role, run `/setup-pstack` and name it; every role you do not change keeps its descriptor, and `codex:gpt-5.6-sol` stays selectable. For example, this row keeps GPT-5.6 Sol on bug fixes while the rest of the sheet takes the new defaults:
 
 ```text
-architect runners: claude:fable@max, codex:gpt-6-astra@high, grok:grok-4.6@xhigh, claude:opus@xhigh
+bug-fix: codex:gpt-5.6-sol@max
 ```
 
 ## Selecting the additional gateway models

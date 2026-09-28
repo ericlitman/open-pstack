@@ -1,5 +1,11 @@
 # CHANGES — applied substitutions
 
+## Unreleased: GPT-6 Codex families become stock
+
+- Move `astra`, `sol-6`, and `luna` from the additional matrix into the stock model matrix. The first-run sheet now assigns GPT-6 Sol high to `feature, refactoring`, `bug-fix`, `perf-issue`, and `hillclimb`; Luna high to `how explorer` and `swarm workers`; and Astra high in place of GPT-5.6 Sol on every panel. `codex:gpt-5.6-sol` stays selectable; existing sheets are untouched until a role is reassigned in setup.
+- `provider-dispatch.md` gains a "Default panel" section that is the single source for the four panel lanes. `setup-pstack`, `arena`, `architect`, and `interrogate` copy it; the static invariant reads that line instead of deriving the panel from every matrix row, and the solo-code invariant checks the `sol-6` row.
+- The matrix test asserts seven stock rows, the GPT-6 descriptors in the first-run sheet, and the panel contract. `UPSTREAM-FLEX.md` records the new permanent conflict surface on upstream syncs. Tracked in [pstack-flex #17](https://github.com/thisguymartin/pstack-flex/issues/17).
+
 ## Unreleased: multiple gateway model choices
 
 - Add DeepSeek V4 Pro and MiniMax M3.1 Flash Preview as independent setup families alongside existing Flash and M3 choices. Keep provider-owned routing and existing descriptors.
