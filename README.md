@@ -88,7 +88,7 @@ In Codex, ask:
 Use pstack:setup-pstack to configure pstack.
 ```
 
-Setup checks the models you can actually run, shows how each one will start, and asks before saving the choices. The current default group uses Fable, GPT-5.6 Sol, Grok 4.6, and Opus.
+Setup checks the models you can actually run, shows how each one will start, and asks before saving the choices. The current default group uses Fable, GPT-5.6 Sol, Grok 4.6, and Opus. You can also assign GPT-6 Astra, Sol, or Luna to any role through Codex.
 
 An older model sheet starts using the rolling aliases in memory as soon as this release is installed. Run setup once after updating to persist that migration. It replaces versioned Fable and Opus entries while preserving every role assignment and effort selection.
 
