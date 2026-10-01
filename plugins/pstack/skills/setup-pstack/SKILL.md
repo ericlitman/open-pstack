@@ -33,7 +33,7 @@ Read the current parent-specific sheet when it exists. Load its dispatch extensi
 
 Treat the normalized values as current role-to-family assignments. Overlay those rows on the complete first-run role map in step 7. Materialize any missing documented role row from that map on the next successful write; if its seed names an unselected family, resolve that lane to a selected family or alias before probing. A duplicate or unknown role row is inconsistent state; report it and resolve it before probing. A bare host-native slug from an older sheet is also invalid because it does not say which provider owns it. A versioned Claude model outside the two migration families remains inconsistent state. If the sheet is missing, use the complete first-run role map and the default families' Default effort cells, subject to the user's supplied choices and caps.
 
-Before effort collection or probing, apply the user's role changes in memory. Every added family must occupy a role; replace every removed family's occurrence with a selected family or alias. Require at least one selected family and require the resulting role map's family set to equal the selected set. Keep the loaded assignments by default; resolve missing assignments before probing. Membership persists only through role descriptors.
+Before effort collection or probing, apply the user's role changes in memory. Every added family must occupy a role; replace every removed family's occurrence with a selected family or alias. Require selected families from at least two distinct providers so the mandatory independent cross-judge in step 9 can run. Reject a reduced selection without that diversity before probing or writing, and report the missing independent provider. Require the resulting role map's family set to equal the selected set. Keep the loaded assignments by default; resolve missing assignments before probing. Membership persists only through role descriptors.
 
 ### 3. Parse per-family efforts
 
@@ -99,7 +99,6 @@ judgment and prose: claude:fable@max
 hardest tasks: claude:fable@max
 how explorer: grok:grok-4.6@xhigh
 how explainer: claude:fable@max
-how critics: claude:fable@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:opus@xhigh
 why investigators, synthesizer: inherit-parent
 reflect tooling, judgment, divergent, synthesizer: inherit-parent
 arena runners: claude:fable@max, codex:gpt-5.6-sol@max, grok:grok-4.6@xhigh, claude:opus@xhigh

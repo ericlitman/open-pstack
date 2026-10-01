@@ -380,7 +380,7 @@ function preflightPassed(provider: Provider, model: string, result: ProcessResul
         /logged in/i.test(combined) ||
         /You are using XAI_API_KEY\./.test(combined);
       return (
-        unavailableStatus(combined) !== "unauthenticated" &&
+        unavailableStatus(combined) === "child-failed" &&
         authenticated &&
         grokModelAvailable(combined, model)
       );

@@ -26,6 +26,30 @@ When the current model sheet contains a line `Dispatch extension: <path>`, read 
 
 An extension declares additional provider/model families, selectable efforts, a proposed effort, parent-specific launcher argv, and authentication/model/completion evidence. It adds routing capabilities, never role assignments or a second mutable model configuration. Require unique families and provider/model pairs; extensions cannot override built-in families, routes, aliases, or the user's effort caps. Only families selected by a role descriptor or the user participate in setup. Persist all selected families in the role map.
 
+The reference is UTF-8 JSON with `schemaVersion: 1` and a `families` array. This example describes the format; `example` and the executable path are illustrative placeholders, not an installed provider:
+
+```json
+{
+  "schemaVersion": 1,
+  "families": [{
+    "family": "example",
+    "provider": "example",
+    "model": "example-model",
+    "selectableEfforts": ["medium", "high"],
+    "defaultEffort": "medium",
+    "launcherArgv": {
+      "claude": ["/absolute/path/to/extension-runner", "--parent", "{parent}", "--provider", "{provider}", "--model", "{model}", "--effort", "{effort}", "--mode", "{mode}", "--prompt", "{promptPath}", "--cwd", "{cwd}", "--output", "{outputPath}", "--receipt", "{receiptPath}"],
+      "codex": ["/absolute/path/to/extension-runner", "--parent", "{parent}", "--provider", "{provider}", "--model", "{model}", "--effort", "{effort}", "--mode", "{mode}", "--prompt", "{promptPath}", "--cwd", "{cwd}", "--output", "{outputPath}", "--receipt", "{receiptPath}"]
+    },
+    "receiptSchema": "pstack-runner-v1"
+  }]
+}
+```
+
+The parent validates the reference before invoking a launcher. Reject unknown fields, duplicate JSON keys, wrong types, empty families, built-in collisions, and duplicate families or provider/model pairs. Family, provider, and model names match `[a-z0-9][a-z0-9.-]*`. Efforts are unique members of the matrix's effort universe and include `defaultEffort`. `launcherArgv` has exactly `claude` and `codex` arrays of nonempty strings, beginning with an absolute executable path. Require each placeholder shown above exactly once per argv. Placeholders occupy a whole argument; embedded or unknown placeholders are invalid. Substitute each parent-owned value as one argv element, without shell evaluation or environment expansion. Only the extension reference path supports the tilde/relative-path rule above.
+
+`receiptSchema` is exactly `pstack-runner-v1`: the launcher writes the existing `RunnerReceipt` fields in `scripts/runner/types.ts`, with `provider` set to its declared extension provider. It performs authentication/model preflight and records sanitized evidence, requested identity and effort, actual argv, exit code, model report, usage, and terminal status. Failed preflight must not execute the model. Success requires process exit 0, receipt `status: complete`, `preflight.status: passed`, `modelVerified: true`, matching parent/provider/model/effort/access/path fields, and nonempty output. Provider reports establish identity; `pinned-argv` is allowed only when the CLI does not report it and actual argv pins the exact model. Login alone or a child self-report is insufficient. The parent verifies the receipt against the assigned lane. Invalid or missing evidence fails setup without writing the sheet.
+
 The parent routes an extension descriptor directly to its declared launcher, with the same unique paths, retained background handle, access boundary, and receipt checks as built-in external lanes. Read the launcher's help before first use. Never send an extension provider to the built-in runner or reinterpret it as a native model. Shared skills consume this contract through the model sheet; no runtime resolver or machine-specific dependency is required.
 
 ## Read-time normalization

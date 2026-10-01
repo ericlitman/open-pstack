@@ -76,6 +76,10 @@ if (name === "grok" && args[0] === "models") {
     console.error("You are not authenticated.");
     process.exit(0);
   }
+  if (process.env.FAKE_GROK_UNSUPPORTED_MODEL === "1") {
+    console.log("You are using XAI_API_KEY.\\nmodel grok-4.6 is not supported");
+    process.exit(0);
+  }
   if (process.env.FAKE_GROK_MISSING_MODEL === "1") {
     console.log("You are logged in with grok.com.\\nAvailable models:\\n  * grok-4.60 (default)");
     process.exit(0);
@@ -246,6 +250,7 @@ beforeEach(() => {
   delete process.env.FAKE_GROK_TRANSIENT_UNAUTH_PATH;
   delete process.env.FAKE_GROK_PREFLIGHT_LOG_PATH;
   delete process.env.FAKE_GROK_MISSING_MODEL;
+  delete process.env.FAKE_GROK_UNSUPPORTED_MODEL;
   delete process.env.FAKE_DESCENDANT_HOLDS_PIPES_MS;
   delete process.env.FAKE_DESCENDANT_PID_PATH;
   delete process.env.FAKE_SELF_SIGNAL;
@@ -271,6 +276,7 @@ afterEach(() => {
   delete process.env.FAKE_GROK_TRANSIENT_UNAUTH_PATH;
   delete process.env.FAKE_GROK_PREFLIGHT_LOG_PATH;
   delete process.env.FAKE_GROK_MISSING_MODEL;
+  delete process.env.FAKE_GROK_UNSUPPORTED_MODEL;
   delete process.env.FAKE_DESCENDANT_HOLDS_PIPES_MS;
   delete process.env.FAKE_DESCENDANT_PID_PATH;
   delete process.env.FAKE_SELF_SIGNAL;
@@ -460,6 +466,24 @@ describe("runLane", () => {
     const modelStarted = join(scratch, "grok-missing-model.started");
     process.env.FAKE_MODEL_STARTED_PATH = modelStarted;
     const input = options("grok", "grok-missing-model");
+    const result = await runLane(input);
+
+    expect(result.exitCode).toBe(69);
+    expect(readFileSync(preflightLog, "utf8")).toBe("attempt\n");
+    expect(existsSync(modelStarted)).toBe(false);
+    expect(receipt(input.receiptPath)).toMatchObject({
+      status: "unavailable-model",
+      preflight: { status: "failed" },
+    });
+  });
+
+  it("rejects an authenticated Grok preflight that explicitly rejects the requested model", async () => {
+    process.env.FAKE_GROK_UNSUPPORTED_MODEL = "1";
+    const preflightLog = join(scratch, "grok-unsupported-model.log");
+    process.env.FAKE_GROK_PREFLIGHT_LOG_PATH = preflightLog;
+    const modelStarted = join(scratch, "grok-unsupported-model.started");
+    process.env.FAKE_MODEL_STARTED_PATH = modelStarted;
+    const input = options("grok", "grok-unsupported-model");
     const result = await runLane(input);
 
     expect(result.exitCode).toBe(69);
