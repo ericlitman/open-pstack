@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env -S -u BUN_OPTIONS -u NODE_OPTIONS bun --no-env-file --config=/dev/null
 const startedAt = Date.now();
 const { main } = await import("./cli.ts");
 process.exitCode = await main(process.argv.slice(2), startedAt);
