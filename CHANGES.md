@@ -3,6 +3,10 @@
 Mergify auto-queue is live: ready PRs to main require passing verify, Unfret and exact-head live-gate; workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## Unreleased
+
+**GPT-6.1 Sol default and the `ultra` effort.** The Sol row now uses `gpt-6.1-sol`, so the first-run `bug-fix`, `perf-issue`, and `hillclimb` roles and the arena, architect, and interrogate panels name `codex:gpt-6.1-sol@max`. The effort universe adds `ultra`. A row offers it only when its CLI's model entry lists it: Codex lists `ultra` for `gpt-6.1-sol` but not for the Luna models, so only the Sol row offers it. Setup rejects `ultra` on any other row, and the runner passes it to Codex unchanged. An existing sheet that names `codex:gpt-5.6-sol@<effort>` keeps running that model. `/setup-pstack` proposes `gpt-6.1-sol` on the next rerun and keeps the old model if the operator declines. `UPSTREAM.md` keeps the exclusion that leaves these three roles on Sol.
+
 ## 1.5.0 syncs to Cursor pstack 0.15.5
 
 Open Pstack 1.5.0 tracks Cursor pstack 0.15.5 at `12d587dfb20741cafc376c42c696c5f6e2a64487`. The first-run panel is now three models: `claude:opus@max`, `codex:gpt-5.6-sol@max`, and `grok:grok-4.7@xhigh`. Opus max takes judgment and prose, hardest tasks, and the How explainer. Grok 4.7 xhigh takes feature and refactoring work, the How explorer, and Swarm workers. Bug-fix, perf-issue, and hillclimb stay on Sol max. Why and Reflect stay on `inherit-parent`. Fable stays in the model matrix with its native agents, but no first-run role uses it. Setup asks about roles first, then asks efforts for and probes only the assigned families (the ordering follows PR #73 by @arjitj2). It drops and lists retired-role rows such as `how critics`.

@@ -77,7 +77,7 @@ fi
 # interrogate defaults copy it verbatim.
 setup="$repo/plugins/pstack/skills/setup-pstack/SKILL.md"
 dispatch="$repo/plugins/pstack/skills/poteto-mode/references/provider-dispatch.md"
-quad_of() { { grep -oE '(claude|codex|grok):[a-z0-9.-]+@(low|medium|high|xhigh|max)' || true; } | tr '\n' ' ' | sed 's/ $//'; }
+quad_of() { { grep -oE '(claude|codex|grok):[a-z0-9.-]+@(low|medium|high|xhigh|max|ultra)' || true; } | tr '\n' ' ' | sed 's/ $//'; }
 canon_panel="$( { grep -m1 '^arena runners:' "$setup" || true; } | quad_of)"
 panel_bad=""
 [ -n "$canon_panel" ] || panel_bad="could not read the canonical panel from $setup"$'\n'

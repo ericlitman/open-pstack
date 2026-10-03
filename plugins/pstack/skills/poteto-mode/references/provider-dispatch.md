@@ -11,11 +11,11 @@ pstack model choices are provider-qualified descriptors:
 | Family | Upstream pstack choice | Provider | Model | Default effort | Selectable efforts | Claude-native agent stem |
 |---|---|---|---|---|---|---|
 | fable | - | claude | fable | max | low medium high xhigh max | fable |
-| sol | gpt-5.6-sol-max | codex | gpt-5.6-sol | max | low medium high xhigh max | - |
+| sol | gpt-5.6-sol-max | codex | gpt-6.1-sol | max | low medium high xhigh max ultra | - |
 | grok | grok-4.7-xhigh-fast | grok | grok-4.7 | xhigh | low medium high xhigh max | - |
 | opus | opus | claude | opus | max | low medium high xhigh max | opus |
 
-The allowed effort universe is exactly `low`, `medium`, `high`, `xhigh`, `max`. First-run requested efforts are the Default effort cell of each row. The first-run panel is Opus, Sol, and Grok, in that order. Fable stays selectable, but no first-run role uses it. A Claude-native agent stem of `-` means the family has no Claude-native agent. Otherwise the shipped agent name is `pstack-<stem>-<effort>`.
+The allowed effort universe is exactly `low`, `medium`, `high`, `xhigh`, `max`, `ultra`. A row offers `ultra` only when its CLI's model entry lists that effort; for Codex, that is the model's entry in `codex`'s model list. `gpt-6.1-sol` lists it. The Luna models and the Claude and Grok rows do not. First-run requested efforts are the Default effort cell of each row. The first-run panel is Opus, Sol, and Grok, in that order. Fable stays selectable, but no first-run role uses it. A Claude-native agent stem of `-` means the family has no Claude-native agent. Otherwise the shipped agent name is `pstack-<stem>-<effort>`.
 
 `fable` and `opus` are Claude Code's rolling aliases. Claude resolves each alias to the latest available family revision. A runner receipt keeps the requested alias in `model` and the concrete provider-reported revision in `reportedModel`; verification accepts only a numeric `claude-fable-*` or `claude-opus-*` revision from the matching family.
 
@@ -24,6 +24,8 @@ The allowed effort universe is exactly `low`, `medium`, `high`, `xhigh`, `max`. 
 Normalize configured descriptors before matching them to the matrix or choosing a route. If a provider-qualified Claude model starts with `claude-fable-` or `claude-opus-` and its remaining revision contains only digits and hyphens, replace that model component in memory with `fable` or `opus`. Preserve provider, effort, role, and lane order. Use only the normalized descriptor for native dispatch or runner argv. Never pass the versioned predecessor to Claude.
 
 This read-time rule makes an older installed sheet use the latest family revision immediately without writing user files. Once per parent run, report that the persisted sheet is stale and that `/setup-pstack` will rewrite it after its normal probes and confirmation. Unknown versioned Claude models remain invalid. The external runner rejects a missed Fable or Opus version pin instead of silently executing it.
+
+`codex:gpt-5.6-sol@<effort>` is the previous Sol default. Match it to the Sol row and dispatch it unchanged, with the sheet's model and effort, until `/setup-pstack` replaces it. Do not rewrite it in memory. Any other model outside the matrix remains invalid.
 
 `fast` is part of Cursor's Grok selector, not a Grok Build CLI model or effort flag. The portable Grok route pins the current CLI model `grok-4.7`. The first-run Grok effort is `xhigh`.
 
@@ -56,7 +58,7 @@ pstack-runner \
   --parent <claude|codex> \
   --provider <claude|codex|grok> \
   --model <real CLI model> \
-  --effort <low|medium|high|xhigh|max> \
+  --effort <low|medium|high|xhigh|max|ultra> \
   --mode <read-only|isolated-write> \
   --prompt <unique prompt file> \
   --cwd <repository or dedicated worktree> \

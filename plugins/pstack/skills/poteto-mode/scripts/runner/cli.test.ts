@@ -40,4 +40,9 @@ describe("runner CLI parsing", () => {
       "greater than zero"
     );
   });
+
+  it("accepts the ultra effort", () => {
+    const args = argv().map((value) => (value === "max" ? "ultra" : value));
+    expect(parseArgs(args)?.effort).toBe("ultra");
+  });
 });

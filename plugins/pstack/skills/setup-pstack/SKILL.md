@@ -31,13 +31,13 @@ Use the harness and tool surface running this skill: Claude Code or Codex. Envir
 
 Read the current parent-specific sheet when it exists. Before matrix validation, normalize only the rolling-alias predecessors that earlier pstack releases generated. A provider-qualified Claude model is migratable when its model component starts with `claude-fable-` or `claude-opus-` and the remaining revision contains only digits and hyphens. Replace that component in memory with `fable` or `opus`, preserving the provider, effort, role, and lane order. Record each original and normalized descriptor for the confirmation in step 7. This migration is valid loaded state and does not require a separate operator choice.
 
-Treat the normalized values as current role-to-family assignments. Overlay those rows on the complete first-run role map in step 7. Materialize any missing documented role row from that map on the next successful write. A duplicate role row is inconsistent state; report it and resolve it before probing. A row whose role is not in the step 7 role map, such as `how critics`, is from a retired role. Drop it and list it at confirmation. A bare host-native slug from an older sheet is also invalid because it does not say which provider owns it. A versioned Claude model outside the two migration families remains inconsistent state. If the sheet is missing, use the complete first-run role map and the model matrix's Default effort cells.
+Treat the normalized values as current role-to-family assignments. Overlay those rows on the complete first-run role map in step 7. Materialize any missing documented role row from that map on the next successful write. A duplicate role row is inconsistent state; report it and resolve it before probing. A row whose role is not in the step 7 role map, such as `how critics`, is from a retired role. Drop it and list it at confirmation. A bare host-native slug from an older sheet is also invalid because it does not say which provider owns it. A versioned Claude model outside the two migration families remains inconsistent state. A `codex:gpt-5.6-sol@<effort>` value is the previous Sol default, not inconsistent state. On a rerun, propose replacing every occurrence with `codex:gpt-6.1-sol@<same effort>` and ask. If the operator declines, the Sol family's model stays `gpt-5.6-sol` for steps 3 to 7: probe it, render it, and write it unchanged. If the sheet is missing, use the complete first-run role map and the model matrix's Default effort cells.
 
 Then ask whether to keep these role-to-family assignments or change named roles. Keeping them is the default. Apply only role changes the operator names; never offer a reset of a customized sheet to the first-run assignments. A changed role may use any model-matrix family, `inherit-parent`, or `auto`.
 
 ### 3. Parse per-family efforts
 
-Read the model matrix. Every non-alias value must match `<provider>:<model>@<effort>`. Map it to exactly one matrix family by `(provider, model)`, require its effort to appear in that row's Selectable efforts cell, and collect the effort. `inherit-parent` and `auto` rows carry no family effort.
+Read the model matrix. Every non-alias value must match `<provider>:<model>@<effort>`. Map it to exactly one matrix family by `(provider, model)`, matching a kept `codex:gpt-5.6-sol` to the Sol row, require its effort to appear in that row's Selectable efforts cell, and collect the effort. Reject `ultra` for every row whose Selectable efforts cell does not list it. `inherit-parent` and `auto` rows carry no family effort.
 
 An unmatched provider/model, out-of-domain effort, or duplicate role is inconsistent state. Stop, show the conflicting rows verbatim, and ask for an explicit matrix family or alias replacement. If one or more families have mixed efforts, show every conflicting family and role row, then ask for one normalized effort per family from its Selectable efforts cell. Do not invent a precedence rule. Do not probe or write while any inconsistency is unresolved.
 
@@ -69,7 +69,7 @@ Build the new sheet in memory. Do not write it yet.
 - First run: start from the complete role assignments in step 7, with the step 2 role changes applied.
 - Rerun: start from the normalized complete role map from step 2, with the step 2 role changes applied, preserving each loaded row's lane order and family (or alias) per lane.
 
-Rewrite every matrix-family descriptor to `provider:model@<requested effort for that family>`. Leave `inherit-parent` and `auto` unchanged. An effort-only rerun cannot change a role's family. Changing Grok's effort updates every Grok occurrence and does not move a Sol role onto Grok. Refuse an unqualified slug, an unavailable route, a model outside the model matrix, or a provider/model mismatch.
+Rewrite every matrix-family descriptor to `provider:model@<requested effort for that family>`, using the Sol model chosen in step 2. Leave `inherit-parent` and `auto` unchanged. An effort-only rerun cannot change a role's family. Changing Grok's effort updates every Grok occurrence and does not move a Sol role onto Grok. Refuse an unqualified slug, an unavailable route, a model outside the model matrix other than a kept `gpt-5.6-sol`, or a provider/model mismatch.
 
 ### 7. Confirm and commit
 
@@ -87,20 +87,20 @@ After the operator confirms, write the in-memory render from step 6. Never paste
 Provider-qualified per-role choices. Read the installed pstack provider-dispatch reference before dispatching a configured role. Every documented role remains present. `inherit-parent` and `auto` use the parent model natively and still count as one panel lane.
 
 feature, refactoring: grok:grok-4.7@xhigh
-bug-fix: codex:gpt-5.6-sol@max
-perf-issue: codex:gpt-5.6-sol@max
-hillclimb: codex:gpt-5.6-sol@max
+bug-fix: codex:gpt-6.1-sol@max
+perf-issue: codex:gpt-6.1-sol@max
+hillclimb: codex:gpt-6.1-sol@max
 judgment and prose: claude:opus@max
 hardest tasks: claude:opus@max
 how explorer: grok:grok-4.7@xhigh
 how explainer: claude:opus@max
 why investigators, synthesizer: inherit-parent
 reflect tooling, judgment, divergent, synthesizer: inherit-parent
-arena runners: claude:opus@max, codex:gpt-5.6-sol@max, grok:grok-4.7@xhigh
-arena cross-judge pool: claude:opus@max, codex:gpt-5.6-sol@max, grok:grok-4.7@xhigh
+arena runners: claude:opus@max, codex:gpt-6.1-sol@max, grok:grok-4.7@xhigh
+arena cross-judge pool: claude:opus@max, codex:gpt-6.1-sol@max, grok:grok-4.7@xhigh
 swarm workers: grok:grok-4.7@xhigh
-architect runners: claude:opus@max, codex:gpt-5.6-sol@max, grok:grok-4.7@xhigh
-interrogate reviewers: claude:opus@max, codex:gpt-5.6-sol@max, grok:grok-4.7@xhigh
+architect runners: claude:opus@max, codex:gpt-6.1-sol@max, grok:grok-4.7@xhigh
+interrogate reviewers: claude:opus@max, codex:gpt-6.1-sol@max, grok:grok-4.7@xhigh
 ```
 
 ### 8. Wire it in
