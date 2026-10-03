@@ -380,6 +380,37 @@ else
   note "ok: codex logo path resolves"
 fi
 
+verification="$repo/.claude/skills/verify-open-pstack"
+verification_bad=""
+if [ ! -L "$repo/.agents/skills/verify-open-pstack" ] ||
+   [ "$(readlink "$repo/.agents/skills/verify-open-pstack" 2>/dev/null || true)" != "../../.claude/skills/verify-open-pstack" ]; then
+  verification_bad="Codex must link to the canonical Claude project skill"
+fi
+for section in Launch Doctor Drive Evidence Cleanup Helpers; do
+  grep -q "^## $section$" "$verification/SKILL.md" || verification_bad="$verification_bad missing $section;"
+done
+for file in features/registry.json features/README.md package.json bun.lock tsconfig.json; do
+  [ -f "$verification/$file" ] || verification_bad="$verification_bad missing $file;"
+done
+[ -x "$verification/scripts/verify.sh" ] || verification_bad="$verification_bad helper is not executable;"
+if [ -e "$plugin/skills/verify-open-pstack" ] || [ -e "$plugin/commands/verify-open-pstack.md" ]; then
+  verification_bad="$verification_bad project verifier must not ship in the plugin;"
+fi
+if [ -n "$verification_bad" ]; then
+  note "FAIL: repository-local verification skill: $verification_bad"
+  fail=1
+else
+  note "ok: shared project verification skill has executable helper and maintained feature map"
+fi
+
+note "Checking non-shipped verification helper"
+(
+  cd "$verification"
+  bun install --frozen-lockfile
+  bun run test
+  bun run typecheck
+)
+
 if [ "${PSTACK_STATIC_ONLY:-0}" = "1" ]; then
   exit "$fail"
 fi

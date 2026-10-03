@@ -11,3 +11,6 @@
 
 # bun deps for the vendored poteto-mode scripts (bootstrap.ts installs them on first run)
 plugins/pstack/skills/poteto-mode/scripts/node_modules/
+
+# Non-shipped repository verification helper dependencies
+.claude/skills/verify-open-pstack/node_modules/
