@@ -3,6 +3,10 @@
 Mergify auto-queue is live: ready PRs to main require passing verify, Unfret and exact-head live-gate; workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## Unreleased
+
+**Claude poteto-agent preload.** The Claude Code agent definition preloads `pstack:poteto-mode` through its `skills` frontmatter. Claude subagents start with isolated context, so the upstream prompt alone exposed the skill name but not its body. The shared skill tree and the Codex path are unchanged. The static invariants preserve the binding, and the behavioral check proves that the packaged agent can read a named principle without invoking `Skill` or reading a file.
+
 ## 1.5.0 syncs to Cursor pstack 0.15.5
 
 Open Pstack 1.5.0 tracks Cursor pstack 0.15.5 at `12d587dfb20741cafc376c42c696c5f6e2a64487`. The first-run panel is now three models: `claude:opus@max`, `codex:gpt-5.6-sol@max`, and `grok:grok-4.7@xhigh`. Opus max takes judgment and prose, hardest tasks, and the How explainer. Grok 4.7 xhigh takes feature and refactoring work, the How explorer, and Swarm workers. Bug-fix, perf-issue, and hillclimb stay on Sol max. Why and Reflect stay on `inherit-parent`. Fable stays in the model matrix with its native agents, but no first-run role uses it. Setup asks about roles first, then asks efforts for and probes only the assigned families (the ordering follows PR #73 by @arjitj2). It drops and lists retired-role rows such as `how critics`.

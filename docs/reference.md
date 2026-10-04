@@ -154,7 +154,7 @@ The table uses the short upstream names. Claude Code exposes each native skill w
 
 ## Subagents
 
-`poteto-agent` ships unchanged. Spawn from a parent with `subagent_type: "poteto-agent"`.
+`poteto-agent` keeps the upstream prompt and adds Claude Code `skills` frontmatter. The field preloads `pstack:poteto-mode` because Claude subagents do not inherit the parent's loaded skills. Spawn the agent from a parent with `subagent_type: "poteto-agent"`.
 
 `comment-sicko` is the read-only comment reviewer the `no-comments` skill spawns. Upstream names it `Comment Sicko`; the port renames it to `comment-sicko` so the name is a valid `subagent_type`. Invoke it through `/no-comments`, not directly.
 
