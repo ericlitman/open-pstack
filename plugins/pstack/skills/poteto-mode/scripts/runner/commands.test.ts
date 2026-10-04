@@ -146,6 +146,33 @@ describe("invocationCommand", () => {
     );
   });
 
+  it("sandboxes Claude writers and denies a shared git directory when one is supplied", () => {
+    const writer = options({ provider: "claude", model: "fable", mode: "isolated-write" });
+    const sandbox = {
+      enabled: true,
+      autoAllowBashIfSandboxed: true,
+      allowUnsandboxedCommands: false,
+      failIfUnavailable: true,
+    };
+    const settings = (args: readonly string[]): unknown =>
+      JSON.parse(args[args.indexOf("--settings") + 1] ?? "");
+
+    expect(settings(invocationCommand(writer).args)).toEqual({ sandbox });
+    expect(settings(invocationCommand(writer, "/repo/.git").args)).toEqual({
+      sandbox: { ...sandbox, filesystem: { denyWrite: ["/repo/.git"] } },
+    });
+    expect(settings(invocationCommand(writer, "/srv/my repo/.git").args)).toEqual({
+      sandbox: { ...sandbox, filesystem: { denyWrite: ["/srv/my repo/.git"] } },
+    });
+
+    const reader = invocationCommand(
+      options({ provider: "claude", model: "fable" }),
+      "/repo/.git"
+    );
+    expect(reader.args).toEqual(expect.arrayContaining(["--permission-mode", "plan"]));
+    expect(reader.args).not.toContain("--settings");
+  });
+
   it("covers low, medium, and high for every external provider", () => {
     const cases = [
       {

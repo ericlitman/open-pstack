@@ -4,15 +4,17 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  realpathSync,
   statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { invocationCommand, preflightCommand, type CommandSpec } from "./commands.ts";
 import { versionedClaudeAlias } from "./model-aliases.ts";
 import { parseProviderOutput, reportedModelMatches } from "./parse-output.ts";
 import type {
+  AccessMode,
   Provider,
   ReceiptStatus,
   RunnerOptions,
@@ -134,8 +136,11 @@ const CLAUDE_IDENTITY = [
   "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
 ] as const;
 
+// A Claude writer's git must find its repository from the cwd, as discovery's git did, so
+// an inherited GIT_DIR or GIT_COMMON_DIR cannot route it to an undenied git directory.
 export function childEnvironment(
   provider: Provider,
+  mode: AccessMode,
   source: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
   const result = { ...source };
@@ -145,6 +150,9 @@ export function childEnvironment(
       ? CLAUDE_IDENTITY
       : [...CODEX_IDENTITY, ...CLAUDE_IDENTITY];
   for (const key of remove) delete result[key];
+  if (provider === "claude" && mode === "isolated-write") {
+    for (const key of Object.keys(result)) if (key.startsWith("GIT_")) delete result[key];
+  }
   return result;
 }
 
@@ -355,6 +363,123 @@ async function waitForGrokPreflightRetry(
   }
 }
 
+type SharedGitDiscovery =
+  | { readonly kind: "found"; readonly sharedGitDir: string | null }
+  | {
+    readonly kind: "refused";
+    readonly status: ReceiptStatus;
+    readonly message: string;
+    readonly evidence: string;
+    readonly exitCode: number | null;
+    readonly signal: string | null;
+  };
+
+// Older git has no --path-format, so a relative answer is resolved against the cwd.
+const GIT_COMMON_DIR: CommandSpec = {
+  command: "git",
+  args: ["rev-parse", "--git-common-dir"],
+  stdin: "none",
+};
+
+function within(parent: string, child: string): boolean {
+  const path = relative(parent, child);
+  return path === "" || (path !== ".." && !path.startsWith(`..${sep}`) && !isAbsolute(path));
+}
+
+// A linked worktree keeps its refs, objects and index in a git directory outside the cwd. Git
+// itself finds that directory, from the cwd and with the writer's environment, so the deny matches
+// what the writer's own git will use. Returns null for a non-repository or a directory the cwd
+// contains, and refuses whatever cannot be denied literally: denyWrite entries are globs that
+// cannot be escaped, and Claude Code 2.1.288 on Linux drops entries containing * ? [ ].
+export async function discoverSharedGitDir(
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+  deadlineAt: number | null,
+  cancellation: RunCancellation
+): Promise<SharedGitDiscovery> {
+  const refuse = (
+    status: ReceiptStatus,
+    message: string,
+    result: ProcessResult | null = null
+  ): SharedGitDiscovery => ({
+    kind: "refused",
+    status,
+    message,
+    evidence: result === null ? "" : evidence(`${result.stdout}\n${result.stderr}`),
+    exitCode: result?.exitCode ?? null,
+    signal: result?.signal ?? null,
+  });
+  const git = Bun.which(GIT_COMMON_DIR.command, { PATH: env.PATH, cwd });
+  if (git === null) {
+    return refuse(
+      "unavailable-cli",
+      "git executable not found, so the shared git directory cannot be found"
+    );
+  }
+  // The C locale keeps git's "not a git repository" message in the English the check reads.
+  const result = await runProcess(
+    git,
+    GIT_COMMON_DIR,
+    cwd,
+    { ...env, LC_ALL: "C" },
+    "",
+    deadlineAt,
+    cancellation
+  );
+  if (result.cancelledBy !== null) {
+    return refuse(
+      "cancelled",
+      `launcher received ${result.cancelledBy} during shared git directory discovery`,
+      result
+    );
+  }
+  if (result.timedOut) {
+    return refuse("timed-out", "shared git directory discovery timed out", result);
+  }
+  // Only git's "searched and found nothing" answer means no repository. A .git that names a
+  // missing or malformed git directory fails with other wording and is refused.
+  const notARepository =
+    /^fatal: not a git repository \(or any (of the parent directories|parent up to mount point)/m;
+  if (result.exitCode === 128 && notARepository.test(result.stderr)) {
+    return { kind: "found", sharedGitDir: null };
+  }
+  const reported = result.stdout.replace(/\n$/, "");
+  if (result.exitCode !== 0 || reported.length === 0) {
+    return refuse(
+      "child-failed",
+      `git rev-parse --git-common-dir exited with status ${result.exitCode}`,
+      result
+    );
+  }
+  let root: string;
+  let shared: string;
+  try {
+    root = realpathSync(cwd);
+    shared = realpathSync(resolve(root, reported));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return refuse("child-failed", `cannot resolve the shared git directory: ${message}`, result);
+  }
+  if (within(root, shared)) return { kind: "found", sharedGitDir: null };
+  if (within(shared, root)) {
+    return refuse(
+      "child-failed",
+      `cwd ${JSON.stringify(root)} is inside its shared git directory ${JSON.stringify(shared)}, ` +
+        "so the Claude writer sandbox cannot deny that directory without denying the cwd",
+      result
+    );
+  }
+  if (/[*?[\]{}\u0000-\u001f\u007f]/.test(shared)) {
+    return refuse(
+      "child-failed",
+      `shared git directory ${JSON.stringify(shared)} contains a glob or control character, ` +
+        "so the Claude writer sandbox cannot deny it literally",
+      result
+    );
+  }
+  return { kind: "found", sharedGitDir: shared };
+}
+
 function preflightPassed(provider: Provider, model: string, result: ProcessResult): boolean {
   if (result.exitCode !== 0 || result.timedOut) return false;
   const combined = `${result.stdout}\n${result.stderr}`;
@@ -539,7 +664,7 @@ async function executeLane(
 ): Promise<RunResult> {
   const startedAt = new Date(started).toISOString();
   const prompt = readFileSync(options.promptPath, "utf8");
-  const env = childEnvironment(options.provider);
+  const env = childEnvironment(options.provider, options.mode);
   const executable = Bun.which(invocation.command, {
     PATH: env.PATH,
     cwd: options.cwd,
@@ -620,6 +745,38 @@ async function executeLane(
     removeIfExists(options.outputPath);
     writeReceipt(options.receiptPath, receipt);
     return { exitCode: statusExitCode(receipt.status), receipt };
+  }
+
+  if (options.provider === "claude" && options.mode === "isolated-write") {
+    const discovery = await discoverSharedGitDir(options.cwd, env, deadlineAt, cancellation);
+    if (discovery.kind === "refused") {
+      const completed = Date.now();
+      receipt = completeReceipt(options, {
+        status: discovery.status,
+        startedAt,
+        completedAt: new Date(completed).toISOString(),
+        elapsedMs: completed - started,
+        executable,
+        preflight: discovery.status === "cancelled" || discovery.status === "timed-out"
+          ? { ...preflightState, status: discovery.status }
+          : preflightState,
+        argv: [executable, ...invocation.args],
+        exitCode: discovery.exitCode,
+        signal: discovery.signal,
+        reportedModel: null,
+        modelVerified: false,
+        modelEvidence: null,
+        sessionId: null,
+        usage: null,
+        costUsd: null,
+        error: { message: discovery.message, evidence: discovery.evidence },
+      });
+      removeIfExists(options.outputPath);
+      writeReceipt(options.receiptPath, receipt);
+      return { exitCode: statusExitCode(discovery.status), receipt };
+    }
+    invocation = invocationCommand(options, discovery.sharedGitDir);
+    progress.argv = [executable, ...invocation.args];
   }
 
   const preflightExecutable = executable;
