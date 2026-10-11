@@ -1,0 +1,23 @@
+.claude/skills/verify-open-pstack/features/recipes.ts
+  s_9b42a6c245f0da::t_dee57e9996d18e 150-151,165,170,206-207
+.claude/skills/verify-open-pstack/features/skill-invocation.md
+  s_9b42a6c245f0da::t_dee57e9996d18e 27
+.claude/skills/verify-open-pstack/scripts/reflect.test.ts
+  s_9b42a6c245f0da::t_82cba2448b1ebe 64,140-142,145-156,158-159,162,164,167-168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b2adc5f64ed5157835273fe078f848245b6e8c87",
+  "prompts": {},
+  "sessions": {
+    "s_9b42a6c245f0da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b55007c7-8595-4374-8b5b-3984f1fe1e2e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Eric A. Litman <ericlitman@studio2.tail062eee.ts.net>"
+    }
+  }
+}
