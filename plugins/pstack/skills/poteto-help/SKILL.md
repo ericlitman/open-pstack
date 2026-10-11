@@ -54,7 +54,7 @@ Whether `/poteto-mode` stays on depends on the harness:
 - In Codex, ask for `pstack:poteto-mode` by name at the start of each task.
 - In both, start each new task with `/poteto-mode` when it matters.
 
-Mid-session, "new task" makes the mode match a fresh playbook. `/poteto-mode` already uses `poteto-agent` for the subagents its playbook steps spawn. To get the same style from a subagent of your own, spawn it with `subagent_type: "poteto-agent"`.
+Mid-session, "new task" makes the mode match a fresh playbook. `/poteto-mode` already uses `poteto-agent` for the subagents its playbook steps spawn. To get the same style from a subagent of your own in Claude Code, spawn it with `subagent_type: "poteto-agent"`. In Codex, use `spawn_agent` and tell the agent to read the `poteto-mode` skill in full first.
 
 ## Pick a skill
 
@@ -103,7 +103,8 @@ Close calls:
 
 Not in pstack:
 
-- `run` (CLIs and TUIs), `verify` (UIs), `loop`, and `plugin-dev:skill-development` are Claude Code built-ins. [`codex-tools.md`](../poteto-mode/references/codex-tools.md) names the Codex equivalent of each.
+- `run` (CLIs and TUIs), `verify` (UIs), and `loop` are Claude Code built-ins.
+- `plugin-dev:skill-development` comes from the separate `plugin-dev` plugin, which pstack does not install. Skill-authoring work and `/reflect` need it, so install it first with `/plugin install plugin-dev@claude-plugins-official`. [`codex-tools.md`](../poteto-mode/references/codex-tools.md) names the Codex equivalent of each.
 - `/make-bot-ui` is not ported, because it depends on Cursor routines and webhooks.
 - pstack has no `/orchestrate` skill. Orchestrate is a `/poteto-mode` playbook. If the slash menu shows `/orchestrate`, another plugin provides it.
 

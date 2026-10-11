@@ -29,6 +29,9 @@ The table above is the current Cursor sync point. Open Pstack 1.6.0 imports this
 - The Built-in PR tool paragraph from `23e4138` and `00b14f1` is not applied. It describes a Cursor run tool that Claude Code and Codex do not have.
 - `00b14f1`'s shorter `principle-test-behavior-not-implementation` text and its matching poteto-mode index line are not applied. The shorter text again lists `toBeDefined` as passing on `undefined` and treats every restated prompt or table value as a weak test, which the 0.15.0 local correction fixed.
 - The 40-line squash-body cutoff returns in `00b14f1` and stays omitted, as in the 0.15.0 sync.
+- `23e4138`'s Autopilot-full rule that skips the merge-prep rebase when the paths are disjoint and `git merge-tree` is clean is narrowed. The skip applies only when the forge tests the head merged with current trunk before it lands, because a disjoint, conflict-free merge can still break at runtime.
+- `poteto-help` from `4e5b1cf` is corrected for this port. `plugin-dev:skill-development` is named as a separate plugin to install, not a Claude Code built-in, and the `poteto-agent` subagent advice is limited to Claude Code, with the Codex `spawn_agent` route beside it.
+- `correct` from `9511e60` keeps absence-only tests that fail on a relevant defect, so it agrees with the retained `principle-test-behavior-not-implementation` text.
 
 ## Local port-patch ledger
 
