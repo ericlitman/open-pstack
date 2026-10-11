@@ -1,0 +1,19 @@
+.github/workflows/ci.yml
+  s_4e9875f2952d9e::t_d1558fe1a68cf9 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f694c559ce79aa6e569b1329cc10861faedcfc0d",
+  "prompts": {},
+  "sessions": {
+    "s_4e9875f2952d9e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "031eb439-42da-411f-8ee0-24a6036b4dfa",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Eric Litman <eric@litman.org>"
+    }
+  }
+}
