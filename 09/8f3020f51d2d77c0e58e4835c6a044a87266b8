@@ -1,0 +1,60 @@
+.claude-plugin/marketplace.json
+  s_f18b16978813d2::t_dff5b3be09adae 12
+scripts/release_test.py
+  s_f18b16978813d2::t_69a1bd07d96348 9
+  s_f18b16978813d2::t_af1a61da716c6e 1-4,6-7,10-53,57-113,169-170
+  s_f18b16978813d2::t_b48a12e928f8c8 54-56,119,134-166
+  s_f18b16978813d2::t_f43ce4238843ef 5,114-118,120-131
+  s_f18b16978813d2::t_dca8a0f070a9e1 8
+tests/skill-collision-repro.sh
+  s_f18b16978813d2::t_8f4af51dbcca63 478-485
+UPSTREAM.md
+  s_f18b16978813d2::t_dff5b3be09adae 13,15
+  s_f18b16978813d2::t_86e223c38a0fd3 28-33
+  s_f18b16978813d2::t_8f4af51dbcca63 64
+CHANGES.md
+  s_f18b16978813d2::t_dff5b3be09adae 6,8-10
+  s_f18b16978813d2::t_8f4af51dbcca63 7,11,259
+  s_f18b16978813d2::t_fcde3e0aeee15f 12-34
+plugins/pstack/skills/correct/SKILL.md
+  s_f18b16978813d2::t_86e223c38a0fd3 21
+plugins/pstack/.codex-plugin/plugin.json
+  s_f18b16978813d2::t_dff5b3be09adae 3
+plugins/pstack/skills/reflect/SKILL.md
+  s_f18b16978813d2::t_a395046c468b59 22
+README.md
+  s_f18b16978813d2::t_dff5b3be09adae 160
+docs/reference.md
+  s_f18b16978813d2::t_a395046c468b59 85
+  s_f18b16978813d2::t_9f62a76f8c914b 219
+  s_f18b16978813d2::t_dff5b3be09adae 5
+plugins/pstack/skills/poteto-mode/playbooks/autopilot-full.md
+  s_f18b16978813d2::t_b10e557478d725 9
+.claude/skills/verify-open-pstack/features/registry.json
+  s_f18b16978813d2::t_8f4af51dbcca63 52
+scripts/release.py
+  s_f18b16978813d2::t_3e6757c05ab4b9 22,67,109,112-114,127,137,141-142,147,152,160-168
+  s_f18b16978813d2::t_5e32c9d73dafe7 1-5,8-11,14-21,23-55,57-66,68-108,110-111,115-126,128-136,138-140,144-146,148,150-151,153-159,169-172
+  s_f18b16978813d2::t_f43ce4238843ef 6-7,12-13,143,149
+  s_f18b16978813d2::t_199378a86f43d1 56
+plugins/pstack/.claude-plugin/plugin.json
+  s_f18b16978813d2::t_dff5b3be09adae 4
+plugins/pstack/skills/poteto-help/SKILL.md
+  s_f18b16978813d2::t_a395046c468b59 57-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "098f3020f51d2d77c0e58e4835c6a044a87266b8",
+  "prompts": {},
+  "sessions": {
+    "s_f18b16978813d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4f7ff88f-1806-4757-9ace-aab566563d34",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Eric A. Litman <ericlitman@studio2.tail062eee.ts.net>"
+    }
+  }
+}
