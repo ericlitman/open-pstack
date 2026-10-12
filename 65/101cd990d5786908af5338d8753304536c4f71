@@ -1,0 +1,44 @@
+.claude/skills/verify-open-pstack/features/skill-invocation.md
+  s_9b42a6c245f0da::t_61167fe3562660 27
+.claude/skills/verify-open-pstack/scripts/core.ts
+  s_9b42a6c245f0da::t_1856cce710e046 39-40
+plugins/pstack/skills/poteto-mode/scripts/resolve-codex-transcript.test.ts
+  s_9b42a6c245f0da::t_523d0bb0be452c 5,21,313-329,331-336
+  s_9b42a6c245f0da::t_f363c62d9b2446 330
+NOTICE.md
+  s_9b42a6c245f0da::t_1856cce710e046 56
+.claude/skills/verify-open-pstack/scripts/reflect.test.ts
+  s_9b42a6c245f0da::t_b912b90f429577 2,5-6,21-29,35,39,41,43,45,51-54,62,65,70-72,85,88-92,96-101,105-108,111-113,115,117-120,123-132,134-135,140,143,154
+  s_9b42a6c245f0da::t_5a7fa54eb4dd5b 60-61,86-87
+plugins/pstack/skills/poteto-mode/scripts/resolve-codex-transcript
+  s_9b42a6c245f0da::t_d8a00cd4fceeac 1-4
+.claude/skills/verify-open-pstack/features/README.md
+  s_9b42a6c245f0da::t_1856cce710e046 22
+.claude/skills/verify-open-pstack/features/recipes.ts
+  s_9b42a6c245f0da::t_d8a00cd4fceeac 131-132,178,181
+  s_9b42a6c245f0da::t_91f1e45f0d5fd2 5,129,138-141,152,154,167,175,179-180,182,187,190-194
+plugins/pstack/skills/poteto-mode/references/codex-tools.md
+  s_9b42a6c245f0da::t_1856cce710e046 33
+docs/reference.md
+  s_9b42a6c245f0da::t_1856cce710e046 64,110
+.claude/skills/verify-open-pstack/scripts/core.test.ts
+  s_9b42a6c245f0da::t_1856cce710e046 113
+UPSTREAM.md
+  s_9b42a6c245f0da::t_1856cce710e046 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "65101cd990d5786908af5338d8753304536c4f71",
+  "prompts": {},
+  "sessions": {
+    "s_9b42a6c245f0da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b55007c7-8595-4374-8b5b-3984f1fe1e2e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Eric A. Litman <ericlitman@studio2.tail062eee.ts.net>"
+    }
+  }
+}
