@@ -3,6 +3,10 @@
 Mergify auto-queue is live: ready PRs to main require passing verify, Unfret and exact-head live-gate, and no unresolved review thread; workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## Unreleased
+
+**Two typed-only skills from upstream.** `/in-your-own-words` restates the user's goal and problem before work starts. `/sharpen` approaches a task the way a top expert would, aimed at the real goal, without overspecifying it. Both come verbatim from Cursor pstack 0.15.24 ahead of the next full sync, with their `poteto-help` and recipe rows (#187). They need no harness substitution.
+
 ## 1.8.0 adds a generated model catalog and fixes the Windows SessionStart hook
 
 Open Pstack 1.8.0 keeps the Cursor pstack 0.15.20 sync. It ships registry units U2 and U3 and the Windows hook fix, merged after 1.7.0, and adds the note for registry unit U1, which shipped in 1.7.0.

@@ -14,6 +14,8 @@ open-pstack tracks [Cursor's pstack](https://github.com/cursor/plugins/tree/main
 
 The table above is the current Cursor sync point. Open Pstack 1.7.0 imported this 0.15.20 sync, and 1.8.0 keeps it. `README-UPSTREAM.md` preserves the upstream pstack README verbatim. `CHANGES.md` and `NOTICE.md` describe the adaptations and provenance.
 
+Ahead of the sync point, the port takes the `in-your-own-words` skill from `7d8d909` and `dbf4981` and the `sharpen` skill from `79afd75` (pstack 0.15.24, `1e5c90a`), with their `poteto-help` and recipe rows (#187). Both skills are verbatim. The next full sync starts from `1b6d44f` as usual and finds these three commits already applied.
+
 ## Upstream-only exclusions
 
 - Commits `799151d` and `6fecddb` add and relocate `make-bot-ui`. It depends on Cursor routines, webhook events, and UI primitives that Claude Code and Codex do not share.
@@ -25,7 +27,7 @@ The table above is the current Cursor sync point. Open Pstack 1.7.0 imported thi
 - The explicit Grok, Opus, and Sol defaults for the Why and Reflect roles are not applied. Those roles stay on `inherit-parent` because the external runner omits the parent's MCP servers.
 - The Claude manifest does not take the logo field from `efa2a53` because Claude Code has no schema for it. The shared asset is exposed through the Codex manifest instead.
 - Commit `df58112` (pstack 0.15.15) is not applied. It drops Sol from every default, cuts the panels to Opus and Grok, and moves Opus from `max` to `xhigh`. Open Pstack keeps its own model defaults and three-model panels.
-- The `disable-model-invocation: true` lines that `23e4138` puts on `benchmark-checklist` and `principle-explain-the-number` are not applied. The same flag, which upstream carried on principle leaves and `figure-it-out` before 0.15.5, stays off as in earlier syncs. Principle leaves keep `user-invocable: false`, and `figure-it-out` and `benchmark-checklist` stay model-invocable because poteto-mode routes to them by name. The typed-only `correct`, `ketchup`, and `poteto-help` keep the flag.
+- The `disable-model-invocation: true` lines that `23e4138` puts on `benchmark-checklist` and `principle-explain-the-number` are not applied. The same flag, which upstream carried on principle leaves and `figure-it-out` before 0.15.5, stays off as in earlier syncs. Principle leaves keep `user-invocable: false`, and `figure-it-out` and `benchmark-checklist` stay model-invocable because poteto-mode routes to them by name. The typed-only `correct`, `ketchup`, `poteto-help`, `in-your-own-words`, and `sharpen` keep the flag.
 - The Built-in PR tool paragraph from `23e4138` and `00b14f1` is not applied. It describes a Cursor run tool that Claude Code and Codex do not have.
 - `00b14f1`'s shorter `principle-test-behavior-not-implementation` text is not applied. It fails every restated constant, table row, or prompt string and every absence-only assertion (`not.toHaveBeenCalled`, `toBeUndefined`, `toEqual([])`), and the 0.15.0 local correction keeps both kinds when they test a real contract. The poteto-mode index line for this principle takes `00b14f1`'s format change and keeps the 0.15.0 wording.
 - The 40-line squash-body cutoff returns in `00b14f1` and stays omitted, as in the 0.15.0 sync.

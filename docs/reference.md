@@ -157,6 +157,8 @@ The table uses the short upstream names. Claude Code exposes each native skill w
 | `/correct` | turn mistakes agents keep repeating in a repo into checks that make them impossible (typed only) |
 | `/ketchup` | catch up on everything in this session since your last message (typed only) |
 | `/poteto-help` | find the skill, playbook, or principle for a question about pstack (typed only) |
+| `/in-your-own-words` | play back your goal and the problem before work starts (typed only) |
+| `/sharpen` | approach a task the way a top expert would, aimed at the real goal, without overspecifying it (typed only) |
 
 ## Subagents
 

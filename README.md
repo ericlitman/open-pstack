@@ -132,6 +132,8 @@ That is the main workflow. The other skills are there when poteto-mode needs the
 | `reflect` | A hard task is finished and its lessons should improve the next run. |
 | `correct` | Agents keep making the same mistake in a repository and you want a check that stops it. |
 | `poteto-help` | You want to know which skill, playbook, or principle fits a question. |
+| `in-your-own-words` | You want the agent to restate your goal and the problem before it starts. |
+| `sharpen` | You want a task approached the way a top expert would, aimed at what you are really after, without overspecifying it. |
 
 Plugin skills include `pstack:` in their name. In Claude Code, invoke a native skill such as `/pstack:architect`. In Codex, ask for the skill, such as `Use pstack:architect for this design.` See the [technical reference](docs/reference.md) for the full list.
 
