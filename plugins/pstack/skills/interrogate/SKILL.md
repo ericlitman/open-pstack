@@ -1,6 +1,6 @@
 ---
 name: interrogate
-description: "Use for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\". Multiple LLM reviewers challenge changes from independent angles."
+description: "Use for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", \"tear this apart\", \"second opinion\", \"simpler solution\", \"challenge my decisions\", or \"am I missing the bigger picture\", also when the user names one model to ask. Multiple LLM reviewers challenge changes from independent angles."
 ---
 
 # Interrogate
@@ -25,7 +25,7 @@ Before spawning reviewers, state the intent in one clear paragraph from the user
 
 ## Step 3, Spawn Reviewers
 
-Start all reviewers in one fan-out phase, one per entry on the `interrogate reviewers` line of the current harness's pstack model sheet, labeled Reviewer A, B, and so on to match the entry count. If the sheet or that line is missing, use its [role default](../poteto-mode/references/model-catalog.md#role-defaults). Native reviewers use the parent subagent primitive. External reviewers use the launcher directly and must return a complete, model-verified receipt.
+When the user names one model to ask, that model is the only reviewer. Otherwise start all reviewers in one fan-out phase, one per entry on the `interrogate reviewers` line of the current harness's pstack model sheet, labeled Reviewer A, B, and so on to match the entry count. If the sheet or that line is missing, use its [role default](../poteto-mode/references/model-catalog.md#role-defaults). Native reviewers use the parent subagent primitive. External reviewers use the launcher directly and must return a complete, model-verified receipt.
 
 Route each reviewer's descriptor with `read-only` access and a unique output and receipt path. Use the parent subagent primitive without a model override for an `auto` or `inherit-parent` entry, so that reviewer runs on the parent model.
 
