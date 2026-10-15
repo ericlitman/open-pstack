@@ -1,0 +1,129 @@
+plugins/pstack/skills/poteto-mode/scripts/worktree-audit.sh
+  s_d1dde724ef5911::t_cec52f76d2ce27 50-52,54-62,107,122
+plugins/pstack/skills/principle-fix-root-causes/SKILL.md
+  s_d1dde724ef5911::t_cec52f76d2ce27 3,9,11,14-21
+plugins/pstack/skills/principle-type-system-discipline/SKILL.md
+  s_d1dde724ef5911::t_cec52f76d2ce27 3
+plugins/pstack/skills/poteto-mode/playbooks/hillclimb.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 12
+plugins/pstack/skills/principle-attack-the-premise/SKILL.md
+  s_d1dde724ef5911::t_cec52f76d2ce27 3,11,15-17,19
+plugins/pstack/skills/poteto-mode/playbooks/autonomous-run.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 6
+plugins/pstack/skills/poteto-mode/scripts/orch/store.ts
+  s_d1dde724ef5911::t_cec52f76d2ce27 170,971-1010,1013-1017,1020-1023,1025-1036,1038,1043-1078,1080-1081,1083-1103,1106,1108,1112,1114-1117,1119,1124,1127,1130-1151,1161,1168-1233,1256,1259,1263,1556,1565
+plugins/pstack/skills/poteto-mode/playbooks/opening-a-pr.md
+  s_d1dde724ef5911::t_026c04314e7bc8 26
+plugins/pstack/skills/poteto-mode/scripts/orch/orch.test.ts
+  s_d1dde724ef5911::t_cec52f76d2ce27 19,80,91-96,103,110,114-162,164,166,169-171,174-193,195,199,203,206-210,212-221,223-224,227,233,238,495-548,550-551,553-573,576-595,599,601-602,604-605,664,671-683
+plugins/pstack/skills/recall/SKILL.md
+  s_d1dde724ef5911::t_715898f8328de9 18
+plugins/pstack/skills/poteto-help/SKILL.md
+  s_d1dde724ef5911::t_cec52f76d2ce27 72
+tests/skill-collision-repro.sh
+  s_d1dde724ef5911::t_5eeef21178d32d 317
+  s_d1dde724ef5911::t_98bdf5ed1ea418 322,330
+plugins/pstack/skills/poteto-mode/playbooks/session-pickup.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 5
+plugins/pstack/skills/arena/SKILL.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 18
+plugins/pstack/skills/principle-make-operations-idempotent/SKILL.md
+  s_d1dde724ef5911::t_cec52f76d2ce27 9,13-15
+plugins/pstack/skills/correct/SKILL.md
+  s_d1dde724ef5911::t_cec52f76d2ce27 21
+plugins/pstack/skills/poteto-mode/playbooks/autopilot-stack.md
+  s_d1dde724ef5911::t_ad43c5253023a4 3,5-10
+  s_d1dde724ef5911::t_cec52f76d2ce27 14
+README-UPSTREAM.md
+  s_d1dde724ef5911::t_cec52f76d2ce27 36-37,116-117,121,218,227,232,234
+plugins/pstack/skills/how/SKILL.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 10
+plugins/pstack/skills/interrogate/SKILL.md
+  s_d1dde724ef5911::t_715898f8328de9 34
+plugins/pstack/skills/figure-it-out/SKILL.md
+  s_d1dde724ef5911::t_715898f8328de9 30
+plugins/pstack/skills/no-comments/SKILL.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 20
+plugins/pstack/skills/poteto-mode/playbooks/orchestrate.md
+  s_d1dde724ef5911::t_026c04314e7bc8 15,82
+  s_d1dde724ef5911::t_cec52f76d2ce27 47-48,63,81,83,109
+plugins/pstack/skills/poteto-mode/playbooks/feature.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 12
+plugins/pstack/skills/poteto-mode/playbooks/eval.md
+  s_d1dde724ef5911::t_715898f8328de9 20
+plugins/pstack/skills/poteto-mode/references/provider-dispatch.md
+  s_d1dde724ef5911::t_843354a1130ad6 13
+  s_d1dde724ef5911::t_552bbca8bab8c4 25
+plugins/pstack/skills/poteto-mode/scripts/watch-pr/github.test.ts
+  s_d1dde724ef5911::t_cec52f76d2ce27 8,125-153
+plugins/pstack/skills/poteto-mode/scripts/watch-pr/github.ts
+  s_d1dde724ef5911::t_cec52f76d2ce27 240-241,243,250-254,270,290,295-297,302
+plugins/pstack/skills/reflect/SKILL.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 20
+plugins/pstack/skills/show-me-your-work/SKILL.md
+  s_d1dde724ef5911::t_715898f8328de9 66
+plugins/pstack/skills/swarm/SKILL.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 23
+plugins/pstack/skills/principle-test-behavior-not-implementation/SKILL.md
+  s_d1dde724ef5911::t_cec52f76d2ce27 3,9,11,13-14,16,18,20
+plugins/pstack/skills/poteto-mode/SKILL.md
+  s_d1dde724ef5911::t_611d4fe72e0439 8-9,94
+  s_d1dde724ef5911::t_cec52f76d2ce27 48,68,70
+  s_d1dde724ef5911::t_3aadbe55bf55f8 98
+plugins/pstack/skills/poteto-mode/playbooks/perf-issue.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 17
+plugins/pstack/skills/poteto-mode/scripts/orch/orch.ts
+  s_d1dde724ef5911::t_cec52f76d2ce27 10,85,477,479-483,490-494,507
+plugins/pstack/skills/poteto-mode/playbooks/multi-phase-plan.md
+  s_d1dde724ef5911::t_a063c93638926e 7,67-68
+plugins/pstack/skills/poteto-mode/playbooks/bug-fix.md
+  s_d1dde724ef5911::t_715898f8328de9 3
+plugins/pstack/skills/poteto-mode/playbooks/runtime-forensics.md
+  s_d1dde724ef5911::t_715898f8328de9 6
+plugins/pstack/skills/automate-me/SKILL.md
+  s_d1dde724ef5911::t_715898f8328de9 32
+plugins/pstack/skills/poteto-mode/playbooks/autopilot-full.md
+  s_d1dde724ef5911::t_cec52f76d2ce27 3,5,7,9,11,13,15-16,18-19,21-23
+  s_d1dde724ef5911::t_04765bf514d0b6 8,10,14,17,20
+  s_d1dde724ef5911::t_a699672ffb4e45 12
+plugins/pstack/skills/why/SKILL.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 10
+plugins/pstack/skills/poteto-mode/scripts/runner/registry.test.ts
+  s_d1dde724ef5911::t_594e19af626192 227-228
+plugins/pstack/skills/ketchup/SKILL.md
+  s_d1dde724ef5911::t_cec52f76d2ce27 3,9-11,15,17,21-29,31,35
+  s_d1dde724ef5911::t_881f2878a02331 33,37
+plugins/pstack/skills/poteto-mode/playbooks/trace-forensics.md
+  s_d1dde724ef5911::t_715898f8328de9 7
+plugins/pstack/skills/poteto-mode/playbooks/shipping.md
+  s_d1dde724ef5911::t_cec52f76d2ce27 3
+  s_d1dde724ef5911::t_9fa4b09b30184c 6-7,11-13,15
+  s_d1dde724ef5911::t_41fd51ca6d37a3 9
+plugins/pstack/skills/poteto-mode/playbooks/refactoring.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 11
+docs/reference.md
+  s_d1dde724ef5911::t_9a6c1a8e502b3e 62
+  s_d1dde724ef5911::t_441e6d7bfae200 109
+plugins/pstack/skills/poteto-mode/playbooks/worktree-cleanup.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 5
+plugins/pstack/skills/poteto-mode/references/codex-tools.md
+  s_d1dde724ef5911::t_441e6d7bfae200 95
+plugins/pstack/agents/poteto-agent.md
+  s_d1dde724ef5911::t_c7ed27c3b30ebc 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "8e0d540762bce574a830fa5c27b5147f55ca722b",
+  "prompts": {},
+  "sessions": {
+    "s_d1dde724ef5911": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c14c7bb2-02f2-484d-894b-c745e58bf609",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Eric A. Litman <ericlitman@studio2.tail062eee.ts.net>"
+    }
+  }
+}
