@@ -15,6 +15,7 @@ Model and provider facts for [`provider-dispatch.md`](provider-dispatch.md), whi
 | luna | GPT-6 Luna | codex | gpt-6-luna | max | low medium high xhigh max | - | optional | - |
 | sonnet | Sonnet | claude | sonnet | max | low medium high xhigh max | `pstack-sonnet-<effort>` | optional | - |
 | opus-5-5 | Opus 5.5 | claude | claude-opus-5-5 | max | low medium high xhigh max | `pstack-opus-5-5-<effort>` | optional | claude-opus-5-5-xhigh |
+| haiku-5-5 | Haiku 5.5 | claude | claude-haiku-5-5 | max | low medium high xhigh max | `pstack-haiku-5-5-<effort>` | optional | - |
 | swe-2 | SWE-2 | devin | swe-2 | max | medium high max | - | optional | - |
 | swe-1.6 | SWE-1.6 | devin | swe-1.6 | default | default | - | optional | - |
 | deepseek-v4.1-flash-free | DeepSeek V4.1 Flash (OpenCode Zen) | opencode | opencode/deepseek-v4.1-flash-free | max | low high max | - | optional | - |
