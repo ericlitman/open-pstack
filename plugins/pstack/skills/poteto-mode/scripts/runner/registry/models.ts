@@ -199,7 +199,6 @@ export const RELEASED_PAIRS = [
   { pair: "codex:gpt-6-luna", family: "luna" },
   { pair: "claude:sonnet", family: "sonnet" },
   { pair: "claude:claude-opus-5-5", family: "opus-5-5" },
-  { pair: "claude:claude-haiku-5-5", family: "haiku-5-5" },
   { pair: "devin:swe-2", family: "swe-2" },
   { pair: "devin:swe-1.6", family: "swe-1.6" },
   { pair: "opencode:opencode/deepseek-v4.1-flash-free", family: "deepseek-v4.1-flash-free" },
@@ -209,4 +208,5 @@ export const RELEASED_PAIRS = [
   { pair: "agy:gemini-3.8-flash", family: "gemini-3.8-flash" },
   { pair: "cursor:composer-2.5", family: "composer-2.5" },
   { pair: "cursor:gemini-3.7-flash", family: "gemini-3.7-flash" },
+  { pair: "claude:claude-haiku-5-5", family: "haiku-5-5" },
 ] as const satisfies readonly ReleasedPair<FamilyName>[];

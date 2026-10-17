@@ -448,6 +448,8 @@ describe("resolveLane", () => {
     const lane = resolveLane(request({ model: "claude-haiku-5-5" }));
     expect([lane.family?.name, lane.model, lane.cliModel, lane.effort])
       .toEqual(["haiku-5-5", "claude-haiku-5-5", "claude-haiku-5-5", "max"]);
+    expect(lane.adapter.launch.argv(lane, { sharedGitDir: null, providerSidecar: null }))
+      .toEqual(expect.arrayContaining(["--model", "claude-haiku-5-5", "--effort", "max"]));
   });
 
   it("resolves Sonnet and Luna, and rejects ultra for both", () => {
