@@ -253,7 +253,7 @@ test('the native-agents case needs each new agent dispatched, its child run, and
   const f = await fixture('claude'), c = recipe('catalog', 'claude').find(c => c.id === 'native-agents')!;
   expect(recipe('catalog', 'codex').some(c => c.id === 'native-agents')).toBe(false);
   await c.prepare!(f);
-  const agents = ['pstack-sonnet-max', 'pstack-opus-5-5-max'];
+  const agents = ['pstack-sonnet-max', 'pstack-opus-5-5-max', 'pstack-haiku-5-5-max'];
   const tools = (names: string[], children = names) => [
     ...names.map((agent, i) => ({ name: 'Agent', id: `a${i}`, input: { subagent_type: `pstack:${agent}` }, parent: null, failed: false })),
     ...children.map(agent => ({ name: 'Read', id: `r-${agent}`, input: {}, parent: `a${names.indexOf(agent)}`, failed: false })),
