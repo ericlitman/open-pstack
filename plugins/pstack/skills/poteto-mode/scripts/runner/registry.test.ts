@@ -93,6 +93,7 @@ describe("registry data", () => {
       ["luna", "max"],
       ["sonnet", "max"],
       ["opus-5-5", "max"],
+      ["haiku-5-5", "max"],
       ["swe-2", "max"],
       ["swe-1.6", "default"],
       ["deepseek-v4.1-flash-free", "max"],
@@ -104,7 +105,7 @@ describe("registry data", () => {
       ["gemini-3.7-flash", "high"],
     ]);
     expect(REGISTRY.families.filter((entry) => entry.provider === "claude").map((entry) => [entry.name, entry.model]))
-      .toEqual([["fable", "fable"], ["opus", "opus"], ["sonnet", "sonnet"], ["opus-5-5", "claude-opus-5-5"]]);
+      .toEqual([["fable", "fable"], ["opus", "opus"], ["sonnet", "sonnet"], ["opus-5-5", "claude-opus-5-5"], ["haiku-5-5", "claude-haiku-5-5"]]);
     expect(REGISTRY.families.filter((entry) => entry.rolling !== undefined)
       .map((entry) => [entry.name, entry.rolling!.revisionPrefix]))
       .toEqual([["fable", "claude-fable-"], ["opus", "claude-opus-"], ["sonnet", "claude-sonnet-"]]);
@@ -438,6 +439,17 @@ describe("resolveLane", () => {
     const lane = resolveLane(request({ model: "claude-opus-5-5" }));
     expect([lane.family?.name, lane.family?.rolling, lane.model]).toEqual(["opus-5-5", null, "claude-opus-5-5"]);
     expect(lane.adapter.launch.argv(lane, { sharedGitDir: null, providerSidecar: null })).toEqual(expect.arrayContaining(["claude-opus-5-5"]));
+  });
+
+  it("resolves the registered Haiku 5.5 model for external Claude lanes", () => {
+    const match = resolveModel("claude", "claude-haiku-5-5");
+    expect([match.kind, match.kind === "current" ? match.family.name : null])
+      .toEqual(["current", "haiku-5-5"]);
+    const lane = resolveLane(request({ model: "claude-haiku-5-5" }));
+    expect([lane.family?.name, lane.model, lane.cliModel, lane.effort])
+      .toEqual(["haiku-5-5", "claude-haiku-5-5", "claude-haiku-5-5", "max"]);
+    expect(lane.adapter.launch.argv(lane, { sharedGitDir: null, providerSidecar: null }))
+      .toEqual(expect.arrayContaining(["--model", "claude-haiku-5-5", "--effort", "max"]));
   });
 
   it("resolves Sonnet and Luna, and rejects ultra for both", () => {

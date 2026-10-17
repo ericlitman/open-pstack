@@ -73,6 +73,15 @@ export const FAMILIES = [
     upstream: "claude-opus-5-5-xhigh",
   }),
   family({
+    name: "haiku-5-5",
+    label: "Haiku 5.5",
+    provider: "claude",
+    model: "claude-haiku-5-5",
+    efforts: UP_TO_MAX,
+    defaultEffort: "max",
+    upstream: null,
+  }),
+  family({
     name: "swe-2",
     label: "SWE-2",
     provider: "devin",
@@ -199,4 +208,5 @@ export const RELEASED_PAIRS = [
   { pair: "agy:gemini-3.8-flash", family: "gemini-3.8-flash" },
   { pair: "cursor:composer-2.5", family: "composer-2.5" },
   { pair: "cursor:gemini-3.7-flash", family: "gemini-3.7-flash" },
+  { pair: "claude:claude-haiku-5-5", family: "haiku-5-5" },
 ] as const satisfies readonly ReleasedPair<FamilyName>[];

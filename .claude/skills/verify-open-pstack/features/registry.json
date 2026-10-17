@@ -47,7 +47,12 @@
     "plugins/pstack/agents/pstack-opus-5-5-medium.md",
     "plugins/pstack/agents/pstack-opus-5-5-high.md",
     "plugins/pstack/agents/pstack-opus-5-5-xhigh.md",
-    "plugins/pstack/agents/pstack-opus-5-5-max.md"
+    "plugins/pstack/agents/pstack-opus-5-5-max.md",
+    "plugins/pstack/agents/pstack-haiku-5-5-low.md",
+    "plugins/pstack/agents/pstack-haiku-5-5-medium.md",
+    "plugins/pstack/agents/pstack-haiku-5-5-high.md",
+    "plugins/pstack/agents/pstack-haiku-5-5-xhigh.md",
+    "plugins/pstack/agents/pstack-haiku-5-5-max.md"
   ],
   "assets": ["plugins/pstack/assets/**"],
   "setup": ["plugins/pstack/skills/setup-pstack/SKILL.md"],

@@ -577,13 +577,15 @@ const CATALOG_LANES: Record<string, [string, string]> = {
   'interrogate reviewers': ['opencode:opencode/deepseek-v4.1-flash-free@max', 'opencode:opencode/deepseek-v4.1-flash-free@max'],
   [WRITER_ROLE]: [WRITER_LANE, WRITER_LANE],
 };
-const NATIVE_AGENTS = ['pstack-sonnet-max', 'pstack-opus-5-5-max'];
+// Each listed generated agent runs natively: the child reads a fixture nonce and writes it to its own output file.
+// The Agent call returns only a launch notice, so the evidence is the child's recorded tool calls and the nonce it wrote.
+const NATIVE_AGENTS = ['pstack-sonnet-max', 'pstack-opus-5-5-max', 'pstack-haiku-5-5-max'];
 const nativeAgents: Case = {
   id: 'native-agents',
   async prepare(f) {
     for (const agent of NATIVE_AGENTS) await writeFile(join(f.dir, `${agent}.nonce`), `${crypto.randomUUID()}\n`);
   },
-  prompt: f => `Do no engineering work. ${NATIVE_AGENTS.map(agent => `Use the Agent tool once with subagent_type pstack:${agent}, and give it exactly this task: "Read ${join(f.dir, `${agent}.nonce`)} and write its exact contents to ${join(f.dir, `${agent}.out`)}. Do nothing else."`).join(' ')} Wait until both output files exist, then reply DONE. ${rules(f.dir)}`,
+  prompt: f => `Do no engineering work. ${NATIVE_AGENTS.map(agent => `Use the Agent tool once with subagent_type pstack:${agent}, and give it exactly this task: "Read ${join(f.dir, `${agent}.nonce`)} and write its exact contents to ${join(f.dir, `${agent}.out`)}. Do nothing else."`).join(' ')} Wait until all output files exist, then reply DONE. ${rules(f.dir)}`,
   async assert(record, f) {
     const assertions: string[] = [];
     for (const agent of NATIVE_AGENTS) {
