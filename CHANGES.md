@@ -3,6 +3,10 @@
 Mergify auto-queue is live: ready PRs to main require passing verify, Unfret and exact-head live-gate, and no unresolved review thread; workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## Unreleased
+
+Local adaptation (#228): bug-fix step 5 and the sequencing principle use repro/baseline-then-fix proof without a new unit test or failing-test commit. Refactoring step 1 uses the flow's existing deterministic E2E, adding only that flow's one E2E when uncovered. The type-checked build remains a build step. Session-start no longer suggests direct TDD entry. Other test guidance is unchanged.
+
 ## 1.15.0 runs Devin, agy and dsh lanes in any repository
 
 Open Pstack 1.15.0 keeps the Cursor pstack 0.15.25 sync. It ships PR #215, merged after 1.14.0. Default roles and panels are unchanged.
