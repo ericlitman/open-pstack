@@ -5,7 +5,7 @@ This port applies the Cursor → Claude Code substitutions in skill bodies. Earl
 
 ## Unreleased
 
-Local adaptation (#228): bug-fix step 5 and the sequencing principle use repro/baseline-then-fix proof without a new unit test or failing-test commit. Refactoring step 1 uses the flow's existing deterministic E2E, adding only that flow's one E2E when uncovered. The type-checked build remains a build step. Session-start no longer suggests direct TDD entry. Other test guidance is unchanged.
+Local adaptation (#228): bug-fix step 5 and the sequencing principle use repro/baseline-then-fix proof without a required failing-test commit; a regression test only where no E2E would catch a recurrence. Refactoring step 1 uses the flow's existing deterministic E2E and adds the smallest behavior pin only for risky, uncovered moves. The type-checked build remains a build step. Session-start no longer suggests direct TDD entry. Other test guidance is unchanged.
 
 ## 1.15.0 runs Devin, agy and dsh lanes in any repository
 

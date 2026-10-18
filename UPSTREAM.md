@@ -16,7 +16,7 @@ The table above is the current Cursor sync point. Open Pstack 1.10.0 imported th
 
 ## Upstream-only exclusions
 
-- Local adaptation #228 changes only bug-fix step 5, refactoring step 1, `principle-sequence-verifiable-units/SKILL.md`, and the session-start direct-entry list: use real-surface repro or the flow's existing deterministic E2E instead of failing-test-first, add only the flow's one E2E if refactoring has no coverage, and keep the type-checked build as a build step. Preserve this divergence on sync; other test guidance remains upstream wording.
+- Local adaptation #228 changes only bug-fix step 5, refactoring step 1, `principle-sequence-verifiable-units/SKILL.md`, and the session-start direct-entry list: use real-surface repro or the flow's existing deterministic E2E instead of failing-test-first, add a regression test or the smallest behavior pin only where it guards a real risk no E2E covers, and keep the type-checked build as a build step. Preserve this divergence on sync; other test guidance remains upstream wording.
 
 - Commits `799151d` and `6fecddb` add and relocate `make-bot-ui`. It depends on Cursor routines, webhook events, and UI primitives that Claude Code and Codex do not share.
 - Four `disable-model-invocation: true` lines from `73f8be4` are not applied to `how`, `why`, `unslop`, or `typescript-best-practices`. Poteto-mode invokes those skills by name, and the flag blocks that route on Claude Code.
