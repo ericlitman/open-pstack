@@ -54,6 +54,15 @@ export const FAMILIES = [
     upstream: null,
   }),
   family({
+    name: "astra",
+    label: "GPT-6 Astra",
+    provider: "codex",
+    model: "gpt-6-astra",
+    efforts: UP_TO_ULTRA, // `codex debug models`, Codex CLI 0.164.0
+    defaultEffort: "max",
+    upstream: null,
+  }),
+  family({
     name: "sonnet",
     label: "Sonnet",
     provider: "claude",
@@ -209,4 +218,5 @@ export const RELEASED_PAIRS = [
   { pair: "cursor:composer-2.5", family: "composer-2.5" },
   { pair: "cursor:gemini-3.7-flash", family: "gemini-3.7-flash" },
   { pair: "claude:claude-haiku-5-5", family: "haiku-5-5" },
+  { pair: "codex:gpt-6-astra", family: "astra" },
 ] as const satisfies readonly ReleasedPair<FamilyName>[];

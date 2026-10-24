@@ -3,6 +3,10 @@
 Open Pstack lands on green: Mergify merges a ready PR to main once verify and exact-head live-gate pass and no review thread is unresolved, and a workflow resolves Unfret's own threads. A PR that touches `.github/` or the Mergify config also waits for Unfret, and workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## Unreleased
+
+**GPT-6 Astra lanes.** The model catalog registers `codex:gpt-6-astra` as an optional family with efforts `low` to `ultra`, as `codex debug models` lists them in Codex CLI 0.164.0, and a default of `max`. Astra is the second family after Sol that offers `ultra`. Codex families have no generated Claude agents, so a Claude Code parent runs Astra through the external runner. Default roles and panels are unchanged.
+
 ## 1.16.0 syncs to Cursor pstack 0.15.29
 
 Open Pstack 1.16.0 tracks Cursor pstack 0.15.29 at `88d47514b82e7c44f00f2b2a72ff6dd12158038c`. Sixteen upstream commits since 0.15.25 touch pstack. Nine change skill content, and all nine are applied with the port adaptations below. `a968159` names two skills after their folders: the port's `poteto-mode` already complies, and `make-bot-ui` stays out. Three add upstream's own Claude Code install and a docs check, which stay out apart from their README text. Three bump only the Cursor manifests and guide, which stay out. The release also fixes #46 and #235, and ships Claude Haiku 5.5 lanes (#223), foreground waits on Claude Code (#232, #233) and the comment sweep (#218), all merged after 1.15.0. Default roles and panels are unchanged.
