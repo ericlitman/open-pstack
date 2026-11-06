@@ -66,9 +66,10 @@ describe('registry and ownership', () => {
   test('only the T3 dispatch surfaces reach t3:dispatch, and self-test never adds a T3 session', () => {
     const reach = (filename: string) => classify([{ filename }], registry).features.includes('t3:dispatch');
     for (const filename of ['plugins/pstack/skills/poteto-mode/references/provider-dispatch.md', 'plugins/pstack/skills/poteto-mode/references/codex-tools.md',
-      'plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/features/recipes.ts']) expect(reach(filename)).toBe(true);
+      'plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/features/recipes.ts',
+      '.claude/skills/verify-open-pstack/scripts/harness.ts', '.claude/skills/verify-open-pstack/scripts/doctor.ts']) expect(reach(filename)).toBe(true);
     for (const filename of ['plugins/pstack/skills/poteto-mode/references/model-catalog.md', 'plugins/pstack/skills/poteto-mode/SKILL.md',
-      'plugins/pstack/hooks/hooks.json', '.claude/skills/verify-open-pstack/scripts/harness.ts']) expect(reach(filename)).toBe(false);
+      'plugins/pstack/hooks/hooks.json', '.claude/skills/verify-open-pstack/scripts/verify.ts']) expect(reach(filename)).toBe(false);
     const r = receipt(true);
     expect(requiredHarnesses(r)).toEqual(['claude', 'codex']);
     r.runFeatures = ['t3:dispatch'];
