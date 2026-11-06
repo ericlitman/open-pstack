@@ -81,8 +81,9 @@ describe("runner CLI parsing", () => {
     expect(stdout).toStartWith(
       "Usage: pstack-runner --parent <claude|codex|grok> --provider <claude|codex|grok|devin|opencode|dsh|amp|agy|cursor|muse> \\\n"
     );
-    expect(stdout).toContain("A Grok parent may run a Grok provider here");
-    expect(stdout).toContain("A Claude or Codex parent rejects its own");
+    const help = stdout.replaceAll("\n", " ");
+    expect(help).toContain("A Grok parent may run a Grok provider here");
+    expect(help).toContain("A Claude or Codex parent rejects its own provider");
   });
 
   it("refuses an unnormalized Claude revision with a usage error", async () => {
