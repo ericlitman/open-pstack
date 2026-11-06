@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import registryData from '../features/registry.json';
 import { recipe } from '../features/recipes.ts';
 import { classify, completeEvidence, matches, newReceipt, requiredFeatures, requiredHarnesses, validateRegistry } from './core.ts';
-import { HARNESSES, type Receipt } from './types.ts';
+import { HARNESSES, LIVE_HARNESSES, type Receipt } from './types.ts';
 import codexManifest from '../../../../plugins/pstack/.codex-plugin/plugin.json';
 import claudeManifest from '../../../../plugins/pstack/.claude-plugin/plugin.json';
 
@@ -62,6 +62,18 @@ describe('registry and ownership', () => {
     for (const feature of both('setup', 'runner', 'shipped-tools', 'hook:startup')) expect(s.features).toContain(feature);
     expect(s.features).toContain('claude:agent-preload:poteto-agent');
     expect(s.features).not.toContain('codex:agent-preload:poteto-agent');
+  });
+  test('only the T3 dispatch surfaces reach t3:dispatch, and self-test never adds a T3 session', () => {
+    const reach = (filename: string) => classify([{ filename }], registry).features.includes('t3:dispatch');
+    for (const filename of ['plugins/pstack/skills/poteto-mode/references/provider-dispatch.md', 'plugins/pstack/skills/poteto-mode/references/codex-tools.md',
+      'plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/features/recipes.ts']) expect(reach(filename)).toBe(true);
+    for (const filename of ['plugins/pstack/skills/poteto-mode/references/model-catalog.md', 'plugins/pstack/skills/poteto-mode/SKILL.md',
+      'plugins/pstack/hooks/hooks.json', '.claude/skills/verify-open-pstack/scripts/harness.ts']) expect(reach(filename)).toBe(false);
+    const r = receipt(true);
+    expect(requiredHarnesses(r)).toEqual(['claude', 'codex']);
+    r.runFeatures = ['t3:dispatch'];
+    expect(requiredHarnesses(r)).toEqual(['claude', 'codex', 't3']);
+    expect(requiredFeatures(r, 't3')).toEqual(['dispatch']);
   });
   test('poteto-mode SKILL.md also reaches the Claude agent that preloads it', () => {
     const s = classify([{ filename: 'plugins/pstack/skills/poteto-mode/SKILL.md' }], registry);
@@ -187,13 +199,13 @@ describe('registry and ownership', () => {
   test('the shared recipe implementation reaches every implemented recipe and preserves project proof', () => {
     const path = '.claude/skills/verify-open-pstack/features/recipes.ts';
     const expected = [...both('catalog', 'setup', 'runner', 'shipped-tools', 'hook:startup', 'project-skill', 'writers',
-      ...registry.skills.map(skill => `skill-invocation:${skill}`)), 'claude:agent-preload:poteto-agent'].sort();
+      ...registry.skills.map(skill => `skill-invocation:${skill}`)), 'claude:agent-preload:poteto-agent', 't3:dispatch'].sort();
     for (const file of [{ filename: path }, { filename: 'docs/moved.md', previous_filename: path }]) {
       const s = classify([file], registry);
       expect(s.features).toEqual(expected);
       expect(s.skills).toEqual([...registry.skills].sort());
       expect(s.noRuntime).toBe(false);
-      for (const harness of HARNESSES) {
+      for (const harness of LIVE_HARNESSES) {
         for (const feature of s.features.filter(f => f.startsWith(`${harness}:`))) {
           expect(recipe(feature.slice(harness.length + 1), harness).length).toBeGreaterThan(0);
         }

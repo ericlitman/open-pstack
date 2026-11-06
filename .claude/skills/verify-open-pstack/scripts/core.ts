@@ -1,4 +1,4 @@
-import { HARNESSES, REPO, type ChangedFile, type Harness, type Receipt, type Registry, type Selection } from './types.ts';
+import { HARNESSES, LIVE_HARNESSES, REPO, type ChangedFile, type Harness, type Receipt, type Registry, type Selection } from './types.ts';
 
 export function validateRegistry(value: unknown): Registry {
   if (!value || typeof value !== 'object') throw new Error('Invalid feature registry');
@@ -17,6 +17,11 @@ export function matches(path: string, pattern: string): boolean {
   return pattern.endsWith('/**') ? path.startsWith(pattern.slice(0, -2)) : path === pattern;
 }
 
+const T3_DISPATCH_PATHS = [
+  'plugins/pstack/skills/poteto-mode/references/provider-dispatch.md', 'plugins/pstack/skills/poteto-mode/references/codex-tools.md',
+  'plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/features/recipes.ts',
+];
+
 export const VERSION_MANIFESTS: Readonly<Record<string, Harness>> = {
   'plugins/pstack/.claude-plugin/plugin.json': 'claude', '.claude-plugin/marketplace.json': 'claude', 'plugins/pstack/.codex-plugin/plugin.json': 'codex',
 };
@@ -34,6 +39,7 @@ export function classify(files: ChangedFile[], registry: Registry): Selection {
       if (path !== 'plugins/pstack/assets/logo.png') throw new Error(`Unmapped asset consumer: ${path}`);
       features.add('codex:assets:codex'); covered = true;
     }
+    if (T3_DISPATCH_PATHS.includes(path)) features.add('t3:dispatch');
     const sharedRecipe = path === '.claude/skills/verify-open-pstack/features/recipes.ts';
     if (sharedRecipe) both('catalog', 'writers');
     const catalog = registry.catalog.some(p => matches(path, p));
@@ -73,11 +79,12 @@ export function newReceipt(pr: number, sha: string, base: string, selfTest: bool
 
 export function requiredFeatures(receipt: Receipt, harness: Harness): string[] {
   const named = receipt.runFeatures.filter(f => f.startsWith(`${harness}:`)).map(f => f.slice(harness.length + 1));
-  return [...new Set([...named, ...(receipt.selfTest ? ['project-skill'] : [])])];
+  const selfTest = receipt.selfTest && (HARNESSES as readonly Harness[]).includes(harness);
+  return [...new Set([...named, ...(selfTest ? ['project-skill'] : [])])];
 }
 
 export function requiredHarnesses(receipt: Receipt): Harness[] {
-  return HARNESSES.filter(harness => requiredFeatures(receipt, harness).length > 0);
+  return LIVE_HARNESSES.filter(harness => requiredFeatures(receipt, harness).length > 0);
 }
 
 export function completeEvidence(receipt: Receipt): void {

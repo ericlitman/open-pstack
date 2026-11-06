@@ -35,6 +35,7 @@ The feature documents below define sub-features, user entry points, driving inst
 - `catalog.md`: the generated model catalog and native agents, read by a parent resolving roles from a model sheet.
 - `shipped-tools.md`: watch, plan checks, audit, statechart, and evidence logging.
 - `assets.md`: manifest-declared installed assets on actual consuming harnesses.
+- `t3.md`: a T3 Code parent dispatching a role through `delegate_task` (`t3:dispatch`), on a run-owned disposable T3 server.
 - `hooks.md`: the SessionStart hook's context reaching a new session (`hook:startup`), and the Windows runner beside it.
 - `recipes.ts`: the headless cases and machine-checked assertions for every selectable feature. A named feature without one fails the run as `missing-recipe` before any session starts. A recipe proves a lookup or a read with a fixture value the model cannot derive from the prompt, such as a per-run `crypto.randomUUID()` marker, compared in the structured result. A command's text can show which tool the parent called, but it never proves what that tool read or produced, so do not add command-text or tool-output pattern checks for that.
 - `agent-preload:poteto-agent` (Claude only): the parent dispatches `pstack:poteto-agent` through the Agent tool and asks it for the first Core principle of the preloaded poteto-mode skill without invoking `Skill` or reading files. The check needs that Agent call, `Laziness Protocol` in the reply the parent writes to `result.md`, and no `Skill` call or `Read` of poteto-mode's `SKILL.md` among the child's own tool calls.
