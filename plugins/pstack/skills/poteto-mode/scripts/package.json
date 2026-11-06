@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "\"$npm_execpath\" test --parallel bootstrap orch watch-pr runner check-plan resolve-codex-transcript",
+    "test": "\"$npm_execpath\" test --parallel bootstrap watch-pr runner check-plan resolve-codex-transcript",
     "typecheck": "tsc --project watch-pr/tsconfig.json --noEmit --strict && tsc --project runner/tsconfig.json --noEmit --strict && tsc --project check-plan.tsconfig.json --noEmit --strict"
   },
   "dependencies": {
