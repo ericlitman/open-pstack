@@ -9,3 +9,5 @@
 plugins/pstack/skills/poteto-mode/scripts/node_modules/
 
 .claude/skills/verify-open-pstack/node_modules/
+
+plugins/pstack/skills/statechart/scripts/node_modules/
