@@ -37,6 +37,17 @@ The resolver reads the [Codex config home](#harness-config-homes) and looks up t
 
 **Fallback.** If the chat ID, index, ownership, path, or opening prompt cannot be verified within these limits, pass a tight session digest instead. Keep it to at most 2,000 words and include only relevant decisions, corrections, evidence paths, and unresolved work. Do not widen transcript discovery to replace missing evidence.
 
+## Reflect skill copies
+
+Reflect never edits a skill inside the plugin cache, `<config-home>/plugins/cache/` in both harnesses. It copies the skill folder to one of these folders and edits the copy:
+
+| Harness | Project | User |
+| --- | --- | --- |
+| Claude Code | `.claude/skills/<skill>/` | `<config-home>/skills/<skill>/` |
+| Codex | `.agents/skills/<skill>/` | `$HOME/.agents/skills/<skill>/` |
+
+The copy registers under its plain name beside the plugin's `pstack:<skill>`, and does not replace it. In the copy, rewrite each relative link that leaves the skill folder, such as `../poteto-mode/`, to the absolute path of that folder in the installed plugin.
+
 ## Tool actions
 
 | pstack / Claude action | Codex equivalent |
