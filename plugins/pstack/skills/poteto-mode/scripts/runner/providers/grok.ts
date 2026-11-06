@@ -137,11 +137,12 @@ export const grok = adapter({
   environment: () => ({ kind: "allowlist", names: BASE_ALLOWLIST, prefixes: ENVIRONMENT_PREFIXES }),
   docs: {
     name: "Grok Build CLI",
-    hostPrerequisites: ["Linux: Landlock and `bwrap`"],
+    hostPrerequisites: ["Linux: Landlock and `bwrap`", "macOS: any `/var/run/docker.sock` symlink points inside Grok's runtime-socket list"],
     statePaths: ["`~/.grok/`, which the CLI writes (for example `~/.grok/managed_config.toml`)"],
     notes: [
       "`fast` is part of Cursor's Grok selector, not a Grok Build CLI model or effort flag.",
       "The preflight passes when `grok models` reports a login (`logged in`, `You are using XAI_API_KEY.`, or `You are authenticated via deployment key.`) and lists the lane's model on a line under `Available models:`. A model named only above that header, such as on the `Default model:` line, or output without the header, is `unavailable-model`/69.",
+      "On macOS, Grok 1.0.77's sandbox refuses to start when a runtime socket it blocks, such as `/var/run/docker.sock`, is a symlink to a path outside its built-in list (`/var/run/docker.sock`, the podman and containerd sockets, `~/.docker/desktop/docker.sock`, `~/.docker/run/docker.sock`). OrbStack's link to `~/.orbstack/run/docker.sock` triggers it, and a `sandbox.toml` deny entry does not help. Removing the link (`sudo rm /var/run/docker.sock`; `docker` keeps working through the `orbstack` context) lets the bounded sandbox start (#275).",
       "The authentication preflight has one bounded retry. If the first `grok models` result would be classified as unauthenticated, the runner waits five seconds and tries the same preflight once more. A second failure is terminal. The delay and second attempt share the runner's absolute deadline and cancellation latch, and the receipt keeps evidence from both attempts. Model execution is never retried.",
     ],
   },
