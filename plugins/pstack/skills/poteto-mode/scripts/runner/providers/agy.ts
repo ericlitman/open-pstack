@@ -1,22 +1,32 @@
-import { adapter, type LaunchFacts, type ModelRun, type ParseResult, type ProviderMetadata } from "../registry/contract.ts";
+import { type Access, adapter, type LaunchFacts, type ModelRun, type ParseResult, type ProviderMetadata } from "../registry/contract.ts";
 import { BASE_ALLOWLIST, BASE_PREFIXES, boundedOutput, finiteNumber, nullableString, object, type JsonObject } from "./shared.ts";
 
 // Measured with Antigravity CLI 1.3.6. agy loads 59 tools by default, among them web search, subagents, `schedule`,
 // `send_message` and the browser. Under this agent, loaded from the run-owned `--add-dir`, the declared tools drop to
-// `view_file` and `manage_task`. An unknown agent name exits 1, so a missing file fails closed.
-const AGENT = "pstack-read-only";
-const AGENT_FILE = `---
+// `view_file` and `manage_task` on 1.3.6; 1.5.2 ignores the list. An unknown agent name exits 1, so a missing file
+// fails closed.
+const AGENT = "pstack-lane";
+function agentFile(access: Access): string {
+  const tools = access.mode === "read-only"
+    ? ["view_file"]
+    : ["view_file", "write_to_file", "replace_file_content", "run_command", "command_status"];
+  return `---
 name: ${AGENT}
-description: Read-only pstack lane with one file-reading tool.
+description: pstack lane with a fixed tool list.
 tools:
-  - view_file
+${tools.map((tool) => `  - ${tool}`).join("\n")}
 mainAgent: true
 subagent: false
 mcpServers: []
 skills: []
 ---
-You are a read-only agent.
+You are a pstack lane agent.
 `;
+}
+
+function modeArgs(access: Access): readonly string[] {
+  return access.mode === "read-only" ? [] : ["--dangerously-skip-permissions"];
+}
 
 // `init.model` repeats `--model` and `result` names no model, so the proof is the pinned argv.
 function metadata(result: JsonObject): ProviderMetadata {
@@ -95,10 +105,8 @@ export const agy = adapter({
     prompt: "stdin",
     // agy reads one JSON line per turn on stdin. It has no prompt-file flag, and `-p` takes the prompt as an argument.
     stdinEnvelope: (prompt) => `${JSON.stringify({ event: "user", message: { role: "user", content: prompt } })}\n`,
-    sidecar: { output: null, config: { name: `.agents/agents/${AGENT}.md`, content: () => AGENT_FILE } },
-    // The default mode's approval policy denies writes and every shell command. `accept-edits` writes only through
-    // the edit tool and denies shell, and `--sandbox` blocks shell writes even in the cwd, so no mode is a bounded writer.
-    supports: ["read-only"],
+    sidecar: { output: null, config: { name: `.agents/agents/${AGENT}.md`, content: (lane) => agentFile(lane.access) } },
+    supports: ["read-only", "isolated-write-full-access"],
     needsSharedGitDir: () => false,
     argv: (lane, facts) => [
       "--input-format",
@@ -111,6 +119,7 @@ export const agy = adapter({
       sidecarDirectory(facts),
       "--agent",
       AGENT,
+      ...modeArgs(lane.access),
     ],
   },
   parse: (run) => parse(run),
@@ -125,9 +134,11 @@ export const agy = adapter({
     ],
     notes: [
       "Effort is part of the model ID. The runner passes the CLI model ID that the effort table gives for the requested effort and never passes `--effort`, because a variant ID with a conflicting `--effort` exits 1. A bare `gemini-3.8-flash` runs as `gemini-3.8-flash-high`. Issue #37 asked for Gemini 3.7 Flash, but `agy models` did not list it for the measured account. The runner registers Gemini 3.8 Flash and never maps a 3.7 request to it.",
-      "Read-only only. A lane runs agy's default mode, whose approval policy, not an OS sandbox, denies the write tool and every shell command. `--mode accept-edits` writes only through the edit tool and denies shell, and `--sandbox` blocks shell writes even in the cwd, so no agy mode is a bounded writer. The runner refuses an `isolated-write` lane before launch.",
+      "A read-only lane runs agy's default mode, whose approval policy, not an OS sandbox, denies the write tool and every shell command.",
+      "No agy writer is confined, so a writer needs the model sheet's opt-in (`isolated-write-full-access`); the runner refuses a bounded `isolated-write` lane before launch. On Antigravity CLI 1.5.2, `--mode auto` is not available for the measured account and falls back to the default mode, `--mode accept-edits` denies shell, and `--sandbox` blocks shell writes even in the cwd. An opted-in writer passes `--dangerously-skip-permissions`. Measured on macOS in a linked worktree under the home directory, whose main repository and a sibling directory sat beside it: edits, shell writes and a Python run inside the worktree succeeded, and the edit tool and the shell wrote into every outside target, including the main repository's shared `.git`, a home directory, `/tmp` and `$TMPDIR`.",
+      "Antigravity CLI 1.5.2 loads the run-owned agent but ignores its `tools` list: the `init` event of a read-only lane listed 60 tools, among them web search, the browser and subagents. The approval policy still denied writes in a read-only lane.",
       "Headless agy cannot ask for approval. The first tool that needs it is denied, and the turn ends with exit 0, `status: \"SUCCESS\"` and a `denied_actions` list. Any `response` text is a preamble written before the denied tool, so the runner records a non-empty `denied_actions` as `child-failed`/70 whatever the response says.",
-      "Each lane writes a run-owned agent file, `.agents/agents/pstack-read-only.md`, in its private `<receipt>.provider/` directory (0700, the file 0600), and runs `--add-dir <that directory> --agent pstack-read-only`. The agent declares only `view_file`, no MCP servers and no skills. The lane keeps `view_file` and `manage_task` and loses web search, `read_url_content`, subagents, `schedule`, `send_message` and the browser. If the file is missing, agy exits 1 with `unknown agent`.",
+      "Each lane writes a run-owned agent file, `.agents/agents/pstack-lane.md`, in its private `<receipt>.provider/` directory (0700, the file 0600), and runs `--add-dir <that directory> --agent pstack-read-only`. The agent declares only `view_file`, no MCP servers and no skills. The lane keeps `view_file` and `manage_task` and loses web search, `read_url_content`, subagents, `schedule`, `send_message` and the browser. If the file is missing, agy exits 1 with `unknown agent`.",
       "An agy lane runs in any directory, and the configuration it finds there applies as it is. agy runs the hooks and MCP servers in `.agents/`, `.agent/`, `_agents/` and `_agent/` directories in the cwd and each parent up to the git root, or up to `/` outside a repository, with no trust check, and loads their rules and skills. So a lane whose cwd is under the home directory and outside any git repository, or in a repository rooted at the home directory, also loads the home directory's own `~/.agents/` and its siblings. No flag stops them. A repository agent named `pstack-read-only` replaces the run-owned one.",
       "No flag turns off the operator's own configuration. `~/.gemini/GEMINI.md` loads as a global rule, and host skills and agy plugin hooks under `~/.gemini/` still load in every lane. The run-owned agent limits only the lane's tools.",
       "The lane passes the base allowlist and nothing else. The login is in the macOS keychain, found through `HOME`, so a run-owned `HOME` would be logged out. `GEMINI_API_KEY` did not authenticate and is not passed.",

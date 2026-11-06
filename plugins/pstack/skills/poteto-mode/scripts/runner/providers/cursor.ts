@@ -1,17 +1,20 @@
-import { adapter, type ParseResult, type ProviderMetadata } from "../registry/contract.ts";
+import { type Access, adapter, type ParseResult, type ProviderMetadata } from "../registry/contract.ts";
 import { BASE_ALLOWLIST, BASE_PREFIXES, boundedOutput, finiteNumber, nullableString, object, type JsonObject } from "./shared.ts";
 
 // Measured with Cursor CLI 2026.10.14-0f9edde. `--mode ask --sandbox enabled` still let MCP, plugin and web tools
 // run until this run-owned config denied them: `Mcp(*:*)` blocks every MCP and plugin call, and with no allow rule
 // nothing approves a web tool. A repository's `.cursor/cli.json` replaces this deny list; the catalog notes say so.
-const LOCKDOWN = {
-  version: 1,
-  permissions: { allow: [], deny: ["Write(**)", "Shell(*)", "Mcp(*:*)"] },
-  approvalMode: "allowlist",
-  sandbox: { mode: "enabled" },
-  autoAcceptWebSearch: false,
-  webFetchDomainAllowlist: [],
-};
+function lockdown(access: Access) {
+  const writes = ["Write(**)", "Shell(*)"];
+  return {
+    version: 1,
+    permissions: access.mode === "read-only" ? { allow: [], deny: [...writes, "Mcp(*:*)"] } : { allow: writes, deny: ["Mcp(*:*)"] },
+    approvalMode: "allowlist",
+    sandbox: { mode: "enabled" },
+    autoAcceptWebSearch: false,
+    webFetchDomainAllowlist: [],
+  };
+}
 
 function metadata(result: JsonObject): ProviderMetadata {
   const raw = object(result.usage);
@@ -68,6 +71,10 @@ function parse(stdout: string): ParseResult {
   return { kind: "complete", text: reply, metadata: found };
 }
 
+function modeArgs(access: Access): readonly string[] {
+  return access.mode === "read-only" ? ["--mode", "ask", "--sandbox", "enabled"] : ["--sandbox", "enabled"];
+}
+
 export const cursor = adapter({
   id: "cursor",
   // Cursor also installs `agent`, which can resolve to another CLI on PATH, such as Grok's.
@@ -90,9 +97,8 @@ export const cursor = adapter({
   },
   launch: {
     prompt: "stdin",
-    sidecar: { output: null, config: { name: "cli-config.json", content: () => `${JSON.stringify(LOCKDOWN, null, 2)}\n` } },
-    // In agent mode the edit tool wrote outside the cwd under every flag combination, so no mode is a bounded writer.
-    supports: ["read-only"],
+    sidecar: { output: null, config: { name: "cli-config.json", content: (lane) => `${JSON.stringify(lockdown(lane.access), null, 2)}\n` } },
+    supports: ["read-only", "isolated-write-full-access"],
     needsSharedGitDir: () => false,
     argv: (lane) => [
       "-p",
@@ -100,11 +106,7 @@ export const cursor = adapter({
       "stream-json",
       "--model",
       lane.cliModel,
-      // The only combination that refused every edit and shell request, including `ls`.
-      "--mode",
-      "ask",
-      "--sandbox",
-      "enabled",
+      ...modeArgs(lane.access),
       // A new directory otherwise exits 1 with `Workspace Trust Required`.
       "--trust",
     ],
@@ -132,8 +134,9 @@ export const cursor = adapter({
     notes: [
       "The executable is `cursor-agent`. Cursor also installs `agent`, and on a host where another CLI's `agent` comes first on PATH (Grok's, for example), `agent status --format json` exits 2 with empty stdout, which looked like an empty Cursor status in #94.",
       "Effort is part of the model ID. The runner passes the CLI model ID that the effort table gives for the requested effort, such as `gemini-3.7-flash-high`. An unregistered Cursor model must be a CLI model ID with the `default` effort. An unknown model exits 1 with `Cannot use this model: <id>`, which is `unavailable-model`/69.",
-      "Read-only only. A lane runs `-p --output-format stream-json --mode ask --sandbox enabled --trust` with the prompt on stdin. Only `--mode ask --sandbox enabled` refused every edit and shell request, including `ls`; the CLI's permission check enforces it, and the Read tool still works. In agent mode the edit tool wrote outside the cwd under every flag combination, so no Cursor mode is a bounded writer. The runner refuses an `isolated-write` lane before launch. `--trust` is required in a new directory. The lane never passes `--force`, `--yolo` or `--approve-mcps`.",
-      "Each lane sets `CURSOR_CONFIG_DIR` to its private `<receipt>.provider/` directory (0700) and writes `cli-config.json` there (0600) before the preflight. The config denies `Write(**)`, `Shell(*)` and `Mcp(*:*)`, sets `approvalMode: \"allowlist\"` with no allow rules, enables the sandbox, and turns off web-search auto-approval and the web-fetch domain allowlist. MCP and plugin tools (such as the GitHub, Gmail and Calendar plugins) are still listed to the model, but every call is blocked. Web search and web fetch are refused, because nothing approves them. A Task subagent runs with the same limits. Without the run-owned directory, every `-p` run rewrites `~/.cursor/cli-config.json` with its default model and an identity block.",
+      "A read-only lane runs `-p --output-format stream-json --mode ask --sandbox enabled --trust` with the prompt on stdin. Only `--mode ask --sandbox enabled` refused every edit and shell request, including `ls`; the CLI's permission check enforces it, and the Read tool still works. `--trust` is required in a new directory. The lane never passes `--force`, `--yolo` or `--approve-mcps`.",
+      "No Cursor writer is confined, so a writer needs the model sheet's opt-in (`isolated-write-full-access`); the runner refuses a bounded `isolated-write` lane before launch. An opted-in writer runs agent mode (no `--mode`) with `--sandbox enabled`, and its config allows `Write(**)` and `Shell(*)` and still denies `Mcp(*:*)`. Measured with Cursor CLI 2026.10.22-27dcf5f on macOS in a linked worktree under the home directory, whose main repository and a sibling directory sat beside it: edits, shell writes and a Python run inside the worktree succeeded. The edit tool wrote into the sibling, the main checkout, the main repository's shared `.git`, a home directory and through a symlink. The sandboxed shell wrote into the shared `.git` and `/tmp`, and failed elsewhere. With `--sandbox disabled`, the edit tool still wrote everywhere and the shell's outside writes were rejected, so that mode gains nothing.",
+      "Each lane sets `CURSOR_CONFIG_DIR` to its private `<receipt>.provider/` directory (0700) and writes `cli-config.json` there (0600) before the preflight. A read-only lane's config denies `Write(**)`, `Shell(*)` and `Mcp(*:*)`, sets `approvalMode: \"allowlist\"` with no allow rules, enables the sandbox, and turns off web-search auto-approval and the web-fetch domain allowlist. MCP and plugin tools (such as the GitHub, Gmail and Calendar plugins) are still listed to the model, but every call is blocked. Web search and web fetch are refused, because nothing approves them. A Task subagent runs with the same limits. Without the run-owned directory, every `-p` run rewrites `~/.cursor/cli-config.json` with its default model and an identity block.",
       "A Cursor lane runs in any repository, and the repository's configuration applies as it is. `.cursor/cli.json`, which the CLI reads in every directory from the git root down to the cwd, replaces the run-owned deny list. A measured one that allowed `Shell(*)` let the lane run shell commands, and an invalid one stops the run with exit 1. `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*.mdc` and `.cursorrules` load as always-applied rules.",
       "Hooks run unsandboxed: the CLI's command executor runs them with sandbox policy `insecure_none` whatever `--sandbox` is set to (batch-158 containment captures, 2026-10-16). No flag stops them, and no command lists them without running them. Enterprise hooks load from a fixed path that follows neither `CURSOR_CONFIG_DIR` nor `HOME`: `/Library/Application Support/Cursor/hooks.json` on macOS and `/etc/cursor/hooks.json` on Linux. For a team account, a turn fetches the team's hooks from Cursor's server, writes them to `~/.cursor/managed/team_<id>/hooks/` and runs them. User hooks load from `~/.cursor/hooks.json` and `~/.claude/settings.json`. Repository hooks load from `.cursor/hooks.json`, `.claude/settings.json` and `.claude/settings.local.json`.",
       "No flag turns off the operator's own configuration. Host skills (from `~/.cursor`, `~/.claude`, `~/.codex` and `~/.agents`), account plugins and `~/.cursor/mcp.json` still load. The run-owned deny list limits only what their tools can do.",

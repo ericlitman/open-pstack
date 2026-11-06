@@ -27,16 +27,18 @@ describe("agy launch", () => {
       "--add-dir",
       "/tmp/receipt.json.provider",
       "--agent",
-      "pstack-read-only",
+      "pstack-lane",
     ]);
     for (const flag of ["-p", "--mode", "--sandbox", "--effort", "--dangerously-skip-permissions"]) {
       expect(agy.launch.argv(lane(), testFacts(agy))).not.toContain(flag);
     }
   });
 
-  it("refuses an isolated-write lane, efforts 3.8 Flash does not list, and never maps 3.7 Flash", () => {
+  it("runs an opted-in writer with permissions skipped, and refuses a bounded writer, efforts 3.8 Flash does not list, and 3.7 Flash", () => {
+    expect(agy.launch.argv(lane({ mode: "isolated-write", writerSandbox: "full-access" }), testFacts(agy)).slice(-3))
+      .toEqual(["--agent", "pstack-lane", "--dangerously-skip-permissions"]);
     expect(() => lane({ mode: "isolated-write" }))
-      .toThrow("provider agy does not support isolated-write; it supports only: read-only");
+      .toThrow("provider agy does not support isolated-write; it supports only: read-only, isolated-write-full-access");
     expect(() => lane({ effort: "max" })).toThrow("effort max is not offered for agy:gemini-3.8-flash; choose one of: low, medium, high");
     const unregistered = lane({ model: "gemini-3.7-flash", effort: "default" });
     expect([unregistered.family, unregistered.cliModel]).toEqual([null, "gemini-3.7-flash"]);
@@ -49,14 +51,17 @@ describe("agy launch", () => {
     expect(JSON.parse(line)).toEqual({ event: "user", message: { role: "user", content: "Read \"marker.txt\".\nReply exactly.\n" } });
   });
 
-  it("writes a run-owned agent with view_file only, no MCP servers and no skills, and refuses the four project directories", () => {
+  it("writes a run-owned agent with view_file only for a reader, the edit and command tools for a writer, and no MCP servers or skills", () => {
     const config = agy.launch.sidecar!.config!;
     expect(agy.launch.sidecar!.output).toBeNull();
-    expect(config.name).toBe(".agents/agents/pstack-read-only.md");
+    expect(config.name).toBe(".agents/agents/pstack-lane.md");
+    const tools = (request: Partial<LaneRequest>) => config.content(lane(request)).split("tools:\n")[1]!.split("mainAgent")[0];
+    expect(tools({ mode: "isolated-write", writerSandbox: "full-access" }))
+      .toBe("  - view_file\n  - write_to_file\n  - replace_file_content\n  - run_command\n  - command_status\n");
     const front = config.content(lane()).split("---\n")[1];
     expect(front).toBe([
-      "name: pstack-read-only",
-      "description: Read-only pstack lane with one file-reading tool.",
+      "name: pstack-lane",
+      "description: pstack lane with a fixed tool list.",
       "tools:",
       "  - view_file",
       "mainAgent: true",

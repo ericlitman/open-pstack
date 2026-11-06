@@ -40,6 +40,7 @@ describe("dsh launch", () => {
       "  config:",
       "    policy: ask",
       "- id: credentials",
+      "  disabled: false",
       "  config:",
       "    path: \"/srv/dsh/.credentials.yaml\"",
       "- id: agent-default-model",
@@ -63,7 +64,7 @@ describe("dsh launch", () => {
     const saved = process.env.DSH_HOME;
     try {
       process.env.DSH_HOME = "/srv/dsh home";
-      expect(dsh.launch.sidecar!.config!.content(lane())).toContain("- id: credentials\n  config:\n    path: \"/srv/dsh home/.credentials.yaml\"\n");
+      expect(dsh.launch.sidecar!.config!.content(lane())).toContain("- id: credentials\n  disabled: false\n  config:\n    path: \"/srv/dsh home/.credentials.yaml\"\n");
       for (const [value, home] of [
         [undefined, join(homedir(), ".dsh")],
         [" \t", join(homedir(), ".dsh")],
@@ -82,8 +83,11 @@ describe("dsh launch", () => {
     }
   });
 
-  it("refuses an isolated-write lane and the medium effort for a registered family", () => {
-    expect(() => lane({ mode: "isolated-write" })).toThrow("provider dsh does not support isolated-write; it supports only: read-only");
+  it("pins workspace-write for a bounded writer and refuses full access and the medium effort for a registered family", () => {
+    const writer = dsh.launch.sidecar!.config!.content(lane({ mode: "isolated-write", cwd: "/tmp/lane" }));
+    expect(writer).toStartWith("- id: sandbox-policy\n  config:\n    mode: workspace-write\n    workspaceRoot: \"/tmp/lane\"\n- id: approval\n  config:\n    policy: ask\n");
+    expect(() => lane({ mode: "isolated-write", writerSandbox: "full-access" }))
+      .toThrow("provider dsh does not support isolated-write-full-access; it supports only: read-only, isolated-write");
     expect(() => lane({ effort: "medium" })).toThrow("effort medium is not offered for dsh:deepseek-flash; choose one of: low, high, max");
   });
 

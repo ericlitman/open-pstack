@@ -291,10 +291,21 @@ describe("hand-written dispatch and setup rules", () => {
     expect(readFileSync(join(PLUGIN_ROOT, "skills/architect/SKILL.md"), "utf8")).toContain("Take the runners from `architect runners` in the current harness's pstack model sheet, in place of Arena's `arena runners`.");
     expect(rule).toContain("or lists only `isolated-write-full-access` while its setting line from step 2 is missing or says `bounded`. Name the role and the provider, and say why.");
     expect(rule).toContain("The runner refuses that provider's writer lane before launch");
-    expect(REGISTRY.adapters.filter((adapter) => !adapter.launch.supports.includes("isolated-write")).map((adapter) => adapter.id))
-      .toEqual(["devin", "opencode", "dsh", "amp", "agy", "cursor"]);
-    const devinRoute = renderCatalog(REGISTRY).content.split("\n").find((line) => line.startsWith("| devin |"));
-    expect(devinRoute).toContain("| `read-only` |");
+    const kinds = Object.fromEntries(REGISTRY.adapters.map((adapter) => [adapter.id, adapter.launch.supports.join(", ")]));
+    expect(kinds).toEqual({
+      claude: "read-only, isolated-write",
+      codex: "read-only, isolated-write, isolated-write-full-access",
+      grok: "read-only, isolated-write",
+      devin: "read-only, isolated-write, isolated-write-full-access",
+      opencode: "read-only, isolated-write-full-access",
+      dsh: "read-only, isolated-write",
+      amp: "read-only",
+      agy: "read-only, isolated-write-full-access",
+      cursor: "read-only, isolated-write-full-access",
+      muse: "read-only, isolated-write-full-access",
+    });
+    const ampRoute = renderCatalog(REGISTRY).content.split("\n").find((line) => line.startsWith("| amp |"));
+    expect(ampRoute).toContain("| `read-only` |");
   });
 
   it("proposes a kept predecessor's current model at the same effort and keeps it on a decline", () => {
@@ -491,8 +502,7 @@ describe("resolveLane", () => {
     expect(() => devin("swe-2", "default")).toThrow("effort default is not offered for devin:swe-2; choose one of: medium, high, max");
     expect([devin("swe-1-7-medium", "default").cliModel, devin("swe-1-7-medium", "default").family]).toEqual(["swe-1-7-medium", null]);
     expect(() => devin("swe-1-7-medium", "max")).toThrow("effort max is not offered for devin:swe-1-7-medium; choose one of: default");
-    expect(() => devin("swe-2", "max", "isolated-write"))
-      .toThrow("provider devin does not support isolated-write; it supports only: read-only");
+    expect(devin("swe-2", "max", "isolated-write").cliModel).toBe("swe-2-max");
     for (const [provider, model] of [["codex", "gpt-6.1-sol"], ["grok", "grok-4.7"], ["grok", "grok-4.5"]]) {
       expect(resolveLane(request({ parent: "claude", provider, model })).cliModel).toBe(model);
     }
@@ -523,20 +533,24 @@ describe("resolveLane", () => {
     expect(() => codex({ writerSandbox: "full-access" })).toThrow("writer sandbox full-access requires mode isolated-write");
     expect(() => codex({ mode: "isolated-write", writerSandbox: "danger-full-access" }))
       .toThrow("writer-sandbox must be one of: bounded, full-access");
-    expect(REGISTRY.adapters.filter((adapter) => adapter.launch.supports.includes("isolated-write-full-access"))
-      .map((adapter) => adapter.id)).toEqual(["codex"]);
     for (const [parent, provider, model] of [["codex", "claude", "opus"], ["claude", "grok", "grok-4.7"]]) {
       expect(() => resolveLane(request({ parent, provider, model, mode: "isolated-write", writerSandbox: "full-access" })))
         .toThrow(`provider ${provider} does not support isolated-write-full-access; it supports only: read-only, isolated-write`);
     }
-    expect(() => resolveLane(request({ parent: "claude", provider: "devin", model: "swe-2", mode: "isolated-write", writerSandbox: "full-access" })))
-      .toThrow("provider devin does not support isolated-write-full-access; it supports only: read-only");
+    expect(() => resolveLane(request({ parent: "claude", provider: "amp", model: "deepseek-v4.1-flash", effort: "default", mode: "isolated-write", writerSandbox: "full-access" })))
+      .toThrow("provider amp does not support isolated-write-full-access; it supports only: read-only");
+    for (const provider of ["opencode", "agy", "cursor", "muse"]) {
+      expect(() => resolveLane(request({ parent: "claude", provider, model: "any", effort: "default", mode: "isolated-write" })))
+        .toThrow(`provider ${provider} does not support isolated-write; it supports only: read-only, isolated-write-full-access`);
+      expect(resolveLane(request({ parent: "claude", provider, model: "any", effort: "default", mode: "isolated-write", writerSandbox: "full-access" })).access)
+        .toEqual(access("isolated-write", "full-access"));
+    }
   });
 
   it("rejects same-provider recursion and unknown names", () => {
     expect(() => resolveLane(request({ parent: "claude" })))
       .toThrow("provider claude is native to parent claude; use the parent subagent primitive");
-    expect(() => resolveLane(request({ provider: "kiro" }))).toThrow("provider must be one of: claude, codex, grok, devin, opencode, dsh, amp, agy, cursor");
+    expect(() => resolveLane(request({ provider: "kiro" }))).toThrow("provider must be one of: claude, codex, grok, devin, opencode, dsh, amp, agy, cursor, muse");
     expect(() => resolveLane(request({ parent: "grok" }))).toThrow("parent must be one of: claude, codex");
     expect(() => resolveLane(request({ mode: "full" }))).toThrow("mode must be one of: read-only, isolated-write");
     expect(() => resolveLane(request({ model: " " }))).toThrow("model is required");

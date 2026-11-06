@@ -1845,12 +1845,6 @@ await Bun.sleep(5_000);`);
     const input = devinOptions("devin-repo-config", { cwd: repo });
     expect((await runLane(laneOf(input))).receipt).toMatchObject({ status: "complete", exitCode: 0 });
   });
-
-  it("refuses an isolated-write Devin lane before launch", () => {
-    const input = devinOptions("devin-writer", { mode: "isolated-write" });
-    expect(() => laneOf(input)).toThrow("provider devin does not support isolated-write");
-    expect(existsSync(input.receiptPath)).toBe(false);
-  });
 });
 
 const STAND_IN_CONFIG = ".agents/agents/lane.md";
@@ -2054,25 +2048,26 @@ describe("childEnvironment", () => {
     };
     const expected: Record<string, Partial<Record<AccessKind, readonly string[]>>> = {
       grok: { "read-only": ["GROK_API_KEY", "XAI_API_KEY"], "isolated-write": ["GROK_API_KEY", "XAI_API_KEY"] },
-      devin: { "read-only": [] },
-      opencode: { "read-only": [] },
-      dsh: { "read-only": ["DEEPSEEK_API_KEY"] },
+      devin: { "read-only": [], "isolated-write": [], "isolated-write-full-access": [] },
+      opencode: { "read-only": [], "isolated-write-full-access": [] },
+      dsh: { "read-only": ["DEEPSEEK_API_KEY"], "isolated-write": ["DEEPSEEK_API_KEY"] },
       amp: { "read-only": ["AMP_API_KEY"] },
-      agy: { "read-only": [] },
-      cursor: { "read-only": ["CURSOR_API_KEY", "CURSOR_AUTH_TOKEN"] },
+      agy: { "read-only": [], "isolated-write-full-access": [] },
+      cursor: { "read-only": ["CURSOR_API_KEY", "CURSOR_AUTH_TOKEN"], "isolated-write-full-access": ["CURSOR_API_KEY", "CURSOR_AUTH_TOKEN"] },
+      muse: { "read-only": [], "isolated-write-full-access": [] },
     };
     const allowlisted = REGISTRY.adapters
       .filter((adapter) => adapter.environment(access("read-only"), "/sidecar").kind === "allowlist");
     expect(allowlisted.map((adapter) => adapter.id).sort()).toEqual(Object.keys(expected).sort());
     for (const adapter of allowlisted) {
-      const family = REGISTRY.families.find((entry) => entry.provider === adapter.id)!;
+      const family = REGISTRY.families.find((entry) => entry.provider === adapter.id);
       expect(Object.keys(expected[adapter.id]!)).toEqual([...adapter.launch.supports]);
       for (const kind of adapter.launch.supports) {
         const lane = laneOf({
           ...options("grok", `allowlist-${adapter.id}-${kind}`),
           provider: adapter.id,
-          model: family.model,
-          effort: family.defaultEffort,
+          model: family?.model ?? "unregistered-model",
+          effort: family?.defaultEffort ?? "default",
           mode: kind === "read-only" ? "read-only" : "isolated-write",
           ...(kind === "isolated-write-full-access" ? { writerSandbox: "full-access" } : {}),
         });
@@ -2323,7 +2318,7 @@ describe("dsh lanes", () => {
   const TRANSPORT = `{"type":"status","phase":"turn_end","turn":1,"reason":{"kind":"error","error":{"message":"DeepSeek Messages transport failed","code":"TRANSPORT"}}}`;
   const MISSING = `{"type":"status","phase":"turn_end","turn":1,"reason":{"kind":"error","error":{"message":"llm-deepseek: no API key","code":"MISSING_CREDENTIAL"}}}`;
 
-  function fakeDsh(status: string, turn: string, version = "0.2.0-rc.2"): void {
+  function fakeDsh(status: string, turn: string, version = "0.2.1-rc.2"): void {
     writeFileSync(join(bin, "dsh"), `#!/usr/bin/env bun
 import { appendFileSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -2351,7 +2346,7 @@ ${turn}
 
   const OBSERVE = `const observed = {
   prompt,
-  patch: [["- id: sandbox-policy", 4], ["- id: credentials", 3], ["- id: agent-default-model", 5]].flatMap(([row, count]) => {
+  patch: [["- id: sandbox-policy", 4], ["- id: credentials", 4], ["- id: agent-default-model", 5]].flatMap(([row, count]) => {
     const lines = readFileSync(patch, "utf8").split("\\n");
     return lines.slice(lines.indexOf(row), lines.indexOf(row) + count);
   }),
@@ -2406,6 +2401,7 @@ emit({ type: "final", text: JSON.stringify(observed) });`;
         "    mode: read-only",
         `    workspaceRoot: ${JSON.stringify(scratch)}`,
         "- id: credentials",
+        "  disabled: false",
         "  config:",
         `    path: ${JSON.stringify(join(resolve("DSH_HOME-value"), ".credentials.yaml"))}`,
         "- id: agent-default-model",
@@ -2488,7 +2484,7 @@ process.exit(130);`);
       status: "unavailable-cli",
       preflight: { status: "not-run" },
       error: {
-        message: "dsh 0.3.0 is not the measured 0.2.0-rc.2; the adapter must be re-measured before it runs this version",
+        message: "dsh 0.3.0 is not the measured 0.2.1-rc.2; the adapter must be re-measured before it runs this version",
         evidence: "0.3.0",
       },
     });
@@ -2510,12 +2506,6 @@ process.exit(130);`);
     writeFileSync(join(cwd, ".env"), "PSTACK_FIXTURE=1\n");
     const input = dshOptions("dsh-cwd-env", { cwd });
     expect((await runLane(laneOf(input))).receipt).toMatchObject({ status: "complete", exitCode: 0 });
-  });
-
-  it("refuses an isolated-write dsh lane before launch", () => {
-    const input = dshOptions("dsh-writer", { mode: "isolated-write" });
-    expect(() => laneOf(input)).toThrow("provider dsh does not support isolated-write");
-    expect(existsSync(input.receiptPath)).toBe(false);
   });
 });
 
@@ -2748,7 +2738,7 @@ result({ response: JSON.stringify(observed) + "\\n" });`;
       const dir = `${input.receiptPath}.provider`;
       expect(saved.argv.slice(1)).toEqual([
         "--input-format", "stream-json", "--output-format", "stream-json", "--model", cliModel,
-        "--add-dir", dir, "--agent", "pstack-read-only",
+        "--add-dir", dir, "--agent", "pstack-lane",
       ]);
       expect(JSON.parse(readFileSync(input.outputPath, "utf8"))).toEqual({
         model: cliModel,

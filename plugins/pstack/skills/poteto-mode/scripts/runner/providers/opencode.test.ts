@@ -27,9 +27,14 @@ describe("opencode launch", () => {
       .toEqual(["run", "--pure", "--agent", "build", "--format", "json", "--title", "pstack-lane", "--print-logs", "--log-level", "ERROR", "-m", "openrouter/deepseek/deepseek-v4-pro"]);
   });
 
-  it("refuses an isolated-write lane and efforts the family does not list", () => {
+  it("allows bash, edit and write only for an opted-in writer, and refuses a bounded writer and efforts the family does not list", () => {
+    const writer = lane({ mode: "isolated-write", writerSandbox: "full-access" });
+    expect(JSON.parse(opencode.launch.sidecar!.config!.content(writer)).permission).toEqual({
+      "*": "deny", read: "allow", glob: "allow", grep: "allow", list: "allow", todowrite: "allow", bash: "allow", edit: "allow", write: "allow",
+    });
+    expect(opencode.launch.argv(writer, testFacts(opencode))).toEqual(opencode.launch.argv(lane(), testFacts(opencode)));
     expect(() => lane({ mode: "isolated-write" }))
-      .toThrow("provider opencode does not support isolated-write; it supports only: read-only");
+      .toThrow("provider opencode does not support isolated-write; it supports only: read-only, isolated-write-full-access");
     expect(() => lane({ effort: "medium" }))
       .toThrow(`effort medium is not offered for opencode:${MODEL}; choose one of: low, high, max`);
   });
