@@ -48,6 +48,7 @@ export function classify(files: ChangedFile[], registry: Registry): Selection {
       if (registry[key].some(p => matches(path, p))) { both(feature); covered = true; }
     }
     if (/^plugins\/pstack\/skills\/poteto-mode\/scripts\/resolve-codex-transcript(?:\.ts)?$/.test(path)) { skills.add('reflect'); covered = true; }
+    if (path.startsWith('plugins/pstack/skills/poteto-mode/scripts/runner/providers/')) both('writers');
     const skill = /^plugins\/pstack\/skills\/([^/]+)\/(.+)$/.exec(path);
     if (!catalog && skill && registry.skills.includes(skill[1]!)) {
       const leaf = skill[2]!;

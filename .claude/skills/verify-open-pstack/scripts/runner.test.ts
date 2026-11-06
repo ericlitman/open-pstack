@@ -30,6 +30,8 @@ async function launch(f: Fixture, prompt: string): Promise<string> {
 test('the runner recipe adds one linked-worktree writer case for a Codex parent only', async () => {
   expect(recipe('runner', 'claude').map(c => c.id)).toEqual(['route-1', 'full-access-writer', 'bounded-writer']);
   expect(recipe('runner', 'codex').map(c => c.id)).toEqual(['route-1', 'linked-worktree-writer']);
+  expect(recipe('writers', 'claude').map(c => c.id))
+    .toEqual(['devin-writer', 'dsh-writer', 'opencode-writer', 'agy-writer', 'cursor-writer', 'muse-writer', 'muse-reader']);
 
   const dir = await realpath(await mkdtemp(join(tmpdir(), 'pstack-runner-recipe-'))); roots.push(dir);
   const workspace = resolve(import.meta.dir, '../../../..');

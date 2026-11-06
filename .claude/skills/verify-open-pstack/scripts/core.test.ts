@@ -71,11 +71,13 @@ describe('registry and ownership', () => {
   test('catalog-only changes select catalog, setup and runner and no skill check', () => {
     for (const filename of [CATALOG, 'plugins/pstack/agents/pstack-opus-max.md', 'plugins/pstack/agents/pstack-fable-low.md',
       'plugins/pstack/agents/pstack-sonnet-max.md', 'plugins/pstack/agents/pstack-opus-5-5-low.md',
-      'plugins/pstack/skills/poteto-mode/scripts/runner/registry/models.ts', 'plugins/pstack/skills/poteto-mode/scripts/runner/providers/grok.ts']) {
+      'plugins/pstack/skills/poteto-mode/scripts/runner/registry/models.ts']) {
       const s = classify([{ filename }], registry);
       expect(s.skills).toEqual([]);
       expect(s.features).toEqual(both('catalog', 'runner', 'setup'));
     }
+    expect(classify([{ filename: 'plugins/pstack/skills/poteto-mode/scripts/runner/providers/grok.ts' }], registry).features)
+      .toEqual(both('catalog', 'runner', 'setup', 'writers'));
   });
   test('a renamed or deleted catalog path keeps catalog ownership', () => {
     for (const previous_filename of [CATALOG, 'plugins/pstack/agents/pstack-opus-max.md']) {
