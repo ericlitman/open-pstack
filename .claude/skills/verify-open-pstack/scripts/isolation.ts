@@ -24,6 +24,15 @@ export async function linkCodexAuth(home: string): Promise<void> {
   await symlink(source, join(await codexDirectory(home), 'auth.json'));
 }
 
+export async function linkMuseConfig(home: string): Promise<void> {
+  const source = join(process.env.XDG_CONFIG_HOME ?? join(process.env.HOME!, '.config'), 'muse');
+  const target = join(home, '.config/muse');
+  await mkdir(target, { recursive: true, mode: 0o700 });
+  for (const name of ['settings.json', 'auth.json']) {
+    if (await stat(join(source, name)).catch(() => undefined)) await symlink(join(source, name), join(target, name));
+  }
+}
+
 export async function assertCodexAuth(home: string): Promise<void> {
   const path = join(await codexDirectory(home), 'auth.json');
   const info = await lstat(path);

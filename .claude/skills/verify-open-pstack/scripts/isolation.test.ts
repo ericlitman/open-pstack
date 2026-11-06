@@ -2,10 +2,10 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { lstat, mkdir, mkdtemp, readFile, readlink, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assertCodexAuth, linkCodexAuth, removeCodexHome, restoreSetup, snapshotSetup } from './isolation.ts';
+import { assertCodexAuth, linkCodexAuth, linkMuseConfig, removeCodexHome, restoreSetup, snapshotSetup } from './isolation.ts';
 
 const roots: string[] = [];
-const environment = { HOME: process.env.HOME, CODEX_HOME: process.env.CODEX_HOME, CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR };
+const environment = { HOME: process.env.HOME, XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME, CODEX_HOME: process.env.CODEX_HOME, CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR };
 afterEach(async () => {
   for (const [name, value] of Object.entries(environment)) {
     if (value === undefined) delete process.env[name]; else process.env[name] = value;
@@ -66,6 +66,19 @@ describe('existing native login', () => {
     await expect(removeCodexHome(home)).rejects.toThrow('Codex replaced or redirected auth.json');
     expect(await readFile(auth, 'utf8')).toBe('operator login');
     expect(await readFile(link, 'utf8')).toBe('replacement');
+  });
+
+  test('links existing operator Muse config files into run-owned XDG config without copying', async () => {
+    const { root, home } = await fixture();
+    process.env.XDG_CONFIG_HOME = join(root, 'daily-config');
+    const settings = join(root, 'daily-config/muse/settings.json');
+    await mkdir(join(root, 'daily-config/muse'), { recursive: true });
+    await writeFile(settings, 'operator transport');
+    await linkMuseConfig(home);
+    const link = join(home, '.config/muse/settings.json');
+    expect((await lstat(link)).isSymbolicLink()).toBe(true);
+    expect(await readlink(link)).toBe(settings);
+    expect(await Bun.file(join(home, '.config/muse/auth.json')).exists()).toBe(false);
   });
 
   test('redirected run-owned Codex directory is refused without touching the source', async () => {

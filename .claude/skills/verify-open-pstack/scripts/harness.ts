@@ -4,7 +4,7 @@ import { CLAUDE_TOOLS, recipe, type Fixture } from '../features/recipes.ts';
 import { requiredFeatures, requiredHarnesses } from './core.ts';
 import { command, isolatedEnv, retainedFile, save, session, treeHash, type Command, type Session } from './io.ts';
 import { doctor } from './doctor.ts';
-import { assertCodexAuth, linkCodexAuth, removeCodexHome, restoreSetup, snapshotSetup, type SetupSnapshot } from './isolation.ts';
+import { assertCodexAuth, linkCodexAuth, linkMuseConfig, removeCodexHome, restoreSetup, snapshotSetup, type SetupSnapshot } from './isolation.ts';
 import { sourceDigest, sourceHash } from './provenance.ts';
 import { publishable } from './verify.ts';
 import { REPO, type Driver, type Harness, type Installation, type Observation, type Receipt, type SessionRecord } from './types.ts';
@@ -118,6 +118,7 @@ export class MacDriver implements Driver {
       let location = candidate;
       await linkCodexAuth(home);
       this.codexHomes.push(home);
+      await linkMuseConfig(home);
       if (harness === 'codex') {
         const added = await candidateRun(['codex', 'plugin', 'marketplace', 'add', workspace, '--json'], { env, cwd: home });
         await save(join(root, 'codex-marketplace.json'), JSON.parse(added));
