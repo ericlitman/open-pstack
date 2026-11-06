@@ -186,7 +186,7 @@ describe('registry and ownership', () => {
   });
   test('the shared recipe implementation reaches every implemented recipe and preserves project proof', () => {
     const path = '.claude/skills/verify-open-pstack/features/recipes.ts';
-    const expected = [...both('catalog', 'setup', 'runner', 'shipped-tools', 'hook:startup', 'project-skill',
+    const expected = [...both('catalog', 'setup', 'runner', 'shipped-tools', 'hook:startup', 'project-skill', 'writers',
       ...registry.skills.map(skill => `skill-invocation:${skill}`)), 'claude:agent-preload:poteto-agent'].sort();
     for (const file of [{ filename: path }, { filename: 'docs/moved.md', previous_filename: path }]) {
       const s = classify([file], registry);

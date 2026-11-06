@@ -35,7 +35,7 @@ export function classify(files: ChangedFile[], registry: Registry): Selection {
       features.add('codex:assets:codex'); covered = true;
     }
     const sharedRecipe = path === '.claude/skills/verify-open-pstack/features/recipes.ts';
-    if (sharedRecipe) both('catalog');
+    if (sharedRecipe) both('catalog', 'writers');
     const catalog = registry.catalog.some(p => matches(path, p));
     if (catalog) { both('catalog', 'setup', 'runner'); covered = true; }
     if (sharedRecipe || (!catalog && registry.shared.some(p => matches(path, p)))) {

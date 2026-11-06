@@ -310,6 +310,14 @@ test('the configure case answers yes to full access and requires that setting wi
   }
 });
 
+test('the configure case keeps another provider\'s writer setting line that setup preserves', async () => {
+  const f = await fixture('claude'), c = setupCase('configure'), installed = await readCatalog(location);
+  const written = `# pstack model configuration\n\n${[...installed.defaults].map(([role, lanes]) =>
+    `${role}: ${lanes.map(lane => lane.includes(':') ? 'claude:opus@high' : lane).join(', ')}`).join('\n')}\nmuse writer sandbox: full-access\n${FULL_ACCESS}`;
+  await writeFile(join(f.dir, 'pstack-models.md'), written);
+  expect((await c.assert(record('claude', 'pstack:setup-pstack'), f)).assertions).toContain('setting:codex writer sandbox: full-access');
+});
+
 test('the configure case starts from the daily sheet with only its setting line removed, so setup asks', async () => {
   const f = await fixture('claude'), c = setupCase('configure'), path = join(f.dir, 'pstack-models.md');
   await c.prepare!(f);
