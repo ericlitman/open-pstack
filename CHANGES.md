@@ -3,6 +3,14 @@
 Open Pstack lands on green: Mergify merges a ready PR to main once verify and exact-head live-gate pass and no review thread is unresolved, and a workflow resolves Unfret's own threads. A PR that touches `.github/` or the Mergify config also waits for Unfret, and workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## 1.18.0 gives external providers writers and adds a Muse Code provider
+
+Open Pstack 1.18.0 keeps the Cursor pstack 0.15.36 sync. Default roles and panels are unchanged.
+
+**Writers on more external providers (#263).** Devin and DeepSeek Harness now have bounded `isolated-write` lanes, measured as confined to the lane's worktree apart from the system temporary folders: Devin under `--sandbox` as a shell-only writer, and dsh under a `workspace-write` sandbox policy. OpenCode, Antigravity, Cursor and Muse writes escaped the worktree, including into the main repository's shared `.git`, so their writers run only when the model sheet holds `<provider> writer sandbox: full-access`. Devin also takes that line, for an unsandboxed `dangerous` writer. `codex writer sandbox:` keeps its meaning. Setup asks about the line for each such provider that a writer role uses, warns that nothing stops a stray write, and refuses a writer role on a provider that cannot write. Amp stays read-only: its writer was not measured. The dsh adapter now requires dsh 0.2.1-rc.2 and enables that version's disabled `credentials` row.
+
+**Muse Code provider (#258).** `muse` lanes run Meta's `muse exec --json`, read-only with writes and the shell disabled, or as an opted-in writer with Muse's sandbox on. The model proof is the pinned argv. No Muse family is registered and no default role changes.
+
 ## 1.17.0 syncs to Cursor pstack 0.15.36
 
 Open Pstack 1.17.0 tracks Cursor pstack 0.15.36 at `2776ddd2355d6d6c8747d3964600f28daf62f049`. Twenty-three upstream commits since 0.15.29 touch pstack. Eighteen change skill content or scripts. Seventeen of those are applied with the port adaptations below, and the deletion of `scripts/orch/` supersedes `3c596e7`'s `orch` fix. Four bump only the Cursor manifests. `a0b0ad9` changes only the upstream README. Default roles and panels are unchanged.
@@ -16,10 +24,6 @@ Open Pstack 1.17.0 tracks Cursor pstack 0.15.36 at `2776ddd2355d6d6c8747d3964600
 **Autopilot-stack is Autopilot-full without the merge.** It stops when each PR is verified and green, hands the PRs to the operator, and pushes nothing after the handoff without the operator's go. A PR stacks only on a PR it builds on, and each owner restacks its own branch through Autopilot-full step 2, which now holds the fork and split-remote rules.
 
 **Changed behavior.** Poteto-mode restates the user's goal in its first message, in each subagent brief, in each PR's `## Why`, and in each final report, and applies Explain the Number before measuring. The arena judge is never from the parent's provider; when no configured judge runs, Arena skips the judge and says so. Reflect never edits a skill in the plugin cache and copies it to the harness's project or user skill folder first. Autopilot-full and the multi-phase plan block a PR only for a problem a run or a wrong doc line shows, rebase when a known concurrent change to the same files lands, and push each finished unit. `watch-pr` ignores fork heads when it discovers a stack and caps each sleep at an explicitly set deadline. `check-plan` ignores punctuation inside multi-backtick code spans. `worktree-audit.sh` works with GNU `stat` and `date`.
-
-**Writers on more external providers (#263).** Devin and DeepSeek Harness now have bounded `isolated-write` lanes, measured as confined to the lane's worktree apart from the system temporary folders: Devin under `--sandbox` as a shell-only writer, and dsh under a `workspace-write` sandbox policy. OpenCode, Antigravity, Cursor and Muse writes escaped the worktree, including into the main repository's shared `.git`, so their writers run only when the model sheet holds `<provider> writer sandbox: full-access`. Devin also takes that line, for an unsandboxed `dangerous` writer. `codex writer sandbox:` keeps its meaning. Setup asks about the line for each such provider that a writer role uses, warns that nothing stops a stray write, and refuses a writer role on a provider that cannot write. Amp stays read-only: its writer was not measured. The dsh adapter now requires dsh 0.2.1-rc.2 and enables that version's disabled `credentials` row.
-
-**Muse Code provider (#258).** `muse` lanes run Meta's `muse exec --json`, read-only with writes and the shell disabled, or as an opted-in writer with Muse's sandbox on. The model proof is the pinned argv. No Muse family is registered and no default role changes.
 
 **Install note.** Claude Code leaves auto-update off for third-party marketplaces. The README says how to turn it on for `open-pstack` or update by hand.
 
