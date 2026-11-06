@@ -454,7 +454,8 @@ test('each provider writer case puts its setting line in the sheet only for an o
   const run = { ...record('claude', 'pstack:poteto-mode'), commands: ['"$RUNNER/pstack-runner" --provider x'] };
   for (const [name, model, effort, optIn] of [
     ['devin', 'swe-2', 'medium', false], ['dsh', 'deepseek-flash', 'low', false], ['opencode', 'opencode/deepseek-v4.1-flash-free', 'low', true],
-    ['agy', 'gemini-3.8-flash', 'low', true], ['cursor', 'composer-2.5', 'default', true], ['muse', 'muse-spark-1.3', 'low', true],
+    ['agy', 'gemini-3.8-flash', 'low', true], ['cursor', 'composer-2.5', 'default', true], ['amp', 'smart', 'default', true],
+    ['muse', 'muse-spark-1.3', 'low', true],
   ] as const) {
     const f = await fixture('claude'), c = recipe('writers', 'claude').find(c => c.id === `${name}-writer`)!;
     await c.prepare!(f);

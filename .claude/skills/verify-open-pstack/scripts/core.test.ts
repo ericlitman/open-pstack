@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import registryData from '../features/registry.json';
 import { recipe } from '../features/recipes.ts';
 import { classify, completeEvidence, matches, newReceipt, requiredFeatures, requiredHarnesses, validateRegistry } from './core.ts';
-import { HARNESSES, LIVE_HARNESSES, type Receipt } from './types.ts';
+import { HARNESSES, LIVE_HARNESSES, WRITER_PROVIDERS, type Receipt } from './types.ts';
 import codexManifest from '../../../../plugins/pstack/.codex-plugin/plugin.json';
 import claudeManifest from '../../../../plugins/pstack/.claude-plugin/plugin.json';
 
@@ -89,8 +89,15 @@ describe('registry and ownership', () => {
       expect(s.skills).toEqual([]);
       expect(s.features).toEqual(both('catalog', 'runner', 'setup'));
     }
-    expect(classify([{ filename: 'plugins/pstack/skills/poteto-mode/scripts/runner/providers/grok.ts' }], registry).features)
-      .toEqual(both('catalog', 'runner', 'setup', 'writers'));
+    const PROVIDERS = 'plugins/pstack/skills/poteto-mode/scripts/runner/providers/';
+    for (const [filename, writers] of [
+      ['grok.ts', 'writers'], ['shared.ts', 'writers'], ['adapter-suite.ts', 'writers'], ['fixtures/claude/stream.jsonl', 'writers'],
+      ...WRITER_PROVIDERS.map(provider => [`${provider}.ts`, `writers:${provider}`]),
+      ['amp.test.ts', 'writers:amp'], ['fixtures/amp/lockdown-settings.json', 'writers:amp'], ['dsh-preflight.yml', 'writers:dsh'],
+    ]) {
+      expect([filename, classify([{ filename: `${PROVIDERS}${filename}` }], registry).features])
+        .toEqual([filename, both('catalog', 'runner', 'setup', writers!)]);
+    }
   });
   test('a renamed or deleted catalog path keeps catalog ownership', () => {
     for (const previous_filename of [CATALOG, 'plugins/pstack/agents/pstack-opus-max.md']) {

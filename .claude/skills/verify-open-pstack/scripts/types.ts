@@ -2,6 +2,7 @@ export const REPO = 'ericlitman/open-pstack';
 export const HARNESSES = ['claude', 'codex'] as const;
 export type CoreHarness = typeof HARNESSES[number];
 export const LIVE_HARNESSES = [...HARNESSES, 't3'] as const;
+export const WRITER_PROVIDERS = ['devin', 'dsh', 'opencode', 'agy', 'cursor', 'amp', 'muse'] as const;
 export type Harness = typeof LIVE_HARNESSES[number];
 export type Phase = 'resolve' | 'classify' | 'prepare' | 'exercise' | 'publish' | 'failed' | 'head-moved';
 export interface Pull {

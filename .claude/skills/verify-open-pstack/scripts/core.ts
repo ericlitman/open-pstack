@@ -1,4 +1,4 @@
-import { HARNESSES, LIVE_HARNESSES, REPO, type ChangedFile, type Harness, type Receipt, type Registry, type Selection } from './types.ts';
+import { HARNESSES, LIVE_HARNESSES, REPO, WRITER_PROVIDERS, type ChangedFile, type Harness, type Receipt, type Registry, type Selection } from './types.ts';
 
 export function validateRegistry(value: unknown): Registry {
   if (!value || typeof value !== 'object') throw new Error('Invalid feature registry');
@@ -55,7 +55,8 @@ export function classify(files: ChangedFile[], registry: Registry): Selection {
       if (registry[key].some(p => matches(path, p))) { both(feature); covered = true; }
     }
     if (/^plugins\/pstack\/skills\/poteto-mode\/scripts\/resolve-codex-transcript(?:\.ts)?$/.test(path)) { skills.add('reflect'); covered = true; }
-    if (path.startsWith('plugins/pstack/skills/poteto-mode/scripts/runner/providers/')) both('writers');
+    const provider = /^plugins\/pstack\/skills\/poteto-mode\/scripts\/runner\/providers\/(?:fixtures\/)?([a-z]+)?/.exec(path);
+    if (provider) both((WRITER_PROVIDERS as readonly string[]).includes(provider[1] ?? '') ? `writers:${provider[1]}` : 'writers');
     const skill = /^plugins\/pstack\/skills\/([^/]+)\/(.+)$/.exec(path);
     if (!catalog && skill && registry.skills.includes(skill[1]!)) {
       const leaf = skill[2]!;
