@@ -38,9 +38,20 @@ describe("amp launch", () => {
     expect(amp.launch.sidecar!.output).toBeNull();
   });
 
-  it("refuses an isolated-write lane and efforts the mode does not list", () => {
+  it("enables and allows the edit and shell tools only for an opted-in writer, and refuses a bounded writer and efforts the mode does not list", () => {
+    const writer = lane({ mode: "isolated-write", writerSandbox: "full-access" });
+    const settings = JSON.parse(amp.launch.sidecar!.config!.content(writer));
+    const tools = ["create_file", "edit_file", "apply_patch", "shell_command", "async_shell_command"];
+    expect(settings["amp.tools.enable"]).toEqual(["Read", ...tools]);
+    expect(settings["amp.permissions"]).toEqual([
+      { tool: "Read", action: "allow" },
+      ...tools.map((tool) => ({ tool, action: "allow" })),
+      { tool: "code_exec", action: "reject" },
+      { tool: "*", action: "reject" },
+    ]);
+    expect(amp.launch.argv(writer, testFacts(amp))).toEqual(amp.launch.argv(lane(), testFacts(amp)));
     expect(() => lane({ mode: "isolated-write" }))
-      .toThrow("provider amp does not support isolated-write; it supports only: read-only");
+      .toThrow("provider amp does not support isolated-write; it supports only: read-only, isolated-write-full-access");
     expect(() => lane({ effort: "max" })).toThrow("effort max is not offered for amp:deepseek-v4.1-flash; choose one of: default");
   });
 

@@ -299,13 +299,11 @@ describe("hand-written dispatch and setup rules", () => {
       devin: "read-only, isolated-write, isolated-write-full-access",
       opencode: "read-only, isolated-write-full-access",
       dsh: "read-only, isolated-write",
-      amp: "read-only",
+      amp: "read-only, isolated-write-full-access",
       agy: "read-only, isolated-write-full-access",
       cursor: "read-only, isolated-write-full-access",
       muse: "read-only, isolated-write-full-access",
     });
-    const ampRoute = renderCatalog(REGISTRY).content.split("\n").find((line) => line.startsWith("| amp |"));
-    expect(ampRoute).toContain("| `read-only` |");
   });
 
   it("proposes a kept predecessor's current model at the same effort and keeps it on a decline", () => {
@@ -537,9 +535,7 @@ describe("resolveLane", () => {
       expect(() => resolveLane(request({ parent, provider, model, mode: "isolated-write", writerSandbox: "full-access" })))
         .toThrow(`provider ${provider} does not support isolated-write-full-access; it supports only: read-only, isolated-write`);
     }
-    expect(() => resolveLane(request({ parent: "claude", provider: "amp", model: "deepseek-v4.1-flash", effort: "default", mode: "isolated-write", writerSandbox: "full-access" })))
-      .toThrow("provider amp does not support isolated-write-full-access; it supports only: read-only");
-    for (const provider of ["opencode", "agy", "cursor", "muse"]) {
+    for (const provider of ["opencode", "amp", "agy", "cursor", "muse"]) {
       expect(() => resolveLane(request({ parent: "claude", provider, model: "any", effort: "default", mode: "isolated-write" })))
         .toThrow(`provider ${provider} does not support isolated-write; it supports only: read-only, isolated-write-full-access`);
       expect(resolveLane(request({ parent: "claude", provider, model: "any", effort: "default", mode: "isolated-write", writerSandbox: "full-access" })).access)

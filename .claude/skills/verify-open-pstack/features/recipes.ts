@@ -364,7 +364,7 @@ function codexWriter(optIn: boolean): Case {
 
 const PROVIDER_WRITERS: [descriptor: string, optIn: boolean][] = [
   ['devin:swe-2@medium', false], ['dsh:deepseek-flash@low', false], ['opencode:opencode/deepseek-v4.1-flash-free@low', true],
-  ['agy:gemini-3.8-flash@low', true], ['cursor:composer-2.5@default', true],
+  ['agy:gemini-3.8-flash@low', true], ['cursor:composer-2.5@default', true], ['amp:smart@default', true],
 ];
 const MUSE = { provider: 'muse', model: 'muse-spark-1.3', effort: 'low' };
 
@@ -810,7 +810,11 @@ export function recipe(feature: string, harness: Harness, routes: string[] = [])
   if (feature === 'project-skill') return [projectSkill];
   if (feature === 'hook:startup') return [startupHook];
   if (feature === 'runner') return runner(harness, routes);
-  if (feature === 'writers') return [...PROVIDER_WRITERS.map(([descriptor, optIn]) => providerWriter(descriptor, optIn)), museWriter, museReader];
+  const writers = /^writers(?::([a-z]+))?$/.exec(feature);
+  if (writers) {
+    const cases = [...PROVIDER_WRITERS.map(([descriptor, optIn]) => providerWriter(descriptor, optIn)), museWriter, museReader];
+    return writers[1] === undefined ? cases : cases.filter(c => c.id.startsWith(`${writers[1]}-`));
+  }
   if (feature === 'setup' || feature === 'skill-invocation:setup-pstack') return setup;
   if (feature === 'catalog') return catalog(harness);
   if (feature === 'shipped-tools') return [shippedTools];

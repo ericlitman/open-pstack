@@ -2051,7 +2051,7 @@ describe("childEnvironment", () => {
       devin: { "read-only": [], "isolated-write": [], "isolated-write-full-access": [] },
       opencode: { "read-only": [], "isolated-write-full-access": [] },
       dsh: { "read-only": ["DEEPSEEK_API_KEY"], "isolated-write": ["DEEPSEEK_API_KEY"] },
-      amp: { "read-only": ["AMP_API_KEY"] },
+      amp: { "read-only": ["AMP_API_KEY"], "isolated-write-full-access": ["AMP_API_KEY"] },
       agy: { "read-only": [], "isolated-write-full-access": [] },
       cursor: { "read-only": ["CURSOR_API_KEY", "CURSOR_AUTH_TOKEN"], "isolated-write-full-access": ["CURSOR_API_KEY", "CURSOR_AUTH_TOKEN"] },
       muse: { "read-only": [], "isolated-write-full-access": [] },

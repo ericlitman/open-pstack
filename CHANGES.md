@@ -3,6 +3,14 @@
 Open Pstack lands on green: Mergify merges a ready PR to main once verify and exact-head live-gate pass and no review thread is unresolved, and a workflow resolves Unfret's own threads. A PR that touches `.github/` or the Mergify config also waits for Unfret, and workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## 1.20.0 gives Amp an opted-in writer
+
+Open Pstack 1.20.0 keeps the Cursor pstack 0.15.36 sync. Default roles and panels are unchanged.
+
+**Amp writer (#269).** Amp's writer was measured on Amp CLI 0.0.1792123242-g03edc7: its edit tool and shell wrote outside the lane's worktree, including into the main repository's shared `.git`, a home directory and `/tmp`, so an Amp writer runs only when the model sheet holds `amp writer sandbox: full-access`. Its settings then enable the edit tools and the shell, and every other tool stays rejected. A bounded `isolated-write` Amp lane is refused before launch.
+
+**One writer case per provider in the live gate (#269).** The verifier's `writers` feature gains an Amp case, and each provider's cases are also the feature `writers:<provider>`, such as `writers:amp`. A change to one provider's adapter, tests or fixtures reaches only that provider's feature, so its live gate runs one case.
+
 ## 1.19.0 adds T3 Code as a third harness
 
 Open Pstack 1.19.0 keeps the Cursor pstack 0.15.36 sync. Default roles and panels are unchanged.

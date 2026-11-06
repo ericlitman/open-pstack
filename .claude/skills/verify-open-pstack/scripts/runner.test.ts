@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { recipe, type Fixture } from '../features/recipes.ts';
 import { command } from './io.ts';
-import type { SessionRecord } from './types.ts';
+import { WRITER_PROVIDERS, type SessionRecord } from './types.ts';
 
 const roots: string[] = [];
 afterEach(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }); });
@@ -31,7 +31,11 @@ test('the runner recipe adds one linked-worktree writer case for a Codex parent 
   expect(recipe('runner', 'claude').map(c => c.id)).toEqual(['route-1', 'full-access-writer', 'bounded-writer']);
   expect(recipe('runner', 'codex').map(c => c.id)).toEqual(['route-1', 'linked-worktree-writer']);
   expect(recipe('writers', 'claude').map(c => c.id))
-    .toEqual(['devin-writer', 'dsh-writer', 'opencode-writer', 'agy-writer', 'cursor-writer', 'muse-writer', 'muse-reader']);
+    .toEqual(['devin-writer', 'dsh-writer', 'opencode-writer', 'agy-writer', 'cursor-writer', 'amp-writer', 'muse-writer', 'muse-reader']);
+  expect(WRITER_PROVIDERS.flatMap(provider => recipe(`writers:${provider}`, 'claude').map(c => c.id)).sort())
+    .toEqual(recipe('writers', 'claude').map(c => c.id).sort());
+  expect(recipe('writers:amp', 'codex').map(c => c.id)).toEqual(['amp-writer']);
+  expect(recipe('writers:muse', 'codex').map(c => c.id)).toEqual(['muse-writer', 'muse-reader']);
 
   const dir = await realpath(await mkdtemp(join(tmpdir(), 'pstack-runner-recipe-'))); roots.push(dir);
   const workspace = resolve(import.meta.dir, '../../../..');

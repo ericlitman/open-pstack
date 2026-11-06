@@ -1,24 +1,30 @@
-import { adapter, type LaunchFacts, type ParseResult } from "../registry/contract.ts";
+import { type Access, adapter, type LaunchFacts, type ParseResult } from "../registry/contract.ts";
 import type { NormalizedUsage } from "../types.ts";
 import { BASE_ALLOWLIST, BASE_PREFIXES, normalizedUsage, nullableString, object, type JsonObject } from "./shared.ts";
 
-const LOCKDOWN = {
-  "amp.mcpServers": {},
-  "amp.skills.disableClaudeCodeSkills": true,
-  "amp.skills.disableGlobalAgentsSkills": true,
-  "amp.tools.enable": ["Read"],
-  "amp.permissions": [
-    { tool: "Read", action: "allow" },
-    { tool: "create_file", action: "reject" },
-    { tool: "edit_file", action: "reject" },
-    { tool: "apply_patch", action: "reject" },
-    { tool: "shell_command", action: "reject" },
-    { tool: "code_exec", action: "reject" },
-    { tool: "*", action: "reject" },
-  ],
-  "amp.updates.mode": "disabled",
-  "amp.notifications.enabled": false,
-};
+const EDITS = ["create_file", "edit_file", "apply_patch"];
+// `smart` lists `shell_command`, and Amp checks the call's permission as `async_shell_command`.
+const SHELLS = ["shell_command", "async_shell_command"];
+
+function lockdown(access: Access) {
+  const writer = access.mode === "isolated-write";
+  return {
+    "amp.mcpServers": {},
+    "amp.skills.disableClaudeCodeSkills": true,
+    "amp.skills.disableGlobalAgentsSkills": true,
+    "amp.tools.enable": writer ? ["Read", ...EDITS, ...SHELLS] : ["Read"],
+    "amp.permissions": [
+      { tool: "Read", action: "allow" },
+      ...(writer
+        ? [...EDITS, ...SHELLS].map((tool) => ({ tool, action: "allow" }))
+        : [...EDITS, "shell_command"].map((tool) => ({ tool, action: "reject" }))),
+      { tool: "code_exec", action: "reject" },
+      { tool: "*", action: "reject" },
+    ],
+    "amp.updates.mode": "disabled",
+    "amp.notifications.enabled": false,
+  };
+}
 
 // SIGINT and SIGTERM both exit 0 with this result error.
 const CANCELLED = "User cancelled (SIGINT/SIGTERM)";
@@ -92,9 +98,8 @@ export const amp = adapter({
   },
   launch: {
     prompt: "stdin",
-    sidecar: { output: null, config: { name: "settings.json", content: () => `${JSON.stringify(LOCKDOWN, null, 2)}\n` } },
-    // No sandbox: a shell write escaped the cwd whenever the shell was allowed, so Amp has no bounded writer.
-    supports: ["read-only"],
+    sidecar: { output: null, config: { name: "settings.json", content: (lane) => `${JSON.stringify(lockdown(lane.access), null, 2)}\n` } },
+    supports: ["read-only", "isolated-write-full-access"],
     needsSharedGitDir: () => false,
     argv: (lane, facts) => [
       "-x",
@@ -129,7 +134,7 @@ export const amp = adapter({
     ],
     notes: [
       "Effort is part of the model ID. The model is an official Amp agent mode, such as `deepseek-v4.1-flash`, from Amp's own `official-modes` plugin, which Amp serves to every user. Where a mode has effort variants, the variant is part of its name (for example `gpt-6-astra-low` to `gpt-6-astra-max`). An unregistered Amp model must be a mode name with the `default` effort. An unknown mode exits 1 with a generic error and ends `child-failed`/70.",
-      "Read-only only. Amp has no OS sandbox and auto-approves its `ask` rules in execute mode, and a shell write escaped the cwd whenever the shell was allowed, so no Amp mode is a bounded writer. The runner refuses an `isolated-write` lane before launch. Amp has no opted-in writer (`isolated-write-full-access`) yet: its login had expired when the other providers' writers were measured on 2026-11-06, so no writer mapping was measured.",
+      "No Amp writer is confined, so a writer needs the model sheet's opt-in (`isolated-write-full-access`); the runner refuses a bounded `isolated-write` lane before launch. An opted-in writer's settings also enable and allow `create_file`, `edit_file`, `apply_patch`, `shell_command` and `async_shell_command`, the name Amp checks a `shell_command` call against. `code_exec` and every other tool stay rejected. Measured with Amp CLI 0.0.1792123242-g03edc7 on macOS 27.0.1 in the built-in `smart` mode, whose tools are `apply_patch` and `shell_command`, in a linked worktree under the home directory, whose main repository and a sibling directory sat beside it: edits, shell writes and a Python run inside the worktree succeeded. The edit tool wrote into the sibling, the main checkout, through symlinks to both, `/tmp` and a home directory. The shell wrote into each of those, the main repository's shared `.git` and `$TMPDIR`. An edit into the shared `.git` and one into `$TMPDIR` never returned: the first raised a UI request that execute mode cannot answer, and both turns waited until they were cancelled. The runner adds no timeout, so such a writer lane runs until the parent cancels it. The account's official modes failed that day with a server `agentMode` validation error, so the measurement used `smart`.",
       "A read-only lane is a run-owned `--settings-file` in its private `<receipt>.provider/` directory (0700). It enables only the `Read` tool and rejects every other tool, which turns off the shell, edits, subagents, web tools, code execution, thread tools and `manage_amp`. It also turns off MCP servers, Claude Code and `~/.agents` skills, updates and notifications. The lane sets `AMP_IGNORE_GUIDANCE_FILES=*`, so `AGENTS.md` in the cwd and its parents does not load. `Read` can read any path on the host. Measured with Amp CLI 0.0.1792094445-g3475f5 and 0.0.1792123242-g03edc7.",
       "Amp's own `official-modes` plugin supplies the pinned modes and runs its code in every lane. Amp serves and updates it with no version pin: its cache hash changed from `a1f1ef61c4dd011d` to `cb61cf1a7f4be96c` between 2026-10-15 and 2026-10-16.",
       "System plugins in `$XDG_CONFIG_HOME/amp/plugins` or `~/.config/amp/plugins` load in every lane, and the lane keeps an inherited `XDG_CONFIG_HOME`. A plugin is Bun code that runs as the user, and Amp has no production switch that turns plugins off (`AMP_DISABLE_PLUGINS` is ignored outside development builds). Measured with Amp CLI 0.0.1792123242-g03edc7: a system plugin ran at import and in the `session.start`, `agent.start` and `agent.end` hooks. One that called `configuration.update` at startup rewrote the lane's settings file to enable every tool with an allow-all rule, after which the model had 29 tools and ran a shell write in the cwd. One that registered the key `deepseek-v4.1-flash` replaced the official mode's prompt and tools, while the argv still named that mode.",
