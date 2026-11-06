@@ -3,6 +3,10 @@
 Open Pstack lands on green: Mergify merges a ready PR to main once verify and exact-head live-gate pass and no review thread is unresolved, and a workflow resolves Unfret's own threads. A PR that touches `.github/` or the Mergify config also waits for Unfret, and workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## T3 host route (#253)
+
+Provider dispatch gains a T3 host section. In a T3 Code session, pstack still chooses each role's model and effort, and T3's `delegate_task` starts, isolates, and tracks the agents in place of the native, external-runner, and receipt rules. `codex-tools.md` points to it. No skill body changes.
+
 ## 1.18.0 gives external providers writers and adds a Muse Code provider
 
 Open Pstack 1.18.0 keeps the Cursor pstack 0.15.36 sync. Default roles and panels are unchanged.

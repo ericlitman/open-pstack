@@ -28,9 +28,23 @@ A kept predecessor in the catalog matches its family. Dispatch it with the sheet
 
 The top-level harness resolves the route once. A child receives an assigned provider, model, effort, access mode, prompt, working directory, and output path. A child never detects the harness, chooses a provider, or launches another model. Environment markers may corroborate the top-level harness before fan-out, but nested processes inherit parent markers and must not use them for routing.
 
-The catalog's [route table](model-catalog.md#routes) gives each provider's route from each parent. A provider native to the parent uses the parent's subagent primitive. Every other provider uses the external runner.
+The catalog's [route table](model-catalog.md#routes) gives each provider's route from each parent. Outside [T3](#t3-host), a provider native to the parent uses the parent's subagent primitive. Every other provider uses the external runner.
 
 `inherit-parent` and `auto` remain aliases. They use the parent's current model and effort through its native subagent primitive. In a panel they still consume one lane, but they reduce provider diversity; say so in the synthesis record.
+
+## T3 host
+
+When the session's own instructions say it runs in T3 Code, T3 starts and tracks every subagent. This section replaces the native-lane, external-lane, background, and receipt rules below. Pstack still chooses each role's provider, model, and effort. T3's instructions govern capability lookup, waiting, cancellation, and re-review.
+
+- `inherit-parent` or `auto` on a lane that shares the checkout and finishes this turn uses the parent's native subagent tool with no model or effort override. Any other inheriting lane calls `delegate_task` without a `target`.
+- A `claude` or `codex` descriptor, after [read-time normalization](#read-time-normalization), calls `delegate_task`. Set `target.providerInstanceId` to the advertised provider whose `driverKind` is `claudeAgent` or `codex`, and `target.model` to a concrete model ID. Put the effort in `target.options` as `{"effort": "<effort>"}` for Claude or `{"reasoningEffort": "<effort>"}` for Codex. Effort `default` passes `options: {}`, which clears inherited settings so the model uses its own defaults. Use `mode: "wait"` when this turn needs the result, and `mode: "async"` otherwise.
+- A rolling alias such as `opus` or `fable` resolves to the `claude-<alias>-<revision>` ID with the numerically highest revision that `orchestrator_capabilities` returns for the search `claude-<alias>`. The unfiltered list omits models, so search before treating a model as missing. A registered exact pin from the model matrix stays exact.
+- A model or effort that T3 does not advertise is a dropout. Never lower the effort or pick another model. Every other provider is a dropout on T3. Do not start its CLI.
+- A writer that needs its own checkout uses `isolation: "worktree"`. T3 creates it from the parent's last commit, so commit what the child needs first. Never create a child checkout in the shell.
+- T3 does not enforce read-only access. Add "Do not edit files." to a read-only lane's task and record that lane as advisory read-only.
+- `/setup-pstack` on T3 skips step 5's CLI access checks and route probes. It probes each assigned pair with a one-line `delegate_task` and runs step 9's smoke panel through `delegate_task`, verifying the T3 records below in place of transcripts and receipts. A pair T3 does not advertise fails its probe.
+
+T3 task results replace runner receipts. Keep the task ID, the provider, model, and options T3 reports, the status, and the summary. A lane completes when T3 reports `completed` with `result_available` and a nonempty summary. A failed, cancelled, or interrupted task, or a reported model or options that differ from the request, is a dropout. These records show what T3 reported, not which model served the request.
 
 ## Native lanes
 
