@@ -42,7 +42,7 @@ export function classify(files: ChangedFile[], registry: Registry): Selection {
     }
     if (T3_DISPATCH_PATHS.includes(path)) features.add('t3:dispatch');
     const sharedRecipe = path === '.claude/skills/verify-open-pstack/features/recipes.ts';
-    if (sharedRecipe) both('catalog', 'writers');
+    if (sharedRecipe) both('catalog', 'writers', ...WRITER_PROVIDERS.map(provider => `writers:${provider}`));
     const catalog = registry.catalog.some(p => matches(path, p));
     if (catalog) { both('catalog', 'setup', 'runner'); covered = true; }
     if (sharedRecipe || (!catalog && registry.shared.some(p => matches(path, p)))) {
