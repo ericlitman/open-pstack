@@ -38,7 +38,18 @@ A T3 Code parent records two facts once, before fan-out: the orchestration harne
 
 Read `orchestrator_capabilities` once per parent run and keep the snapshot. Route each normalized descriptor in this order:
 
-1. T3 route: call `delegate_task` when T3 lists a provider for the descriptor's provider with `canRunChildTask`, no constraints, `canRunCrossProviderChildTask` when it is not the parent's provider, and the resolved model with the requested effort. That provider's `driverKind` is `claudeAgent` for `claude` and the descriptor's provider otherwise.
+1. T3 route: call `delegate_task` when T3 lists a provider for the descriptor's provider with `canRunChildTask`, no constraints, `canRunCrossProviderChildTask` when it is not the parent's provider, and the resolved model with the requested effort. Match the descriptor's provider to T3's `driverKind` with this table:
+
+   | Pstack provider | T3 `driverKind` |
+   | --- | --- |
+   | `claude` | `claudeAgent` |
+   | `codex` | `codex` |
+   | `cursor` | `cursor` |
+   | `grok` | `grok` |
+   | `opencode` | `opencode` |
+   | `agy` | `antigravity` |
+
+   A provider missing from the table has no T3 driver and takes the standalone route.
 2. Standalone route: any other lane takes the route a standalone parent of the same runtime gives it in the [route table](model-catalog.md#routes): the runtime's native subagent for its own provider, and otherwise the external runner with `--parent` set to the runtime.
 3. A lane neither route can run is a named dropout. Never lower the effort or pick another model.
 
