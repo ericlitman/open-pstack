@@ -139,6 +139,8 @@ async function sumRepairRecognized(_record: SessionRecord, f: Fixture): Promise<
   return { assertions: ['recognized-repair:sum.mjs', 'test-unchanged:sum.test.mjs'], files: [join(f.dir, 'sum.mjs'), join(f.dir, 'sum.test.mjs')] };
 }
 
+const BROKEN_SUM = TASK['sum.mjs'];
+
 const overrides: Record<string, Case> = {
   'fix-ci': skillCase('fix-ci', 'There is no pull request or remote. The failing CI check is the local command `sh ci.sh` in $DIR. Fix it locally and do not push.', ciFixed),
   babysit: skillCase('babysit', 'The pull request is the local `main` branch of the repository at $DIR; there is no remote. Its one failing check is the local command `sh ci.sh`. Do exactly one babysit pass: fix the failing check locally, push nothing, change nothing remote, then stop instead of watching.', ciFixed),
@@ -152,6 +154,18 @@ const overrides: Record<string, Case> = {
     await writeFile(join(f.dir, 'sum.mjs'), 'export function sum(a, b) {\n  return a + b;\n}\n'); await git(f, 'commit', '-qam', 'wip');
     await writeFile(join(f.dir, 'README.md'), '# Fixture\n\nA tiny sum module.\n'); await git(f, 'commit', '-qam', 'fix typo');
     await writeFile(`${f.dir}.head`, await git(f, 'rev-parse', 'feature'));
+  }),
+  interrogate: skillCase('interrogate', 'The scope is the last commit of the repository at $DIR (`git diff HEAD~1`). Its intent: sum(a, b) returns the sum of a and b.', async (_record, f) => {
+    if (await readFile(join(f.dir, 'sum.mjs'), 'utf8') !== BROKEN_SUM) throw new Error('scope-modified:sum.mjs');
+    if ((await git(f, 'status', '--porcelain', '--untracked-files=no')).trim()) throw new Error('scope-checkout-modified');
+    return { assertions: ['scope-unmodified'], files: [join(f.dir, 'sum.mjs')] };
+  }, async f => {
+    await files(f.dir, { ...TASK, 'sum.mjs': 'export function sum(a, b) {\n  return a + b;\n}\n' });
+    await git(f, 'init', '-q', '-b', 'main');
+    await git(f, 'add', '.');
+    await git(f, 'commit', '-qm', 'Add sum module');
+    await writeFile(join(f.dir, 'sum.mjs'), BROKEN_SUM);
+    await git(f, 'commit', '-qam', 'Refactor sum');
   }),
   'automate-me': {
     id: 'invoke',
