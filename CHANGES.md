@@ -5,7 +5,7 @@ This port applies the Cursor → Claude Code substitutions in skill bodies. Earl
 
 ## Unreleased
 
-**Grok is a parent harness.** A Grok session resolves routes from the catalog's Grok parent column. A Grok lane whose model and effort already match the parent uses `spawn_subagent`. Every other Grok lane, and every Claude or Codex lane, uses the runner with `--parent grok`. The runner accepts a Grok provider from a Grok parent and sets `--permission-mode auto`. Claude-on-Claude and Codex-on-Codex stay on the native route. A headless Grok parent stays in auto mode, so a permission prompt reports the blocked call instead of cancelling the turn.
+**Grok is a parent harness.** A Grok session resolves routes from the catalog's Grok parent column. A Grok lane whose model and effort already match the parent uses `spawn_subagent`. Every other Grok lane, and every Claude or Codex lane, uses the runner with `--parent grok`. The runner accepts a Grok provider from a Grok parent and sets `--permission-mode auto`. Its help says a Claude or Codex parent still rejects its own provider. Claude-on-Claude and Codex-on-Codex stay on the native route. A headless Grok parent stays in auto mode, so a permission prompt reports the blocked call instead of cancelling the turn.
 
 ## 1.20.0 gives Amp an opted-in writer
 
