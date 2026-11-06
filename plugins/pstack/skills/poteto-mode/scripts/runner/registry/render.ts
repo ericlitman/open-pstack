@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { ACCESS_MODES, PARENTS, type Parent } from "../types.ts";
+import { type AccessKind, PARENTS, type Parent } from "../types.ts";
 import { access, type EnvPolicy, type ProviderAdapter } from "./contract.ts";
 import { defaultDescriptor, effortsOf, modelIds, REGISTRY, type Registry } from "./index.ts";
 
@@ -45,10 +45,16 @@ function policy(value: EnvPolicy, long: boolean): string {
     + (set.length === 0 ? "" : `; sets ${set.join(", ")}`);
 }
 
+function accessOf(kind: AccessKind) {
+  return kind === "isolated-write-full-access" ? access("isolated-write", "full-access") : access(kind);
+}
+
 function environment(adapter: ProviderAdapter, long: boolean): string {
   const sidecarDir = adapter.launch.sidecar === null ? null : "<receipt>.provider";
-  const [read, write] = ACCESS_MODES.map((mode) => policy(adapter.environment(access(mode), sidecarDir), long));
-  return read === write ? read! : `read-only: ${read}; isolated-write: ${write}`;
+  const policies = adapter.launch.supports.map((kind) => [kind, policy(adapter.environment(accessOf(kind), sidecarDir), long)] as const);
+  return new Set(policies.map(([, rendered]) => rendered)).size === 1
+    ? policies[0]![1]
+    : policies.map(([kind, rendered]) => `${kind}: ${rendered}`).join("; ");
 }
 
 const list = (items: readonly string[]): string => items.length === 0 ? "none" : items.join("; ");
@@ -131,7 +137,7 @@ export function renderCatalog(registry: Registry): GeneratedFile {
       ])
     ),
     "",
-    "The runner refuses an access mode outside a provider's Access modes cell before launch. `isolated-write-full-access` is a writer capability, not a `--mode` value: the runner takes it as `--mode isolated-write --writer-sandbox full-access`, which a parent passes only when the model sheet opts in, as [`provider-dispatch.md`](provider-dispatch.md#codex-writer-sandbox) says.",
+    "The runner refuses an access mode outside a provider's Access modes cell before launch. `isolated-write-full-access` is a writer capability, not a `--mode` value: the runner takes it as `--mode isolated-write --writer-sandbox full-access`, which a parent passes only when the model sheet opts in, as [`provider-dispatch.md`](provider-dispatch.md#writer-sandbox) says. A provider whose cell lists `isolated-write-full-access` without `isolated-write` has no confined writer and writes only with that opt-in.",
     "",
     "## Provider notes",
     ...registry.adapters.flatMap((adapter) => [

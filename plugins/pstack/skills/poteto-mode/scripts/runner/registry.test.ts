@@ -289,7 +289,7 @@ describe("hand-written dispatch and setup rules", () => {
     expect(readFileSync(join(PLUGIN_ROOT, "skills/arena/SKILL.md"), "utf8")).toContain("Give each candidate its own output location (a git worktree");
     expect(readFileSync(join(PLUGIN_ROOT, "skills/swarm/SKILL.md"), "utf8")).toContain("in the worker's own worktree");
     expect(readFileSync(join(PLUGIN_ROOT, "skills/architect/SKILL.md"), "utf8")).toContain("Take the runners from `architect runners` in the current harness's pstack model sheet, in place of Arena's `arena runners`.");
-    expect(rule).toContain("lacks `isolated-write`: name the role and the provider, and say why.");
+    expect(rule).toContain("or lists only `isolated-write-full-access` while its setting line from step 2 is missing or says `bounded`. Name the role and the provider, and say why.");
     expect(rule).toContain("The runner refuses that provider's writer lane before launch");
     expect(REGISTRY.adapters.filter((adapter) => !adapter.launch.supports.includes("isolated-write")).map((adapter) => adapter.id))
       .toEqual(["devin", "opencode", "dsh", "amp", "agy", "cursor"]);
@@ -306,20 +306,26 @@ describe("hand-written dispatch and setup rules", () => {
       .toEqual(expect.arrayContaining(["codex:gpt-5.6-sol", "grok:grok-4.6"]));
   });
 
-  it("passes full access only to an opted-in external Codex writer, and setup keeps the setting line", () => {
-    const rule = section(dispatch, "### Codex writer sandbox", "### Host and parent prerequisites");
-    expect(rule).toContain("`codex writer sandbox: full-access` or `codex writer sandbox: bounded`");
-    expect(rule).toContain("Append `--writer-sandbox full-access` only when that line says `full-access` and the lane is an external Codex `isolated-write` lane.");
+  it("passes full access only to an opted-in external writer of the named provider, and setup keeps every setting line", () => {
+    const rule = section(dispatch, "### Writer sandbox", "### Host and parent prerequisites");
+    expect(rule).toContain("`<provider> writer sandbox: full-access` or `<provider> writer sandbox: bounded`");
+    expect(rule).toContain("Append `--writer-sandbox full-access` only when the line for the lane's provider says `full-access` and the lane is an external `isolated-write` lane of that provider.");
+    expect(rule).toContain("it writes only when its line says `full-access`, and the runner refuses its `isolated-write` lane before launch otherwise");
     expect(rule).toContain("the setting never moves a native lane to the runner");
     expect(rule).toContain("Never add the flag, or retry with it, after a sandbox failure");
     expect(rule).toContain("it confines nothing");
     expect(dispatch).not.toMatch(/Bash sandbox, Codex `workspace-write`, and/);
     const load = section(setup, "### 2. Load current state", "### 3. Parse per-family efforts");
-    expect(load.indexOf("Set it aside before the role overlay, the retired-role rule, and descriptor validation"))
+    expect(load.indexOf("Set the setting lines aside before the role overlay, the retired-role rule, and descriptor validation"))
       .toBeLessThan(load.indexOf("is from a retired role. Drop it"));
-    expect(load).toContain("Record `codex writer sandbox: full-access` on a yes and `codex writer sandbox: bounded` on a decline");
+    expect(load).toContain("including the line of a provider that no role uses");
+    expect(load).toContain("A second line for one provider, a provider outside the [route table]");
+    expect(load).toContain("Record `<provider> writer sandbox: full-access` on a yes and `<provider> writer sandbox: bounded` on a decline");
+    expect(load).toContain("\"Nothing stops this provider from writing outside its worktree, including the main repository's shared Git state.\"");
     expect(load).toContain("When the line exists, keep it unless the operator names a change, and do not ask.");
-    expect(setup).toContain("Keep the setting line from step 2 where the loaded sheet had it.");
+    expect(section(setup, "### 3. Parse per-family efforts", "### 4. Collect"))
+      .toContain("or lists only `isolated-write-full-access` while its setting line from step 2 is missing or says `bounded`");
+    expect(setup).toContain("Keep the setting lines from step 2 where the loaded sheet had them.");
     expect(setup).not.toContain("Every non-alias value must match");
   });
 

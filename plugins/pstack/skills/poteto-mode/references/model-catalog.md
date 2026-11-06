@@ -75,7 +75,7 @@ Rolling aliases:
 | agy | external runner | external runner | `read-only` | stdin | pinned argv | allowlist | - |
 | cursor | external runner | external runner | `read-only` | stdin | pinned argv | allowlist | - |
 
-The runner refuses an access mode outside a provider's Access modes cell before launch. `isolated-write-full-access` is a writer capability, not a `--mode` value: the runner takes it as `--mode isolated-write --writer-sandbox full-access`, which a parent passes only when the model sheet opts in, as [`provider-dispatch.md`](provider-dispatch.md#codex-writer-sandbox) says.
+The runner refuses an access mode outside a provider's Access modes cell before launch. `isolated-write-full-access` is a writer capability, not a `--mode` value: the runner takes it as `--mode isolated-write --writer-sandbox full-access`, which a parent passes only when the model sheet opts in, as [`provider-dispatch.md`](provider-dispatch.md#writer-sandbox) says. A provider whose cell lists `isolated-write-full-access` without `isolated-write` has no confined writer and writes only with that opt-in.
 
 ## Provider notes
 
