@@ -30,7 +30,9 @@ const table = (header: readonly string[], rows: readonly (readonly string[])[]):
 ];
 
 function route(adapter: ProviderAdapter, parent: Parent): string {
-  return adapter.id === parent ? `native ${code(PARENTS[parent].native)}` : "external runner";
+  if (adapter.id !== parent) return "external runner";
+  const native = `native ${code(PARENTS[parent].native)}`;
+  return PARENTS[parent].externalSelf ? `${native} or external runner` : native;
 }
 
 function policy(value: EnvPolicy, long: boolean): string {

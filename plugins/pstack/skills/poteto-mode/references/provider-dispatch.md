@@ -14,7 +14,7 @@ The allowed effort universe is exactly `low`, `medium`, `high`, `xhigh`, `max`, 
 
 A rolling alias, such as `opus`, names a family whose CLI resolves it to the latest available family revision. A runner receipt keeps the requested alias in `model` and the concrete provider-reported revision in `reportedModel`; verification accepts only a revision of the matching family, as the catalog's rolling-alias table gives it.
 
-A descriptor whose `(provider, model)` matches no matrix row, kept predecessor, or rolling-alias revision is an unregistered pair. It runs unchanged on an external route and on Codex's native route. A Claude-native route needs a generated agent, so an unregistered Claude model on a Claude Code parent is a dropout. Never guess a replacement.
+A descriptor whose `(provider, model)` matches no matrix row, kept predecessor, or rolling-alias revision is an unregistered pair. It runs unchanged on an external route and on Codex's native route. A Claude-native route needs a generated agent, so an unregistered Claude model on a Claude Code parent is a dropout. An unregistered Grok model on a Grok parent uses the runner, which keeps that model. Do not replace it with the parent model. Never guess a replacement.
 
 ## Read-time normalization
 
@@ -28,7 +28,7 @@ A kept predecessor in the catalog matches its family. Dispatch it with the sheet
 
 The top-level harness resolves the route once. A child receives an assigned provider, model, effort, access mode, prompt, working directory, and output path. A child never detects the harness, chooses a provider, or launches another model. Environment markers may corroborate the top-level harness before fan-out, but nested processes inherit parent markers and must not use them for routing.
 
-The catalog's [route table](model-catalog.md#routes) gives each provider's route from each parent. Outside [T3](#t3-host), a provider native to the parent uses the parent's subagent primitive. Every other provider uses the external runner.
+The catalog's [route table](model-catalog.md#routes) gives each provider's route from each parent. Outside [T3](#t3-host), a Claude or Codex provider on its own parent uses that parent's subagent primitive, and every other provider from those parents uses the external runner. A Grok parent uses `spawn_subagent` for `inherit-parent`, `auto`, and a Grok descriptor whose model and effort are already the parent's. It uses the external runner for every other descriptor, including any other Grok descriptor.
 
 `inherit-parent` and `auto` remain aliases. Outside [T3](#t3-host), they use the parent's current model and effort through its native subagent primitive. In a panel they still consume one lane, but they reduce provider diversity; say so in the synthesis record.
 
@@ -78,8 +78,9 @@ Native dispatch avoids a second CLI startup and its base context.
 
 - Claude Code: match the descriptor's `(provider, model)` to one model-matrix row, then dispatch it through `pstack-<family>-<effort>` using that row's family and the descriptor's effort. Those definitions select the row's model and requested effort. `pstack-fable-max` and `pstack-opus-xhigh` remain in that set. Pass the complete task, grounding paths, access mode, and unique output location in the `Agent` prompt. Dispatch and wait as [Waits on Claude Code](codex-tools.md#waits-on-claude-code) says.
 - Codex: call `spawn_agent` with the descriptor's model and `reasoning_effort`, the complete task, grounding paths, access mode, and unique output location. Use an isolated worktree for a writer. Codex subagents already run concurrently.
+- Grok: call `spawn_subagent` with the complete task, grounding paths, access mode, and unique output location in the prompt. Pass `model` when the tool lists it. The tool takes no effort, so use this route only when the descriptor's model and effort are already the parent's. Use `isolation` `worktree` for a writer and `none` for a read-only lane. The call runs in the background. Keep its id and read the result with `get_command_or_subagent_output`. A native child inherits the parent session's permission mode. A headless Grok parent uses auto mode, because headless Grok cancels the turn on a permission prompt and auto mode reports the blocked call to the model instead.
 
-Do not send a same-provider descriptor to the external runner. It rejects that call because the native route is cheaper and already available.
+Do not send a Claude or Codex descriptor to the external runner from that same parent. The runner rejects that call because the native route is available. A Grok parent may send a Grok descriptor to the runner. Use native `spawn_subagent` for `inherit-parent`, `auto`, and a Grok descriptor whose model and effort are already the parent's. Send every other Grok descriptor through the runner with `--parent grok`. That launch sets `--permission-mode auto`, the model, and the effort. Do not switch to the runner after a native lane fails.
 
 ## External lanes
 
@@ -87,7 +88,7 @@ The launcher lives at `skills/poteto-mode/scripts/runner/pstack-runner` under th
 
 ```text
 pstack-runner \
-  --parent <claude|codex> \
+  --parent <claude|codex|grok> \
   --provider <provider in the route table> \
   --model <real CLI model> \
   --effort <low|medium|high|xhigh|max|ultra|default> \
@@ -122,6 +123,7 @@ The parent invocation must itself be resumable background work:
 
 - Claude Code: call the launcher through a Bash tool invocation with `run_in_background: true` and retain its task ID. A foreground Bash tool call has an automatic ten-minute ceiling even when the runner's own timeout is longer. Shelling out with `&` and losing the task handle is not equivalent. A subagent that must wait on the launcher follows [Waits on Claude Code](codex-tools.md#waits-on-claude-code).
 - Codex: run the launcher in a persistent exec session that returns a session ID, then wait or poll that handle. Do not hold one foreground tool call open for the model's full runtime.
+- Grok: start the launcher as background work that returns a task id, then read that id with `get_command_or_subagent_output`. Do not hold one foreground tool call open for the model's full runtime.
 
 Start the background process, continue launching the other lanes, then drain their handles. Native and external lanes belong in the same fan-out phase.
 
