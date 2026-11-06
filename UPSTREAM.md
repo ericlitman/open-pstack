@@ -1,6 +1,6 @@
 # Upstream synchronization
 
-open-pstack tracks [Cursor's pstack](https://github.com/cursor/plugins/tree/main/pstack) while adapting Cursor-specific primitives for Claude Code and Codex.
+open-pstack tracks [Cursor's pstack](https://github.com/cursor/plugins/tree/main/pstack) while adapting Cursor-specific primitives for Claude Code, Codex and T3 Code.
 
 ## Current sync point
 
@@ -10,9 +10,9 @@ open-pstack tracks [Cursor's pstack](https://github.com/cursor/plugins/tree/main
 | Path | `pstack/` |
 | Commit | `2776ddd2355d6d6c8747d3964600f28daf62f049` |
 | Upstream version | `0.15.36` |
-| open-pstack version | `1.18.0` |
+| open-pstack version | `1.19.0` |
 
-The table above is the current Cursor sync point. Open Pstack 1.17.0 imported this 0.15.36 sync, and 1.18.0 keeps it. `README-UPSTREAM.md` preserves the upstream pstack README verbatim. `CHANGES.md` and `NOTICE.md` describe the adaptations and provenance.
+The table above is the current Cursor sync point. Open Pstack 1.17.0 imported this 0.15.36 sync, and 1.18.0 and 1.19.0 keep it. `README-UPSTREAM.md` preserves the upstream pstack README verbatim. `CHANGES.md` and `NOTICE.md` describe the adaptations and provenance.
 
 ## Upstream-only exclusions
 
@@ -69,6 +69,8 @@ The table above is the current Cursor sync point. Open Pstack 1.17.0 imported th
 
 - **#265 — Orchestrate verifier and sub-coordinator**: keep upstream's "on a different model family" for each PR's verifier; do not substitute provider. After upstream's sub-coordinator sentence, the port adds that where a subagent cannot start agents, such as a Claude Code native lane, the coordinator starts the sub-coordinator's workers from the kickoffs it writes and hands their results back to it. `codex-tools.md#subagent-policy` states that native lanes disallow `Agent` and `Task`.
 
+- **#253 — T3 Code parent**: Cursor has no T3 Code route. The port adds the `T3 host` section to `provider-dispatch.md`: a lane whose provider T3 offers and has enabled goes through `delegate_task`, and any other lane takes the standalone route of the Claude Code or Codex runtime. `codex-tools.md` points to it, and `setup-pstack/SKILL.md` routes its probes and smoke panel the same way at its existing steps. No other skill body changes. Keep these lines during syncs.
+
 ## Check for changes
 
 The repository already names Cursor's repository as the `cursor` remote in the maintainer checkout. A fresh clone can add it once:
@@ -90,7 +92,7 @@ No output means the tracked pstack tree has not changed. This comparison does no
 ## Incorporate a change
 
 1. Create or update a GitHub issue in `ericlitman/open-pstack` and branch from current `main`. Pin the upstream target commit in the issue.
-2. Read each upstream pstack commit in order, and record a decision for each one in the issue as a table: adopt, adapt (name the adaptation), or exclude (give the reason). Bring over each adopted commit's intent and content, then apply only the Claude Code and Codex substitutions documented in `CHANGES.md` and the adaptations in this file.
+2. Read each upstream pstack commit in order, and record a decision for each one in the issue as a table: adopt, adapt (name the adaptation), or exclude (give the reason). Bring over each adopted commit's intent and content, then apply only the Claude Code, Codex and T3 Code substitutions documented in `CHANGES.md` and the adaptations in this file.
 3. Run the audit and the mechanical merge from a clean checkout:
 
    ```shell
@@ -100,7 +102,7 @@ No output means the tracked pstack tree has not changed. This comparison does no
 
    The merge checks out files the port never changed, merges the rest three ways, and prints counts of verbatim, clean, review and unmapped paths. It exits 1 when any path needs review.
 4. Resolve each review row by hand. A conflict hunk keeps the port's adaptation and takes upstream's new intent beside it. A change to an excluded path stays out and extends that exclusion's line in this file. Each unmapped path, such as a Cursor manifest or the guide, is excluded or mapped by a decision in step 2. Record every hand resolution and every new adaptation or exclusion in this file.
-5. Keep one shared `plugins/pstack/skills/` tree. Put harness translation in the existing `codex-tools.md` and provider routing in `provider-dispatch.md`; do not fork a skill per harness.
+5. Keep one shared `plugins/pstack/skills/` tree. Put harness translation in the existing `codex-tools.md` and provider routing, including T3 Code's, in `provider-dispatch.md`; do not fork a skill per harness.
 6. Add every new skill to the `skills` list in `.claude/skills/verify-open-pstack/features/registry.json`.
 7. Update the commit and version in this file, add a provenance row to `NOTICE.md`, and take `README-UPSTREAM.md` when upstream changes its README.
 8. Run CI-equivalent checks locally, then run the installed Claude Code and Codex behavioral lanes required by the changed surface with `verify-open-pstack`. A sync that edits the verifier runs from the candidate head with `--self-test`. A run above the session limit needs `--wide "<reason>"`. Unit tests alone are not a release gate.

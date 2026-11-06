@@ -3,6 +3,12 @@
 Open Pstack lands on green: Mergify merges a ready PR to main once verify and exact-head live-gate pass and no review thread is unresolved, and a workflow resolves Unfret's own threads. A PR that touches `.github/` or the Mergify config also waits for Unfret, and workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## 1.19.0 adds T3 Code as a third harness
+
+Open Pstack 1.19.0 keeps the Cursor pstack 0.15.36 sync. Default roles and panels are unchanged.
+
+**T3 Code is a third parent harness (#253).** Started from fikaventures' PR #254. In a T3 Code session, pstack still chooses each role's model and effort. A lane whose provider T3 offers and has enabled, with the model and effort, goes through T3's `delegate_task`. Any other lane takes the route a standalone Claude Code or Codex parent gives it, and a lane neither route can run is a named dropout. `inherit-parent` and `auto` go through `delegate_task` with no model override. A T3 result is T3 launch-configuration evidence, not a served-model report. A read-only lane on T3 is advisory, and a caller that needs enforced read-only access takes the standalone route. `/setup-pstack` runs from a T3 session: it probes T3-routed families through `delegate_task` and the rest as before, and runs its smoke panel through the same routes.
+
 ## 1.18.0 gives external providers writers and adds a Muse Code provider
 
 Open Pstack 1.18.0 keeps the Cursor pstack 0.15.36 sync. Default roles and panels are unchanged.

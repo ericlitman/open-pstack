@@ -5,7 +5,7 @@ import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { sha256, type Command } from '../scripts/io.ts';
-import type { Harness, SessionRecord } from '../scripts/types.ts';
+import type { CoreHarness, Harness, SessionRecord } from '../scripts/types.ts';
 
 export interface Fixture {
   harness: Harness;
@@ -29,7 +29,7 @@ export interface Case {
 }
 
 export const CLAUDE_TOOLS = 'Skill,Read,Glob,Grep,Write,Edit,Bash,Agent,Task,TodoWrite';
-export const DEFAULT_ROLES: Record<Harness, string> = { claude: 'bug-fix', codex: 'judgment and prose' };
+export const DEFAULT_ROLES: Record<CoreHarness, string> = { claude: 'bug-fix', codex: 'judgment and prose' };
 export const ROUTE = /^([a-z][a-z0-9-]*):([A-Za-z0-9._/-]+)@([a-z]+)$/;
 const SETUP_DESCRIPTOR = 'claude:opus@high';
 const DESCRIPTOR = /\b[a-z][a-z0-9-]*:[A-Za-z0-9._/-]+@[a-z]+/g;
@@ -54,7 +54,7 @@ export async function readCatalog(location: string): Promise<Catalog> {
   const kept = new Map(rows(section('Kept predecessors and normalization').split('\nRolling aliases:')[0]!).slice(1)
     .map(([provider, model, , current]): [string, string] => [`${provider}:${model}`, `${provider}:${current}`]));
   const [header = [], ...routes] = rows(section('Routes'));
-  const column = { claude: header.indexOf('Claude Code parent'), codex: header.indexOf('Codex parent') };
+  const column = { claude: header.indexOf('Claude Code parent'), codex: header.indexOf('Codex parent'), t3: -1 };
   if (!defaults.size || column.claude < 0 || column.codex < 0) throw new Error('catalog-unreadable');
   return { defaults, kept, route(harness, descriptor) {
     if (!descriptor.includes(':')) return 'native';
@@ -440,7 +440,7 @@ const museReader: Case = {
   },
 };
 
-function runner(harness: Harness, routes: string[]): Case[] {
+function runner(harness: CoreHarness, routes: string[]): Case[] {
   const chosen = routes.filter(route => !route.startsWith(`${harness}:`));
   const cases = (chosen.length ? chosen : ['']).map((fixed, index): Case => {
     let route = fixed, provider = '', model = '', effort = '';
@@ -775,7 +775,37 @@ const startupHook: Case = {
   },
 };
 
+const T3_ROLE = 'bug-fix', T3_LANE = { provider: 'claudeAgent', model: 'claude-haiku-5-5', effort: 'low' };
+const t3Dispatch: Case = {
+  id: 'dispatch',
+  async prepare(f) {
+    await files(f.dir, { 'marker.txt': `${crypto.randomUUID()}\n`, 'pstack-models.md': sheetText([[T3_ROLE, [`claude:${T3_LANE.model}@${T3_LANE.effort}`]]]) });
+  },
+  prompt: f => `${invoke(f.harness, 'poteto-mode', `Dispatch exactly one lane for the ${T3_ROLE} role and nothing else. For this task the pstack model sheet is ${join(f.dir, 'pstack-models.md')}; use it in place of any configured sheet. The lane's whole task: "Read ${join(f.dir, 'marker.txt')} and reply with its exact contents. Do not edit files." Wait for the lane's result, then reply with it.`)} ${rules(f.dir)}`,
+  async assert(record, f) {
+    if (!record.skills.includes(join(f.location, 'skills/poteto-mode'))) throw new Error('skill-not-loaded-from-candidate:pstack:poteto-mode');
+    const calls = record.tools.filter(t => t.name === 'mcp__t3-code__delegate_task' && !t.failed);
+    if (calls.length !== 1) throw new Error(`delegate-task-calls:${calls.length}`);
+    const { input, result } = calls[0]!, target = input.target ?? {};
+    if (target.providerInstanceId !== T3_LANE.provider || target.model !== T3_LANE.model || !Bun.deepEquals(target.options, { effort: T3_LANE.effort })) throw new Error('delegate-request-mismatch');
+    const response = parseJson(result) as Record<string, any> | undefined;
+    if (response?.providerInstanceId !== T3_LANE.provider || response.model !== T3_LANE.model ||
+        !Bun.deepEquals(response.options, [{ id: 'effort', value: T3_LANE.effort }])) throw new Error('delegate-response-mismatch');
+    if (response.status !== 'completed' || response.workState !== 'result_available' || response.hasPendingChildRuns !== false ||
+        response.hasPendingQuestion !== false || response.pendingApproval !== null) throw new Error(`delegate-not-settled:${response.status}`);
+    const marker = (await readFile(join(f.dir, 'marker.txt'), 'utf8')).trim();
+    if (typeof response.summary !== 'string' || !response.summary.includes(marker)) throw new Error('marker-missing');
+    const exchange = join(f.dir, 'delegate-task.json');
+    await writeFile(exchange, JSON.stringify({ request: input, response }, null, 2));
+    return { assertions: ['skill-loaded-from-candidate', 'delegate-request', 'delegate-settled', 'marker-returned'], files: [exchange, join(f.dir, 'pstack-models.md')] };
+  },
+};
+
 export function recipe(feature: string, harness: Harness, routes: string[] = []): Case[] {
+  if (harness === 't3') {
+    if (feature === 'dispatch') return [t3Dispatch];
+    throw new Error(`missing-recipe:${harness}/${feature}`);
+  }
   if (feature === 'assets:codex') throw new Error('unsupported-native-consumer:assets:codex');
   if (feature === 'project-skill') return [projectSkill];
   if (feature === 'hook:startup') return [startupHook];

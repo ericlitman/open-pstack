@@ -1,16 +1,18 @@
-import { copyFile, mkdir, readdir, readFile, realpath, stat } from 'node:fs/promises';
+import { Database } from 'bun:sqlite';
+import { copyFile, mkdir, open, readdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { CLAUDE_TOOLS, recipe, type Fixture } from '../features/recipes.ts';
 import { requiredFeatures, requiredHarnesses } from './core.ts';
 import { command, isolatedEnv, retainedFile, save, session, treeHash, type Command, type Session } from './io.ts';
-import { doctor } from './doctor.ts';
+import { doctor, t3Binary } from './doctor.ts';
 import { assertCodexAuth, linkCodexAuth, linkMuseConfig, removeCodexHome, restoreSetup, snapshotSetup, type SetupSnapshot } from './isolation.ts';
 import { sourceDigest, sourceHash } from './provenance.ts';
 import { publishable } from './verify.ts';
 import { REPO, type Driver, type Harness, type Installation, type Observation, type Receipt, type SessionRecord } from './types.ts';
 
+const T3_PARENT_MODEL = 'claude-sonnet-5-5';
 const setupFeature = (feature: string): boolean => feature === 'setup' || feature === 'skill-invocation:setup-pstack';
-export function launch(harness: Harness, workspace: string, options: { cwd: string; addDirs: string[]; codexSandbox?: 'danger-full-access'; claudePermission?: 'bypassPermissions' }): string[] {
+export function launch(harness: Exclude<Harness, 't3'>, workspace: string, options: { cwd: string; addDirs: string[]; codexSandbox?: 'danger-full-access'; claudePermission?: 'bypassPermissions' }): string[] {
   const addDirs = options.addDirs.flatMap(dir => ['--add-dir', dir]);
   return harness === 'claude'
     ? ['claude', '-p', '--input-format', 'stream-json', '--replay-user-messages', '--output-format', 'stream-json', '--verbose', '--no-session-persistence',
@@ -31,16 +33,18 @@ function resultText(blocks: Event[], id: string): string | undefined {
 export function parseSession(harness: Harness, text: string, exitCode: number, started: number, rollout = ''): SessionRecord {
   if (exitCode !== 0) throw new Error(`exit:${exitCode}`);
   const stream: Event[] = text.split('\n').filter(line => line.trim()).map(line => JSON.parse(line));
-  if (harness === 'claude') {
+  if (harness !== 'codex') {
     const blocks = stream.filter(e => e.type === 'assistant' || e.type === 'user').flatMap(e => Array.isArray(e.message?.content) ? e.message.content as Event[] : []);
     const failed = new Set(blocks.filter(b => b.type === 'tool_result' && b.is_error).map(b => b.tool_use_id));
     const uses = blocks.filter(b => b.type === 'tool_use' && !failed.has(b.id));
     const commands = stream.filter(e => e.type === 'user' && e.isReplay && typeof e.message?.content === 'string')
       .flatMap(e => [...(e.message.content as string).matchAll(/<command-name>\/([^<\s]+)<\/command-name>/g)].map(m => m[1]!));
+    const skillDirs = blocks.filter(b => b.type === 'text' && typeof b.text === 'string')
+      .flatMap(b => [...(b.text as string).matchAll(/^Base directory for this skill: (.+)$/gm)].map(m => m[1]!));
     const context = stream.filter(e => e.type === 'system' && e.subtype === 'hook_response' && e.hook_event === 'SessionStart' &&
       e.exit_code === 0 && e.outcome === 'success' && typeof e.stdout === 'string').map(e => e.stdout as string);
     return { harness, exitCode, started, context,
-      skills: [...commands, ...uses.filter(u => u.name === 'Skill' && typeof u.input?.skill === 'string').map(u => u.input.skill as string)],
+      skills: harness === 't3' ? skillDirs : [...commands, ...uses.filter(u => u.name === 'Skill' && typeof u.input?.skill === 'string').map(u => u.input.skill as string)],
       commands: uses.filter(u => u.name === 'Bash' && typeof u.input?.command === 'string').map(u => u.input.command as string),
       tools: stream.filter(e => e.type === 'assistant' && Array.isArray(e.message?.content)).flatMap(e => (e.message.content as Event[]).filter(b => b.type === 'tool_use')
         .map(b => ({ name: String(b.name), id: String(b.id), input: b.input ?? {}, parent: e.parent_tool_use_id ?? null, failed: failed.has(b.id), result: resultText(blocks, b.id) }))) };
@@ -107,7 +111,7 @@ export class MacDriver implements Driver {
       const home = join(root, 'state', harness), workspace = join(home, 'workspace');
       await mkdir(join(home, 'tmp'), { recursive: true, mode: 0o700 });
       for (const dir of ['.codex', '.config/gh', '.cache']) await mkdir(join(home, dir), { recursive: true, mode: 0o700 });
-      const env = isolatedEnv(home, harness);
+      const env = isolatedEnv(home);
       const candidateRun = this.candidate(home);
       await candidateRun(['git', 'clone', '--no-checkout', '--', `https://github.com/${REPO}.git`, workspace], { env });
       await candidateRun(['git', 'fetch', 'origin', receipt.sha], { cwd: workspace, env });
@@ -129,10 +133,10 @@ export class MacDriver implements Driver {
         verifyCodexEnabled(listed);
         await save(join(root, 'codex-plugins.json'), JSON.parse(listed));
       }
-      const manifest = JSON.parse(await readFile(join(location, harness === 'claude' ? '.claude-plugin/plugin.json' : '.codex-plugin/plugin.json'), 'utf8'));
+      const manifest = JSON.parse(await readFile(join(location, harness === 'codex' ? '.codex-plugin/plugin.json' : '.claude-plugin/plugin.json'), 'utf8'));
       if (await sourceDigest(workspace) !== pinnedSource) throw new Error('Pinned source changed during installation');
       installs.push({ harness, sha: receipt.sha, home, location, treeHash: expected, sourceHash: pinnedSource, pluginVersion: manifest.version,
-        cliVersion: (await candidateRun([harness, '--version'], { env })).trim() });
+        cliVersion: (await candidateRun([harness === 't3' ? await t3Binary() : harness, '--version'], { env })).trim() });
     }
     return installs;
   }
@@ -145,6 +149,41 @@ export class MacDriver implements Driver {
     await copyFile(join(sessions, name), copy);
     return readFile(copy, 'utf8');
   }
+  private async t3Thread(location: string, project: string, base: string, env: Record<string, string>, prompt: string, out: { thread: string; stderr: string; transcript: string }): Promise<void> {
+    const bin = await t3Binary();
+    await mkdir(join(base, 'userdata'), { recursive: true, mode: 0o700 });
+    await writeFile(join(base, 'userdata/settings.json'), JSON.stringify({ providerInstances: { claudeAgent: { driver: 'claudeAgent',
+      config: { launchArgs: `--plugin-dir '${location}' --settings '{"enabledPlugins":{"pstack@open-pstack":false}}'` } } } }));
+    const listener = Bun.listen({ hostname: '127.0.0.1', port: 0, socket: { data() {} } }), port = listener.port;
+    listener.stop(true);
+    const log = await open(join(base, 'serve.log'), 'wx', 0o600);
+    const server = Bun.spawn([bin, 'serve', '--base-dir', base, '--port', String(port), '--host', '127.0.0.1', project],
+      { cwd: project, env, detached: true, stdin: 'ignore', stdout: log.fd, stderr: log.fd });
+    try {
+      while (!await Bun.file(join(base, 'userdata/server-runtime.json')).exists()) {
+        if (server.exitCode !== null) throw new Error(`t3-serve-exit:${server.exitCode}`);
+        await Bun.sleep(250);
+      }
+      await this.run([bin, 'project', 'add', '--base-dir', base, project], { env });
+      const code = await this.record([bin, 'thread', 'start', '--base-dir', base, '--provider', 'claudeAgent', '--model', T3_PARENT_MODEL, '--wait', '--json', project, '-'],
+        { cwd: project, env, input: prompt, stdout: out.thread, stderr: out.stderr });
+      if (code !== 0) throw new Error(`t3-thread-exit:${code}`);
+    } finally {
+      try { process.kill(-server.pid, 'SIGTERM'); } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error; }
+      await server.exited;
+      await log.close();
+    }
+    const thread = JSON.parse(await readFile(out.thread, 'utf8'));
+    if (thread.status !== 'completed') throw new Error(`t3-thread-status:${thread.status}`);
+    const db = new Database(join(base, 'userdata/statev2.sqlite'), { readwrite: true });
+    let rows: { payload_json: string }[];
+    try { rows = db.query("select payload_json from orchestration_v2_projection_provider_threads where thread_id = ? and provider = 'claudeAgent'").all(thread.threadId) as typeof rows; }
+    finally { db.close(); }
+    const session = rows.length === 1 ? JSON.parse(rows[0]!.payload_json).nativeThreadRef?.nativeId : undefined;
+    if (typeof session !== 'string' || !/^[0-9a-f-]{36}$/.test(session)) throw new Error('t3-native-session-missing');
+    const projects = join(env.CLAUDE_CONFIG_DIR ?? join(env.HOME!, '.claude'), 'projects');
+    await copyFile(join(projects, (await realpath(project)).replace(/[^A-Za-z0-9]/g, '-'), `${session}.jsonl`), out.transcript);
+  }
   async exercise(receipt: Receipt): Promise<Observation[]> {
     const plans = receipt.installations.map(installation => ({ installation,
       features: requiredFeatures(receipt, installation.harness).sort((a, b) => Number(setupFeature(a)) - Number(setupFeature(b)))
@@ -153,22 +192,24 @@ export class MacDriver implements Driver {
     for (const { installation, features } of plans) {
       const { harness, home } = installation, workspace = join(home, 'workspace');
       if (await sourceDigest(workspace) !== installation.sourceHash) throw new Error('Pinned source changed before exercise');
-      const env = isolatedEnv(home, harness);
+      const env = isolatedEnv(home);
       for (const { feature, cases } of features) {
         const slug = feature.replace(/[^a-z0-9-]/g, '-'), dir = join(home, 'fixtures', slug), records = join(receipt.artifactRoot, 'sessions', harness, slug);
         for (const path of [dir, records]) await mkdir(path, { recursive: true, mode: 0o700 });
         const fixture: Fixture = { harness, dir, workspace, location: installation.location, run: this.candidate(home),
-          configHome: harness === 'claude' ? env.CLAUDE_CONFIG_DIR ?? join(env.HOME!, '.claude') : env.CODEX_HOME! };
+          configHome: harness === 'codex' ? env.CODEX_HOME! : env.CLAUDE_CONFIG_DIR ?? join(env.HOME!, '.claude') };
         const assertions: string[] = [], evidence: string[] = [];
         if (setupFeature(feature)) this.setup = await snapshotSetup();
         try {
           for (const c of cases) {
             await c.prepare?.(fixture);
             const stdout = join(records, `${c.id}.jsonl`), stderr = join(records, `${c.id}.stderr`), cwd = c.cwd === 'workspace' ? workspace : dir;
-            const started = Date.now();
-            const exitCode = await this.record(launch(harness, workspace, { cwd, addDirs: cwd === dir ? [] : [dir], codexSandbox: c.codexSandbox, claudePermission: c.claudePermission }),
+            const started = Date.now(), thread = join(records, `${c.id}.thread.json`);
+            let exitCode = 0;
+            if (harness === 't3') await this.t3Thread(installation.location, cwd, join(home, 'server', `${slug}.${c.id}`), env, c.prompt(fixture), { thread, stderr, transcript: stdout });
+            else exitCode = await this.record(launch(harness, workspace, { cwd, addDirs: cwd === dir ? [] : [dir], codexSandbox: c.codexSandbox, claudePermission: c.claudePermission }),
               { cwd, env, input: sessionInput(harness, c.prompt(fixture)), stdout, stderr });
-            evidence.push(stdout, ...(await stat(stderr)).size ? [stderr] : []);
+            evidence.push(stdout, ...harness === 't3' ? [thread] : [], ...(await stat(stderr)).size ? [stderr] : []);
             let record: SessionRecord, result;
             try {
               const text = await readFile(stdout, 'utf8');
@@ -192,7 +233,8 @@ export class MacDriver implements Driver {
         const [transcript, ...artifacts] = await Promise.all(evidence.map(path => retainedFile(receipt.artifactRoot, path)));
         const passed = `passed: ${assertions.join(' ')}`;
         observations.push({ harness, feature, reviewer: 'recipe', assertions,
-          surface: harness === 'claude' ? 'claude -p stream-json with the candidate plugin-dir' : 'codex exec --json with the run-owned candidate installation',
+          surface: { claude: 'claude -p stream-json with the candidate plugin-dir', codex: 'codex exec --json with the run-owned candidate installation',
+            t3: 't3 thread start on a run-owned T3 server whose Claude provider loads the candidate plugin-dir' }[harness],
           action: `recipe ${feature}: ${cases.map(c => c.id).join(', ')}`,
           observed: publishable(passed) ? passed : `passed ${assertions.length} assertions; ids retained privately`,
           transcript: transcript!.path, transcriptHash: transcript!.sha256, artifacts });

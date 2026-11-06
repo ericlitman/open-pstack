@@ -1,6 +1,6 @@
 # Codex tool mapping for pstack
 
-pstack skills retain Claude Code tool language (`Skill`, `Agent`, `AskUserQuestion`) in shared prose. On Codex the files are the same; only those tool names resolve differently. Model execution is not translated here. Read [`provider-dispatch.md`](provider-dispatch.md) for the parent-owned Claude/Codex/Grok route table and provider-qualified descriptors.
+pstack skills retain Claude Code tool language (`Skill`, `Agent`, `AskUserQuestion`) in shared prose. On Codex the files are the same; only those tool names resolve differently. Model execution is not translated here. Read [`provider-dispatch.md`](provider-dispatch.md) for the parent-owned Claude/Codex/Grok route table and provider-qualified descriptors. In a T3 Code session under either app, its [T3 host](provider-dispatch.md#t3-host) section routes each lane. This file's subagent, background, and wait mappings apply only to a lane it gives the standalone route.
 
 ## Harness config homes
 

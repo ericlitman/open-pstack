@@ -1,6 +1,6 @@
 ---
 name: verify-open-pstack
-description: Verify an Open Pstack PR's exact candidate head in native Claude Code and Codex sessions, judge them with machine-checked assertions, and publish the exact-SHA live gate.
+description: Verify an Open Pstack PR's exact candidate head in native Claude Code, Codex and T3 Code sessions, judge them with machine-checked assertions, and publish the exact-SHA live gate.
 ---
 
 # Verify Open Pstack
@@ -50,6 +50,8 @@ Read `features/README.md` and the document for every named feature. Path classif
 Create detached exact-head candidate checkouts and run-owned temporary/fixture state, only for harnesses with a named feature. Every named feature resolves to a recipe in `features/recipes.ts` before the first session starts: one or more cases, each with a fixture, a prompt, and an assertion the trusted parent evaluates. A feature without a recipe fails as `missing-recipe:<harness>/<feature>`; `assets:codex` fails as `unsupported-native-consumer` until it has a recipe. Each case runs as one fresh headless session, sequentially, and setup never runs alongside anything.
 
 Claude runs with normal operator config/login and session-only `claude --plugin-dir <exact-head checkout>/plugins/pstack --settings '{"enabledPlugins":{"pstack@open-pstack":false}}'`, plus `-p --input-format stream-json --replay-user-messages --output-format stream-json --verbose --no-session-persistence --permission-mode dontAsk --allowedTools <recipe tools>`. The prompt arrives on stdin, so the replayed user message shows the slash expansion. A tool outside the pre-authorized list is denied without a prompt. Codex runs `codex exec --json` against the run-owned installation with approvals set to never, `--sandbox workspace-write`, `--add-dir` for a fixture outside its working directory, and `--dangerously-bypass-hook-trust` so the candidate's hooks run for that invocation only. Cases whose parent launches an external provider CLI use `--sandbox danger-full-access`, because those CLIs need network and their own state outside the fixture. Codex installs the exact-head marketplace/plugin in its run-owned home with `codex plugin marketplace add … --ref <sha>` and `codex plugin add`. Verify candidate plugin and project-skill sources against immutable Git provenance before and after exercise; version strings alone are insufficient.
+
+`t3:` features run through the T3 transport in `features/t3.md`: a run-owned disposable T3 server whose Claude provider gets the same session-only plugin flags, one `t3 thread start --wait --json` per case, and the parent's Claude transcript parsed like the Claude stream. Classification never adds `t3` on its own and self-test does not reach it; the doctor checks the T3 service binary only when a `t3:` feature is named.
 
 Candidate commands and provider descendants use the recorded native-login arrangement, never GitHub publisher credentials. No extra login, implicit timeout, or weaker-model fallback is permitted. If Claude's plugin flags fail to exclude installed pstack or Codex replaces the auth symlink instead of writing through it, stop and reopen the design.
 
