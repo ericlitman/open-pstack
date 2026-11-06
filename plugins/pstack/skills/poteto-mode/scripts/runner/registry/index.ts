@@ -71,7 +71,7 @@ export function resolveLane(request: LaneRequest): Lane {
   }
   if (request.model.trim().length === 0) throw new UsageError("model is required");
   const effort = oneOf("effort", request.effort, EFFORTS);
-  if (adapter.id === parent) {
+  if (adapter.id === parent && !PARENTS[parent].externalSelf) {
     throw new UsageError(
       `provider ${adapter.id} is native to parent ${parent}; use the parent subagent primitive`
     );

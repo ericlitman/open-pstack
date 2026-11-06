@@ -79,7 +79,7 @@ describe("runner CLI parsing", () => {
     let stdout = "";
     expect(await main(["--help"], Date.now(), { stdout: (value) => { stdout += value; }, stderr: () => {} })).toBe(0);
     expect(stdout).toStartWith(
-      "Usage: pstack-runner --parent <claude|codex> --provider <claude|codex|grok|devin|opencode|dsh|amp|agy|cursor|muse> \\\n"
+      "Usage: pstack-runner --parent <claude|codex|grok> --provider <claude|codex|grok|devin|opencode|dsh|amp|agy|cursor|muse> \\\n"
     );
   });
 

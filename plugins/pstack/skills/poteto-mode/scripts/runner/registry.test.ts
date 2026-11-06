@@ -22,7 +22,7 @@ import {
   writeGenerated,
 } from "./registry/render.ts";
 import { type Access, access } from "./registry/contract.ts";
-import { EFFORTS } from "./types.ts";
+import { EFFORTS, PARENTS, type Parent } from "./types.ts";
 
 const RUNNER = import.meta.dir;
 const PLUGIN_ROOT = join(RUNNER, "../../../..");
@@ -148,10 +148,12 @@ describe("registry data", () => {
     const routes = renderCatalog(REGISTRY).content.split("\n## Routes\n")[1]!.split("\n## ")[0]!;
     for (const adapter of REGISTRY.adapters) {
       const cells = routes.split("\n").find((line) => line.startsWith(`| ${adapter.id} |`))!.split(" | ");
-      expect(cells.slice(1, 3)).toEqual([
+      expect(cells.slice(1, 4)).toEqual([
         adapter.id === "claude" ? "native `Agent`" : "external runner",
         adapter.id === "codex" ? "native `spawn_agent`" : "external runner",
+        adapter.id === "grok" ? "native `spawn_subagent` or external runner" : "external runner",
       ]);
+      expect(routes).toContain("| Provider | Claude Code parent | Codex parent | Grok parent |");
     }
   });
 });
@@ -229,6 +231,9 @@ describe("hand-written dispatch and setup rules", () => {
     const native = section(dispatch, "## Native lanes", "## External lanes");
     expect(native).toContain("match the descriptor's `(provider, model)` to one model-matrix row");
     expect(native).toContain("`pstack-<family>-<effort>`");
+    expect(native).toContain("`spawn_subagent`");
+    expect(native).toContain("A headless Grok parent uses auto mode");
+    expect(dispatch).toContain("--parent <claude|codex|grok>");
   });
 
   it("normalizes rolling-alias pins and keeps predecessors before any runtime route", () => {
@@ -547,9 +552,36 @@ describe("resolveLane", () => {
     expect(() => resolveLane(request({ parent: "claude" })))
       .toThrow("provider claude is native to parent claude; use the parent subagent primitive");
     expect(() => resolveLane(request({ provider: "kiro" }))).toThrow("provider must be one of: claude, codex, grok, devin, opencode, dsh, amp, agy, cursor, muse");
-    expect(() => resolveLane(request({ parent: "grok" }))).toThrow("parent must be one of: claude, codex");
+    expect(() => resolveLane(request({ parent: "kiro" }))).toThrow("parent must be one of: claude, codex, grok");
     expect(() => resolveLane(request({ mode: "full" }))).toThrow("mode must be one of: read-only, isolated-write");
     expect(() => resolveLane(request({ model: " " }))).toThrow("model is required");
+  });
+
+  it("accepts a grok parent for every provider, including grok, and keeps auto mode on that lane", () => {
+    const parents = Object.keys(PARENTS) as Parent[];
+    for (const parent of parents) {
+      for (const adapter of REGISTRY.adapters) {
+        const family = REGISTRY.families.find((entry) => entry.provider === adapter.id);
+        const laneRequest = request({
+          parent,
+          provider: adapter.id,
+          model: family?.model ?? "any",
+          effort: family?.defaultEffort ?? "default",
+        });
+        const sameProvider = adapter.id === parent;
+        if (sameProvider && !PARENTS[parent].externalSelf) {
+          expect(() => resolveLane(laneRequest)).toThrow("use the parent subagent primitive");
+          continue;
+        }
+        const lane = resolveLane(laneRequest);
+        expect(lane.parent).toBe(parent);
+        expect(lane.adapter.id).toBe(adapter.id);
+        if (parent === "grok" && adapter.id === "grok") {
+          expect(lane.adapter.launch.argv(lane, { sharedGitDir: null, providerSidecar: null }))
+            .toEqual(expect.arrayContaining(["--permission-mode", "auto"]));
+        }
+      }
+    }
   });
 });
 

@@ -60,7 +60,7 @@ The copy registers under its plain name beside the plugin's `pstack:<skill>`, an
 | Search the web | `web_search` |
 | Invoke a skill (the `Skill` tool, `/command`) | Skills load natively. Follow the instructions presented. |
 | `paths` frontmatter scopes automatic loading | Claude Code only. On Codex, invoke `pstack:typescript-best-practices` by name. |
-| Dispatch a subagent (the `Agent`/`Task` tool) | `spawn_agent` |
+| Dispatch a subagent (the `Agent`/`Task` tool) | `spawn_agent`. On Grok this is `spawn_subagent`. |
 | Dispatch N parallel subagents in one turn | N `spawn_agent` calls in one response |
 | Wait for a subagent result | `wait_agent` |
 | Free a finished subagent slot | `close_agent` |
@@ -99,7 +99,7 @@ poteto-mode's Subagents section sets the Claude-specific default `subagent_type:
 
 ## Models and providers
 
-Do not replace every configured entry with a Codex model. `/setup-pstack` writes portable descriptors, such as the [role defaults](model-catalog.md#role-defaults). In a Codex parent, only `codex:*` is native. Route Claude and Grok descriptors through the external launcher exactly as `provider-dispatch.md` specifies. The default panel runs one model from each of three providers and contains no older GPT or Claude substitute.
+Do not replace every configured entry with a Codex model. `/setup-pstack` writes portable descriptors, such as the [role defaults](model-catalog.md#role-defaults). In a Codex parent, only `codex:*` is native. Route Claude and Grok descriptors through the external launcher exactly as `provider-dispatch.md` specifies. In a Grok parent, `inherit-parent`, `auto`, and a Grok descriptor that already matches the parent's model and effort use `spawn_subagent`. Every other provider, and any other Grok descriptor, uses the runner with `--parent grok`. The runner still rejects a Claude provider from a Claude parent and a Codex provider from a Codex parent. It accepts `--parent grok` with a Grok provider. The default panel runs one model from each of three providers and contains no older GPT or Claude substitute.
 
 ## Claude built-in skills pstack references
 
@@ -114,7 +114,7 @@ Some triggers name skills that ship with Claude Code, not pstack. They do not ex
 
 ## Vendored scripts
 
-`skills/poteto-mode/scripts/` ships the `watch-pr` PR watcher, `worktree-audit.sh`, and `runner/pstack-runner`. They are plain bun and bash, so they run the same on Codex; invoke them through `shell`. The external runner additionally needs the assigned `claude`, `codex`, or `grok` executable already authenticated. It rejects a Codex provider when Codex is the parent because that lane belongs on native `spawn_agent`. The other scripts need `bun`, `gh` (or Origin's `origin` CLI where the playbook resolves it), and (for `worktree-audit.sh`) `jq` and `rg`. `worktree-audit.sh` reads Claude Code transcripts under `~/.claude/projects/`; point it at your runtime's transcript directory instead when you run it elsewhere.
+`skills/poteto-mode/scripts/` ships the `watch-pr` PR watcher, `worktree-audit.sh`, and `runner/pstack-runner`. They are plain bun and bash, so they run the same on Codex; invoke them through `shell`. The external runner additionally needs the assigned `claude`, `codex`, or `grok` executable already authenticated. It rejects a Codex provider when Codex is the parent because that lane belongs on native `spawn_agent`. It rejects a Claude provider when Claude Code is the parent for the same reason. A Grok parent may run a Grok provider through the runner when `spawn_subagent` cannot carry the model or the effort. The other scripts need `bun`, `gh` (or Origin's `origin` CLI where the playbook resolves it), and (for `worktree-audit.sh`) `jq` and `rg`. `worktree-audit.sh` reads Claude Code transcripts under `~/.claude/projects/`; point it at your runtime's transcript directory instead when you run it elsewhere.
 
 ## Instructions file
 
