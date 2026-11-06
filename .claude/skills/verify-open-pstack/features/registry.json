@@ -3,7 +3,7 @@
     "architect", "arena", "automate-me", "babysit", "benchmark-checklist", "blast-radius", "bro", "correct",
     "create-formal-verification-skill", "create-verification-skill", "deslop", "figure-it-out",
     "fix-ci", "fix-merge-conflicts", "get-pr-comments", "how", "in-your-own-words", "interrogate",
-    "ketchup", "maintain-formal-verification-skill", "maintain-verification-skill",
+    "ketchup", "ketchup-video", "maintain-formal-verification-skill", "maintain-verification-skill",
     "make-pr-easy-to-review", "no-comments", "poteto-help", "poteto-mode",
     "principle-attack-the-premise", "principle-boundary-discipline", "principle-build-the-lever",
     "principle-encode-lessons-in-structure", "principle-exhaust-the-design-space",
@@ -15,7 +15,7 @@
     "principle-redesign-from-first-principles", "principle-separate-before-serializing-shared-state",
     "principle-sequence-verifiable-units", "principle-subtract-before-you-add",
     "principle-test-behavior-not-implementation", "principle-type-system-discipline",
-    "recall", "reflect", "setup-pstack", "sharpen", "show-me-your-work", "swarm", "tdd", "teach",
+    "recall", "reflect", "setup-pstack", "sharpen", "show-me-your-work", "statechart", "swarm", "tdd", "teach",
     "technical-writing", "thermo-nuclear-code-quality-review", "typescript-best-practices",
     "unslop", "what-did-i-get-done", "why"
   ],
@@ -62,14 +62,14 @@
   ],
   "tools": [
     "plugins/pstack/skills/poteto-mode/scripts/bootstrap.ts",
-    "plugins/pstack/skills/poteto-mode/scripts/orch/**",
     "plugins/pstack/skills/poteto-mode/scripts/watch-pr/**",
     "plugins/pstack/skills/poteto-mode/scripts/check-plan.mjs",
     "plugins/pstack/skills/poteto-mode/scripts/worktree-audit.sh",
     "plugins/pstack/skills/poteto-mode/scripts/package.json",
     "plugins/pstack/skills/poteto-mode/scripts/bun.lock",
     "plugins/pstack/skills/poteto-mode/scripts/check-plan.tsconfig.json",
-    "plugins/pstack/skills/show-me-your-work/scripts/log.sh"
+    "plugins/pstack/skills/show-me-your-work/scripts/log.sh",
+    "plugins/pstack/skills/statechart/scripts/**"
   ],
   "project": [
     ".claude/skills/verify-open-pstack/**", ".agents/skills/verify-open-pstack",
@@ -83,6 +83,7 @@
     ".gitignore", ".mergify.yml", ".github/workflows/unfret-threads.yml", "docs/**", "assets/**",
     "plugins/pstack/skills/poteto-mode/scripts/bootstrap.test.ts",
     "plugins/pstack/skills/poteto-mode/scripts/check-plan.test.ts",
+    "plugins/pstack/skills/poteto-mode/scripts/orch/**",
     "plugins/pstack/skills/poteto-mode/scripts/resolve-codex-transcript.test.ts", "scripts/release.py", "scripts/release_test.py"
   ]
 }

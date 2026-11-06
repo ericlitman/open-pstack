@@ -37,6 +37,17 @@ The resolver reads the [Codex config home](#harness-config-homes) and looks up t
 
 **Fallback.** If the chat ID, index, ownership, path, or opening prompt cannot be verified within these limits, pass a tight session digest instead. Keep it to at most 2,000 words and include only relevant decisions, corrections, evidence paths, and unresolved work. Do not widen transcript discovery to replace missing evidence.
 
+## Reflect skill copies
+
+Reflect never edits a skill inside the plugin cache, `<config-home>/plugins/cache/` in both harnesses. It copies the skill folder to one of these folders and edits the copy:
+
+| Harness | Project | User |
+| --- | --- | --- |
+| Claude Code | `.claude/skills/<skill>/` | `<config-home>/skills/<skill>/` |
+| Codex | `.agents/skills/<skill>/` | `$HOME/.agents/skills/<skill>/` |
+
+The copy registers under its plain name beside the plugin's `pstack:<skill>`, and does not replace it. In the copy, rewrite each relative link that leaves the skill folder, such as `../poteto-mode/`, to the absolute path of that folder in the installed plugin.
+
 ## Tool actions
 
 | pstack / Claude action | Codex equivalent |
@@ -102,7 +113,7 @@ Some triggers name skills that ship with Claude Code, not pstack. They do not ex
 
 ## Vendored scripts
 
-`skills/poteto-mode/scripts/` ships the `watch-pr` PR watcher, the `orch` store CLI, `worktree-audit.sh`, and `runner/pstack-runner`. They are plain bun and bash, so they run the same on Codex; invoke them through `shell`. The external runner additionally needs the assigned `claude`, `codex`, or `grok` executable already authenticated. It rejects a Codex provider when Codex is the parent because that lane belongs on native `spawn_agent`. The other scripts need `bun`, `gh` (or Origin's `origin` CLI where the playbook resolves it), and (for `worktree-audit.sh`) `jq` and `rg`. `worktree-audit.sh` reads Claude Code transcripts under `~/.claude/projects/`; point it at your runtime's transcript directory instead when you run it elsewhere.
+`skills/poteto-mode/scripts/` ships the `watch-pr` PR watcher, `worktree-audit.sh`, and `runner/pstack-runner`. They are plain bun and bash, so they run the same on Codex; invoke them through `shell`. The external runner additionally needs the assigned `claude`, `codex`, or `grok` executable already authenticated. It rejects a Codex provider when Codex is the parent because that lane belongs on native `spawn_agent`. The other scripts need `bun`, `gh` (or Origin's `origin` CLI where the playbook resolves it), and (for `worktree-audit.sh`) `jq` and `rg`. `worktree-audit.sh` reads Claude Code transcripts under `~/.claude/projects/`; point it at your runtime's transcript directory instead when you run it elsewhere.
 
 ## Instructions file
 

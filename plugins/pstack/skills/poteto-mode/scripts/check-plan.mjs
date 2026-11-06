@@ -213,7 +213,7 @@ function checkPunctuation(lines, fail) {
   for (const line of lines) {
     if (line.code) continue;
     const prose = line.text
-      .replace(/`[^`]*`/g, "`")
+      .replace(/(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)/g, "`")
       .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
       .replace(/\]\([^)]*\)/g, "]");
     for (const rule of CONTRACT.punctuation) {

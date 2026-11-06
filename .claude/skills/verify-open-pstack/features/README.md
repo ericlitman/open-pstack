@@ -22,7 +22,7 @@ A change to `plugins/pstack/.claude-plugin/plugin.json`, `.claude-plugin/marketp
 
 Asset ownership is consumer-driven, not blanket shared ownership. Inspect the exact candidate's plugin manifests. At present, `plugins/pstack/assets/logo.png` is referenced only by `plugins/pstack/.codex-plugin/plugin.json`, so a logo-only change selects the installed Codex asset surface and does not invent a Claude exercise. New shipped assets must be added to `assets` and must have a real manifest consumer; missing, ambiguous, or unknown consumption fails closed.
 
-`bootstrap.ts` belongs to `tools`; exercise its actual consumers, `orch` and `watch-pr`, including dependency bootstrapping rather than the unrelated external runner.
+`bootstrap.ts` belongs to `tools`; exercise its actual consumer, `watch-pr`, including dependency bootstrapping rather than the unrelated external runner.
 
 Catalog paths take precedence over `shared` and over the skill match, so `references/model-catalog.md` and the generated agents select only `catalog`, `setup`, and `runner`. Each generated agent is listed by exact path; a new one is unmapped until it is added to `catalog`. Skill-owned `SKILL.md`, `references/**`, and `playbooks/**` select their skill. poteto-mode's `SKILL.md` also reaches Claude's `agent-preload:poteto-agent`, because poteto-agent preloads it. Additional executable paths must be registered explicitly. `core.ts` assigns the Codex transcript resolver, `poteto-mode/scripts/resolve-codex-transcript.ts`, and its launcher, `poteto-mode/scripts/resolve-codex-transcript`, to `reflect` by their exact paths, so a change to it selects `skill-invocation:reflect` rather than the unrelated shipped-tool recipe. Shared consumed mappings select every dependent skill conservatively. The coverage test inventories tracked plugin files; new unmapped files block CI and runs. Deleted skill surfaces cannot silently disappear from evidence: choose a surviving documented entry point demonstrating the intended removal, or report blocked.
 
@@ -33,7 +33,7 @@ The feature documents below define sub-features, user entry points, driving inst
 - `isolation.md`: existing native logins, Codex auth symlink, and private run state.
 - `runner.md`: parent-to-child provider dispatch and receipts.
 - `catalog.md`: the generated model catalog and native agents, read by a parent resolving roles from a model sheet.
-- `shipped-tools.md`: orchestration, watch, plan checks, audit, and evidence logging.
+- `shipped-tools.md`: watch, plan checks, audit, statechart, and evidence logging.
 - `assets.md`: manifest-declared installed assets on actual consuming harnesses.
 - `hooks.md`: the SessionStart hook's context reaching a new session (`hook:startup`), and the Windows runner beside it.
 - `recipes.ts`: the headless cases and machine-checked assertions for every selectable feature. A named feature without one fails the run as `missing-recipe` before any session starts. A recipe proves a lookup or a read with a fixture value the model cannot derive from the prompt, such as a per-run `crypto.randomUUID()` marker, compared in the structured result. A command's text can show which tool the parent called, but it never proves what that tool read or produced, so do not add command-text or tool-output pattern checks for that.

@@ -264,7 +264,7 @@ github_pr_unscoped="$(printf '%s\n' "$github_pr_commands" | grep -Fv -- '--repo 
 if [ -n "$github_pr_unscoped" ]; then
   shipping_safety_bad="${shipping_safety_bad}GitHub PR commands do not all name the canonical base repository: ${github_pr_unscoped}"$'\n'
 fi
-for remote_file in "$shipping" "$autopilot_full" "$autopilot_stack"; do
+for remote_file in "$shipping" "$autopilot_full"; do
   grep -Fq '<head-remote>' "$remote_file" || shipping_safety_bad="${shipping_safety_bad}${remote_file} does not resolve the head push remote independently"$'\n'
   grep -Fq '<head-url>' "$remote_file" || shipping_safety_bad="${shipping_safety_bad}${remote_file} does not bind its remote read to the head push repository"$'\n'
   grep -Fq '<base-remote>' "$remote_file" || shipping_safety_bad="${shipping_safety_bad}${remote_file} does not resolve the base fetch remote independently"$'\n'
@@ -281,26 +281,27 @@ grep -Fq 'Fetch current trunk through `<base-remote>`' "$shipping" || shipping_s
 if [ "$(grep -Fc 'through `<base-remote>`' "$shipping")" -lt 2 ]; then
   shipping_safety_bad="${shipping_safety_bad}Shipping does not keep using the base repository after the first merge"$'\n'
 fi
-grep -Fq 'Fetch another stack branch directly through `<head-url>`' "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack does not fetch a fork parent through the head push repository URL"$'\n'
-if grep -Fq '<parent-remote>' "$autopilot_stack"; then
-  shipping_safety_bad="${shipping_safety_bad}Autopilot-stack still fetches a parent through a remote name whose fetch and push repositories can differ"$'\n'
+grep -Fq 'Fetch another stack branch directly through `<head-url>`' "$autopilot_full" || shipping_safety_bad="${shipping_safety_bad}Autopilot-full does not fetch a fork parent through the head push repository URL"$'\n'
+if grep -Fq '<parent-remote>' "$autopilot_full"; then
+  shipping_safety_bad="${shipping_safety_bad}Autopilot-full still fetches a parent through a remote name whose fetch and push repositories can differ"$'\n'
 fi
-grep -Fq 'When the head repository is a fork, keep the local child branch rebased onto its parent' "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack does not retain local parent ancestry for fork heads"$'\n'
-grep -Fq 'create or retarget every PR against `<trunk>` in the base repository' "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack tries to use a fork-only branch as a PR base"$'\n'
-grep -Fq 'never infer stack order from their equal base branches' "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack does not preserve explicit fork stack order"$'\n'
-grep -Fq 'git rebase --onto "$parent_tip" "$current_base_sha" -- "$branch"' "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack does not move only child commits when a parent tip changes"$'\n'
+grep -Fq 'Keep the local child branch rebased onto its parent' "$autopilot_full" || shipping_safety_bad="${shipping_safety_bad}Autopilot-full does not retain local parent ancestry for fork heads"$'\n'
+grep -Fq 'create or retarget every PR against `<trunk>` in the base repository' "$autopilot_full" || shipping_safety_bad="${shipping_safety_bad}Autopilot-full tries to use a fork-only branch as a PR base"$'\n'
+grep -Fq 'never infer stack order from their equal base branches' "$autopilot_full" || shipping_safety_bad="${shipping_safety_bad}Autopilot-full does not preserve explicit fork stack order"$'\n'
+grep -Fq 'record the fetched parent tip as `<target-tip>` in the flow above' "$autopilot_full" || shipping_safety_bad="${shipping_safety_bad}Autopilot-full does not move only child commits when a parent tip changes"$'\n'
 grep -Fq "Shipping step 4's disarm-and-confirm rule to that child and every descendant" "$opening_a_pr" || shipping_safety_bad="${shipping_safety_bad}Opening a PR can rewrite or retarget an armed existing stack"$'\n'
 grep -Fq 'If repository instructions require a draft until named evidence exists' "$opening_a_pr" || shipping_safety_bad="${shipping_safety_bad}Opening a PR ignores repository-required draft evidence gates"$'\n'
 grep -Fq 'Create every fork PR' "$opening_a_pr" || shipping_safety_bad="${shipping_safety_bad}Opening a PR does not bind a root fork PR to its explicit head repository"$'\n'
 grep -Fq 'A fork child PR targets trunk while retaining local parent ancestry' "$multi_phase_plan" || shipping_safety_bad="${shipping_safety_bad}Multi-phase plan does not model fork stack PR bases"$'\n'
-for fork_file in "$autopilot_stack" "$opening_a_pr" "$multi_phase_plan"; do
+for fork_file in "$autopilot_full" "$opening_a_pr" "$multi_phase_plan"; do
   grep -Fq 'gh api --method POST "repos/$base_repo/pulls"' "$fork_file" || shipping_safety_bad="${shipping_safety_bad}${fork_file} does not create fork PRs through the organization-capable GitHub API"$'\n'
   grep -Fq -- '-f "head_repo=$head_name"' "$fork_file" || shipping_safety_bad="${shipping_safety_bad}${fork_file} does not identify the validated fork repository"$'\n'
 done
 grep -Fq 'Rebase each unmerged stack child onto its parent' "$multi_phase_plan" || shipping_safety_bad="${shipping_safety_bad}Multi-phase plan flattens unmerged stack children onto trunk"$'\n'
 grep -Fq 'An appended stack child keeps its recorded parent tip until that parent lands' "$multi_phase_plan" || shipping_safety_bad="${shipping_safety_bad}Multi-phase plan rebases an unmerged stack child onto trunk before delivery"$'\n'
 grep -Fq 'For fork heads, take the order from the verified local parent ancestry' "$shipping" || shipping_safety_bad="${shipping_safety_bad}Shipping tries to infer a fork stack from shared trunk bases"$'\n'
-grep -Fq 'only the current bottom PR through Shipping, one at a time' "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack offers merge-when-ready outside the current bottom frontier"$'\n'
+grep -Fq 'Run the Autopilot-full playbook, but do not merge.' "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack can merge"$'\n'
+grep -Fq "After the handoff, nobody pushes without the operator's go." "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack can push after the handoff"$'\n'
 grep -Fq -- '--force-with-lease="refs/heads/$branch:$captured_sha"' "$autopilot_full" || shipping_safety_bad="${shipping_safety_bad}Autopilot-full does not bind its post-rebase push to the captured SHA"$'\n'
 grep -Fq 'Record the selected exact commit as `<target-tip>`' "$autopilot_full" || shipping_safety_bad="${shipping_safety_bad}Autopilot-full does not record the exact rebase target"$'\n'
 grep -Fq 'git rebase --onto "$target_tip" "$current_base_sha" -- "$branch"' "$autopilot_full" || shipping_safety_bad="${shipping_safety_bad}Autopilot-full does not isolate its own commits when changing the rebase target"$'\n'
@@ -314,9 +315,7 @@ if [ -n "$autopilot_full_rewrite_order" ]; then
 fi
 grep -Fq "Shipping step 4's disarm-and-confirm rule" "$autopilot_full" || shipping_safety_bad="${shipping_safety_bad}Autopilot-full can rewrite an armed pull request"$'\n'
 grep -Fq "Shipping step 5's server-enforced expected-head flow" "$autopilot_full" || shipping_safety_bad="${shipping_safety_bad}Autopilot-full does not bind owner merges to the current landing SHA"$'\n'
-grep -Fq -- '--force-with-lease="refs/heads/$branch:$captured_sha"' "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack does not bind its topology push to the captured SHA"$'\n'
-grep -Fq "Shipping step 4's disarm-and-confirm rule" "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack can rewrite an armed pull request"$'\n'
-grep -Fq "step 2's captured-SHA lease flow" "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack drift handling does not reuse its guarded push flow"$'\n'
+grep -Fq 'through the stacked-owner rule in Autopilot-full step 2' "$autopilot_stack" || shipping_safety_bad="${shipping_safety_bad}Autopilot-stack restacks outside Autopilot-full's guarded push flow"$'\n'
 if [ -n "$shipping_safety_bad" ]; then
   note "FAIL: forge-neutral landing safety rules regressed:"
   note "$shipping_safety_bad"
