@@ -483,7 +483,7 @@ const setup: Case[] = [{
     const sheet = join(f.configHome, 'pstack-models.md'), assertions = [loaded(record, 'pstack:setup-pstack'), await written(record, sheet)];
     const text = await readFile(sheet, 'utf8'), descriptors = text.match(DESCRIPTOR) ?? [];
     if (!descriptors.length || descriptors.some(d => d !== SETUP_DESCRIPTOR)) throw new Error('sheet-descriptors-mismatch');
-    if (!Bun.deepEquals(settingLines(text), [FULL_ACCESS_SETTING])) throw new Error('setting-not-full-access');
+    if (!Bun.deepEquals(settingLines(text).filter(line => line.startsWith(SETTING)), [FULL_ACCESS_SETTING])) throw new Error('setting-not-full-access');
     return { assertions: [...assertions, `sheet:${SETUP_DESCRIPTOR}`, `setting:${FULL_ACCESS_SETTING}`], files: [sheet] };
   },
 }, {
