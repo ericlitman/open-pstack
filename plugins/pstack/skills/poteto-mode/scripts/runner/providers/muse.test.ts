@@ -36,14 +36,14 @@ describe("muse launch", () => {
 });
 
 describe("muse preflight", () => {
-  it("passes a signed-in `muse usage` with fixed evidence and reads `not logged in` as unauthenticated", () => {
+  it("passes a signed-in `muse usage` or an API-key `muse usage` with fixed evidence and reads `not logged in` as unauthenticated", () => {
     expect(muse.preflight.argv(lane(), null)).toEqual(["usage"]);
     expect(muse.preflight.classify({ exitCode: 0, stdout: fixture("usage-logged-in.txt"), stderr: "" }, lane()))
       .toEqual({ kind: "passed", evidence: "authenticated" });
     expect(muse.preflight.classify({ exitCode: 1, stdout: "", stderr: fixture("usage-logged-out.stderr.txt") }, lane()))
       .toEqual({ kind: "unauthenticated" });
     expect(muse.preflight.classify({ exitCode: 0, stdout: "No subscription allowance (api_key)\n", stderr: "" }, lane()))
-      .toEqual({ kind: "inconclusive" });
+      .toEqual({ kind: "passed", evidence: "api-key" });
   });
 });
 

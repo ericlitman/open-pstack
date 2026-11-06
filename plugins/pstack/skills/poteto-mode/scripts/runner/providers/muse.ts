@@ -75,6 +75,7 @@ export const muse = adapter({
     retryAfterUnauthenticatedMs: null,
     classify(run) {
       if (run.exitCode === 0 && run.stdout.startsWith("Tier: ")) return { kind: "passed", evidence: "authenticated" };
+      if (run.exitCode === 0 && run.stdout.startsWith("No subscription allowance (api_key)")) return { kind: "passed", evidence: "api-key" };
       return run.exitCode === 1 && /^muse usage: not logged in:/m.test(run.stderr) ? { kind: "unauthenticated" } : { kind: "inconclusive" };
     },
   },
@@ -109,7 +110,7 @@ export const muse = adapter({
   },
   parse: (run) => parse(run),
   proof: { report: "absent", matches: () => false },
-  environment: () => ({ kind: "allowlist", names: BASE_ALLOWLIST, prefixes: BASE_PREFIXES }),
+  environment: () => ({ kind: "allowlist", names: [...BASE_ALLOWLIST, "META_API_KEY"], prefixes: BASE_PREFIXES }),
   docs: {
     name: "Muse Code",
     hostPrerequisites: [],
@@ -123,8 +124,8 @@ export const muse = adapter({
       "No Muse writer is confined, so a writer needs the model sheet's opt-in (`isolated-write-full-access`); the runner refuses a bounded `isolated-write` lane before launch. An opted-in writer drops `--disable-write` and `--disable-shell` and keeps Muse's sandbox on. Measured in a linked worktree under the home directory, whose main repository and a sibling directory sat beside it: edits, shell writes and a Python run inside the worktree succeeded. The file tools refused every path outside the workspace (`absolute path is outside the workspace`, `path escapes workspace`) except the system temporary folders. The sandboxed shell failed outside the worktree with `Operation not permitted`, except that it wrote into the main repository's shared `.git`, `/tmp` and `$TMPDIR`. With `--disable-sandbox`, the file tools and the shell wrote into every outside target, so the runner never passes it.",
       "With `--approval-mode never --approval-judge off`, a refused tool call returns its error to the model and the run continues. Muse reports `Agent delegation: auto unavailable: workspace is untrusted` on stderr, and the lane never passes `--trust-workspace`, so the workspace's skills and rules do not load.",
       "Muse reads `~/.config/muse/settings.json` in every lane. Its `endpoint_transport` key reroutes every lane to another endpoint: on the measured host, a value that another tool wrote sent each lane to a proxy, and every turn failed with `still unauthorized after a token refresh`. The runner does not override it.",
-      "The environment is the base allowlist. The login is found through `HOME`. `muse login --help` says `META_API_KEY` takes priority over the account login; the lane does not pass it, and that path is not measured.",
-      "The preflight runs `muse usage`. It passes when it exits 0 and starts with `Tier: `, with the fixed evidence `authenticated`, because the output names the subscription tier. Exit 1 with `muse usage: not logged in:` is `unauthenticated`/77. Any other output, such as `No subscription allowance (api_key)`, is `child-failed`/70.",
+      "The environment is the base allowlist plus `META_API_KEY`. The account login is found through `HOME`. `muse login --help` says `META_API_KEY` always takes priority over the account login.",
+      "The preflight runs `muse usage`. It passes when it exits 0 and starts with `Tier: `, with the fixed evidence `authenticated`, because the output names the subscription tier. It also passes when it exits 0 and starts with `No subscription allowance (api_key)`, with the fixed evidence `api-key`, because `META_API_KEY` is the login and the model call checks access. Exit 1 with `muse usage: not logged in:` is `unauthenticated`/77. Any other output is `child-failed`/70.",
       "The `--json` stream is one envelope per line, dispatched on `payload_type`. The reply is the text of the last `run.terminal.*` event, accepted only when its `terminal` is `completed` and the text is not empty. Another terminal is `child-failed`/70 with its reason, except that `model `<id>` does not exist or you lack access` is `unavailable-model`/69. SIGINT exits 130 and SIGTERM 143, each with no terminal event, which is `cancelled`/130; a stream with no terminal event otherwise is `malformed-output`/65. The session is the `session` stream ID, and usage sums the `run.usage` event's per-model tokens. No cost is reported.",
       "`run.model.configured` repeats the requested model, and no event was shown to name a different served model, so the model proof is the pinned argv (`pinned-argv`).",
     ],
