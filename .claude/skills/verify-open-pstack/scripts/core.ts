@@ -20,6 +20,7 @@ export function matches(path: string, pattern: string): boolean {
 const T3_DISPATCH_PATHS = [
   'plugins/pstack/skills/poteto-mode/references/provider-dispatch.md', 'plugins/pstack/skills/poteto-mode/references/codex-tools.md',
   'plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/features/recipes.ts',
+  '.claude/skills/verify-open-pstack/scripts/harness.ts', '.claude/skills/verify-open-pstack/scripts/doctor.ts',
 ];
 
 export const VERSION_MANIFESTS: Readonly<Record<string, Harness>> = {
