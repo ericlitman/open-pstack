@@ -63,7 +63,7 @@ The table above is the current Cursor sync point. Open Pstack 1.17.0 imported th
 
 - **#262 — reflect skill copies**: `7054003` copies a skill out of the plugin cache to `.cursor/skills/` or `~/.cursor/skills/` before editing it. The port names the destinations per harness once, in `plugins/pstack/skills/poteto-mode/references/codex-tools.md#reflect-skill-copies`, and `reflect/SKILL.md` points there.
 
-- **#262 — statechart tests and types**: the root `bun run test` and `bun run typecheck` run statechart's suite. `statechart/scripts/package.json` adds pinned `typescript` and `@types/node` and a `typecheck` script, with a `bun.lock`. Upstream's code fails strict type checking in three places and one test fails on macOS, so the port annotates `exitClass` in `run.ts` with its `0 | 1 | 2` return type, makes two signal tests in `test/cli.test.ts` return `void`, and resolves the symlink test's temporary folder with `fs.realpathSync`, because macOS's temporary folder is itself a symlink. Keep these lines during syncs until upstream fixes them.
+- **#262 — statechart types, no test corpus**: `statechart/scripts/test/` is not imported. It is 2.9 MB of upstream test data and TLC output, more than the review service's reviewers can read, and upstream's CI runs it. The root `bun run typecheck` checks statechart's scripts: `statechart/scripts/package.json` adds pinned `typescript` and `@types/node` and a `typecheck` script, with a `bun.lock`, and the port annotates `exitClass` in `run.ts` with its `0 | 1 | 2` return type, which upstream's code needs under strict checking. Keep these lines during syncs until upstream fixes the type, and keep `scripts/test/` out.
 
 ## Check for changes
 
