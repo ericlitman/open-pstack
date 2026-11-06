@@ -55,6 +55,8 @@ Run these commands inside Claude Code:
 /reload-plugins
 ```
 
+Claude Code leaves auto-update off for third-party marketplaces, so Open Pstack stays on the version you installed. To turn it on, run `/plugin`, open the **Marketplaces** tab, select `open-pstack`, and choose **Enable auto-update**. To update once by hand, run `claude plugin update pstack@open-pstack`.
+
 ### Codex
 
 Run these commands in your shell:
@@ -170,7 +172,7 @@ This repository also keeps:
 
 ## Staying close to Lauren's pstack
 
-Open Pstack 1.16.0 tracks pstack 0.15.29 at Cursor commit [`88d47514b82e7c44f00f2b2a72ff6dd12158038c`](https://github.com/cursor/plugins/commit/88d47514b82e7c44f00f2b2a72ff6dd12158038c).
+Open Pstack 1.17.0 tracks pstack 0.15.36 at Cursor commit [`2776ddd2355d6d6c8747d3964600f28daf62f049`](https://github.com/cursor/plugins/commit/2776ddd2355d6d6c8747d3964600f28daf62f049).
 
 The two projects have separate version numbers. The pstack version identifies Lauren's upstream content. The Open Pstack version identifies the Claude Code and Codex package built from it.
 
