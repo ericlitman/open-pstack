@@ -73,7 +73,6 @@ export const muse = adapter({
   preflight: {
     argv: () => ["usage"],
     retryAfterUnauthenticatedMs: null,
-    // The output names the subscription tier and allowance, so the evidence is fixed.
     classify(run) {
       if (run.exitCode === 0 && run.stdout.startsWith("Tier: ")) return { kind: "passed", evidence: "authenticated" };
       return run.exitCode === 1 && /^muse usage: not logged in:/m.test(run.stderr) ? { kind: "unauthenticated" } : { kind: "inconclusive" };
