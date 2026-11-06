@@ -19,6 +19,8 @@ Open Pstack 1.17.0 tracks Cursor pstack 0.15.36 at `2776ddd2355d6d6c8747d3964600
 
 **Install note.** Claude Code leaves auto-update off for third-party marketplaces. The README says how to turn it on for `open-pstack` or update by hand.
 
+**GPT-6 Astra lanes.** The model catalog registers `codex:gpt-6-astra` as an optional family with efforts `low` to `ultra`, as `codex debug models` lists them in Codex CLI 0.164.0, and a default of `max`. Astra is the second family after Sol that offers `ultra`. Codex families have no generated Claude agents, so a Claude Code parent runs Astra through the external runner. Default roles and panels are unchanged.
+
 **Not applied.** See `UPSTREAM.md`: fallback chains on a rejected model slug and refilling a rejected arena seat with the parent model, which conflict with the named-dropout rule; `disable-model-invocation` on `interrogate` and `principle-explain-the-number`; Orchestrate's retry on a different model; and the Cursor manifests, guide edits and generated Claude Code tree.
 
 ## 1.16.0 syncs to Cursor pstack 0.15.29
