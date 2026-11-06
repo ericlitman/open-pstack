@@ -65,6 +65,8 @@ The table above is the current Cursor sync point. Open Pstack 1.17.0 imported th
 
 - **#262 — statechart types, no test corpus**: `statechart/scripts/test/` is not imported. It is 2.9 MB of upstream test data and TLC output, more than the review service's reviewers can read, and upstream's CI runs it. The root `bun run typecheck` checks statechart's scripts: `statechart/scripts/package.json` adds pinned `typescript` and `@types/node` and a `typecheck` script, with a `bun.lock`, and the port annotates `exitClass` in `run.ts` with its `0 | 1 | 2` return type, which upstream's code needs under strict checking. Keep these lines during syncs until upstream fixes the type, and keep `scripts/test/` out.
 
+- **#265 — Orchestrate verifier and sub-coordinator**: keep upstream's "on a different model family" for each PR's verifier; do not substitute provider. After upstream's sub-coordinator sentence, the port adds that where a subagent cannot start agents, such as a Claude Code native lane, the coordinator starts the sub-coordinator's workers from the kickoffs it writes and hands their results back to it. `codex-tools.md#subagent-policy` states that native lanes disallow `Agent` and `Task`.
+
 ## Check for changes
 
 The repository already names Cursor's repository as the `cursor` remote in the maintainer checkout. A fresh clone can add it once:
