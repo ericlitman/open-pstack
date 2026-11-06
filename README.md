@@ -153,7 +153,7 @@ Both apps read the same pstack skills. Only the way they start those skills and 
 | --- | --- | --- |
 | Start poteto-mode | Claude loads a small startup instruction that can route non-trivial work into it. You can also run `/pstack:poteto-mode` yourself. | Ask for `pstack:poteto-mode` by name. Codex does not load the Claude startup instruction. |
 | Runs inside the app | Claude models stay inside Claude Code. | Codex models, such as Sol, stay inside Codex. |
-| Other models | Codex, Grok and the read-only providers run through their command-line tools ([routes](plugins/pstack/skills/poteto-mode/references/model-catalog.md#routes)). | Claude, Grok and the read-only providers run through their command-line tools ([routes](plugins/pstack/skills/poteto-mode/references/model-catalog.md#routes)). |
+| Other models | Codex, Grok and the other external providers run through their command-line tools ([routes](plugins/pstack/skills/poteto-mode/references/model-catalog.md#routes)). | Claude, Grok and the other external providers run through their command-line tools ([routes](plugins/pstack/skills/poteto-mode/references/model-catalog.md#routes)). |
 | Skills and workflows | Shared with Codex. | Shared with Claude Code. |
 
 The other providers take part only through the runner. Open Pstack itself runs inside Claude Code or Codex.
@@ -172,7 +172,7 @@ This repository also keeps:
 
 ## Staying close to Lauren's pstack
 
-Open Pstack 1.17.0 tracks pstack 0.15.36 at Cursor commit [`2776ddd2355d6d6c8747d3964600f28daf62f049`](https://github.com/cursor/plugins/commit/2776ddd2355d6d6c8747d3964600f28daf62f049).
+Open Pstack 1.18.0 tracks pstack 0.15.36 at Cursor commit [`2776ddd2355d6d6c8747d3964600f28daf62f049`](https://github.com/cursor/plugins/commit/2776ddd2355d6d6c8747d3964600f28daf62f049).
 
 The two projects have separate version numbers. The pstack version identifies Lauren's upstream content. The Open Pstack version identifies the Claude Code and Codex package built from it.
 

@@ -42,9 +42,14 @@ describe("cursor launch", () => {
     }
   });
 
-  it("refuses an isolated-write lane and efforts a family does not list", () => {
+  it("runs an opted-in writer in agent mode with the sandbox on and writes allowed, and refuses a bounded writer and efforts a family does not list", () => {
+    const writer = lane({ mode: "isolated-write", writerSandbox: "full-access" });
+    const argv = cursor.launch.argv(writer, testFacts(cursor));
+    expect([argv.includes("--mode"), argv.slice(argv.indexOf("--sandbox"), argv.indexOf("--sandbox") + 2)]).toEqual([false, ["--sandbox", "enabled"]]);
+    const config = JSON.parse(cursor.launch.sidecar!.config!.content(writer));
+    expect([config.permissions, config.sandbox]).toEqual([{ allow: ["Write(**)", "Shell(*)"], deny: ["Mcp(*:*)"] }, { mode: "enabled" }]);
     expect(() => lane({ mode: "isolated-write" }))
-      .toThrow("provider cursor does not support isolated-write; it supports only: read-only");
+      .toThrow("provider cursor does not support isolated-write; it supports only: read-only, isolated-write-full-access");
     expect(() => lane({ model: "gemini-3.7-flash", effort: "max" })).toThrow("choose one of: low, medium, high");
   });
 

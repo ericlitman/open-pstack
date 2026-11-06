@@ -1,16 +1,21 @@
-import { adapter, type ModelRun, type ParseResult, type ProviderMetadata } from "../registry/contract.ts";
+import { type Access, adapter, type ModelRun, type ParseResult, type ProviderMetadata } from "../registry/contract.ts";
 import { BASE_ALLOWLIST, BASE_PREFIXES, effortArgs, finiteNumber, nullableString, object, type JsonObject } from "./shared.ts";
 
 // The run-owned global config. `"*": "deny"` removes every tool the allow-list does not name from the model's tool
-// list, so bash, edit, write, task, webfetch, websearch, skill and question are gone. Measured with OpenCode 1.19.1.
+// list, so task, webfetch, websearch, skill and question are gone, and bash, edit and write too for a reader.
+// Measured with OpenCode 1.19.1.
 const READS = ["read", "glob", "grep", "list", "todowrite"];
-const LOCKDOWN = {
-  share: "disabled",
-  autoupdate: false,
-  snapshot: false,
-  instructions: [],
-  permission: { "*": "deny", ...Object.fromEntries(READS.map((tool) => [tool, "allow"])) },
-};
+const WRITES = ["bash", "edit", "write"];
+function lockdown(access: Access) {
+  const tools = access.mode === "read-only" ? READS : [...READS, ...WRITES];
+  return {
+    share: "disabled",
+    autoupdate: false,
+    snapshot: false,
+    instructions: [],
+    permission: { "*": "deny", ...Object.fromEntries(tools.map((tool) => [tool, "allow"])) },
+  };
+}
 const CONFIG_NAME = "opencode.json";
 
 // SIGINT exits 130 and SIGTERM 143, each after only a step_start event.
@@ -108,9 +113,8 @@ export const opencode = adapter({
   },
   launch: {
     prompt: "stdin",
-    sidecar: { output: null, config: { name: CONFIG_NAME, content: () => `${JSON.stringify(LOCKDOWN, null, 2)}\n` } },
-    // No OS sandbox: with external_directory denied, a shell write still escaped the cwd, so no mode is a bounded writer.
-    supports: ["read-only"],
+    sidecar: { output: null, config: { name: CONFIG_NAME, content: (lane) => `${JSON.stringify(lockdown(lane.access), null, 2)}\n` } },
+    supports: ["read-only", "isolated-write-full-access"],
     needsSharedGitDir: () => false,
     argv: (lane) => [
       "run",
@@ -162,7 +166,8 @@ export const opencode = adapter({
     ],
     notes: [
       "The model is `provider/model`, such as `opencode/deepseek-v4.1-flash-free`. The effort is `--variant <effort>`, omitted for `default`. OpenCode accepts an unknown variant silently, so only a registered family's efforts are checked.",
-      "Read-only only, measured on OpenCode 1.19.1. Each lane runs the `build` agent (`--agent build`, because a config's `default_agent` would otherwise pick another agent) with a run-owned config whose `\"*\": \"deny\"` permission removes every tool except `read`, `glob`, `grep`, `list` and `todowrite` from the model's tool list. OpenCode's permission policy enforces this, not an OS sandbox. With `external_directory` denied, a shell write still escaped the cwd, so no OpenCode mode is a bounded writer, and the runner refuses an `isolated-write` lane before launch.",
+      "Each lane runs the `build` agent (`--agent build`, because a config's `default_agent` would otherwise pick another agent) with a run-owned config whose `\"*\": \"deny\"` permission removes every tool the config does not allow from the model's tool list. A read-only lane allows `read`, `glob`, `grep`, `list` and `todowrite`. OpenCode's permission policy enforces this, not an OS sandbox.",
+      "No OpenCode writer is confined, so a writer needs the model sheet's opt-in (`isolated-write-full-access`); the runner refuses a bounded `isolated-write` lane before launch. An opted-in writer's config also allows `bash`, `edit` and `write`. Measured with OpenCode 1.19.1 on macOS in a linked worktree under the home directory, whose main repository and a sibling directory sat beside it: edits, shell writes and a Python run inside the worktree succeeded. The `external_directory` rule stopped the edit tool outside the worktree except through a symlinked directory, and the shell wrote into the sibling, the main checkout, the main repository's shared `.git`, a home directory, `/tmp` and `$TMPDIR`.",
       "The runner writes that config to `<receipt>.provider/opencode.json` (0600, in a 0700 directory), points `OPENCODE_CONFIG` at it, and sets `XDG_CONFIG_HOME` and `OPENCODE_TEST_HOME` to the directory, so OpenCode reads the run-owned directory in place of the host's `~/.config/opencode/` and `~/.opencode/`. OpenCode 1.19.1 merges `~/.opencode/opencode.json` after `OPENCODE_CONFIG` and imports `~/.opencode/plugins/*.js` even with `--pure`, and it finds that home `.opencode/` through `OPENCODE_TEST_HOME` when set. Measured with a fresh `HOME` whose `.opencode/opencode.json` allowed `bash`, `edit` and `write` and whose `.opencode/plugins/` held a canary plugin: without `OPENCODE_TEST_HOME`, `opencode debug agent build` listed those tools and the canary ran, and neither `OPENCODE_CONFIG_CONTENT` nor `OPENCODE_CONFIG_DIR` changed that; with it, `debug agent build` and `debug config` showed only the lockdown, the canary did not run, and a lane asked to write and edit files changed nothing. Stored logins still come from the real home. `OPENCODE_DISABLE_PROJECT_CONFIG=1` stops the repository's `opencode.json`, `opencode.jsonc`, `.opencode/` agents and commands, and `AGENTS.md` from loading. `OPENCODE_DISABLE_CLAUDE_CODE=1` stops `~/.claude/CLAUDE.md` and `~/.claude/skills`, and `OPENCODE_DISABLE_EXTERNAL_SKILLS=1` stops `~/.agents/skills`. `OPENCODE_DISABLE_AUTOUPDATE=1` and `--pure` turn off updates and external plugins. The built-in `customize-opencode` skill remains, but the `skill` tool is denied.",
       "A managed config (`/Library/Application Support/opencode/` on macOS, `/etc/opencode/` on Linux) merges after the run-owned config and overrides it. Measured on OpenCode 1.19.1 with layers planted through the binary's `OPENCODE_TEST_MANAGED_CONFIG_DIR` redirect: a managed `mcp` server started in a real lane, a managed `lsp` command ran when the model called `read`, a managed `provider` `baseURL` rerouted the lane, and a managed `agent.build` prompt replaced the build agent's prompt. `--agent build` and `-m` took precedence over a managed `default_agent` and `agent.build.model`, and `--pure` kept a managed `plugin` from loading. On macOS, `/Library/Managed Preferences/<user>/ai.opencode.managed.plist` and `/Library/Managed Preferences/ai.opencode.managed.plist` merge last. The plist layer is from OpenCode's source and was not measured.",
       "A stored `wellknown` login (from `opencode providers login <url>`) or an active console organization (from `opencode console login`) makes every OpenCode process, including each lane, fetch remote config and merge it into the lane's configuration. Measured with a fake well-known login and a local server, whose config added an MCP server and a `default_agent`. The console organization fetch is from OpenCode's source and was not measured.",

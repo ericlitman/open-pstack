@@ -1,4 +1,4 @@
-import { adapter, type LaunchFacts, type ModelRun, type ParseResult, type ProviderMetadata } from "../registry/contract.ts";
+import { type Access, adapter, type LaunchFacts, type ModelRun, type ParseResult, type ProviderMetadata } from "../registry/contract.ts";
 import { BASE_ALLOWLIST, BASE_PREFIXES, finiteNumber, nullableString, object, type JsonObject } from "./shared.ts";
 
 // Devin loads the host's rules (such as CLAUDE.md), MCP servers, web search and subagents by default,
@@ -80,6 +80,11 @@ function sidecar(facts: LaunchFacts): { readonly output: string; readonly config
   return { output: paths.output, config: paths.config };
 }
 
+function permissionArgs(access: Access): readonly string[] {
+  if (access.mode === "read-only") return ["--permission-mode", "auto"];
+  return access.sandbox === "full-access" ? ["--permission-mode", "dangerous"] : ["--sandbox"];
+}
+
 export const devin = adapter({
   id: "devin",
   executable: "devin",
@@ -98,9 +103,7 @@ export const devin = adapter({
   launch: {
     prompt: "file",
     sidecar: { output: "export.json", config: { name: "lockdown.json", content: () => `${JSON.stringify(LOCKDOWN, null, 2)}\n` } },
-    // `--sandbox` forces Devin's autonomous mode, which lets shell commands write in the cwd while it
-    // rejects the edit tools, so Devin has no bounded writer mode.
-    supports: ["read-only"],
+    supports: ["read-only", "isolated-write", "isolated-write-full-access"],
     needsSharedGitDir: () => false,
     argv(lane, facts) {
       const paths = sidecar(facts);
@@ -110,9 +113,7 @@ export const devin = adapter({
         lane.promptPath,
         "--model",
         lane.cliModel,
-        // Without --sandbox, auto mode's approval policy rejects edits and writing shell commands.
-        "--permission-mode",
-        "auto",
+        ...permissionArgs(lane.access),
         // Print mode refuses an untrusted cwd otherwise.
         "--respect-workspace-trust",
         "false",
@@ -134,7 +135,9 @@ export const devin = adapter({
     statePaths: ["`~/.local/share/devin/` (the login, which the CLI reads) and the config, telemetry and log files it writes under the home"],
     notes: [
       "Effort is part of the model ID. The runner passes the CLI model ID that the effort table gives for the requested effort. An unregistered Devin model must be a CLI model ID with the `default` effort.",
-      "Read-only only. A lane runs `--permission-mode auto` without `--sandbox`, so Devin's approval policy, not an OS sandbox, rejects edits and writing shell commands, as Claude's `plan` mode does. With `--sandbox`, approved shell commands write in the cwd while the edit tools are rejected, so no Devin mode is a bounded writer. The runner refuses an `isolated-write` lane before launch.",
+      "Read-only lanes run `--permission-mode auto` without `--sandbox`, so Devin's approval policy, not an OS sandbox, rejects edits and writing shell commands, as Claude's `plan` mode does.",
+      "A bounded `isolated-write` lane is a shell-only writer: it adds `--sandbox` and passes no `--permission-mode`, because `--sandbox` always uses Devin's autonomous mode and ignores the flag. Seatbelt confines the `exec` tool to the cwd. The autonomous mode rejects the `write` and `edit` tools, and a rejected call ends the turn with an empty reply, which is `child-failed`/70; Devin's own sandbox prompt tells the model to work through `exec`. A deny rule for `write` and `edit` in the run-owned config does not hide them. Measured on macOS with Devin CLI 3000.11.234 in a linked worktree under the home directory: shell writes and a Python run inside the worktree succeeded, and shell writes into a sibling directory, the main checkout, the main repository's shared `.git`, a home directory, through a symlink to the main checkout, and into `/tmp` failed with `Operation not permitted`. A write into `$TMPDIR` succeeded.",
+      "An `isolated-write-full-access` lane, which the model sheet must opt in to, runs `--permission-mode dangerous` without `--sandbox`. Nothing confines it: in the same test, the edit tool and the shell wrote into every outside target, including the shared `.git`. The edit tool refused only a write through a symlinked directory.",
       "A Devin lane runs in any directory, and the configuration it finds there applies as it is. The lane passes `--respect-workspace-trust false`, so Devin loads the `.devin/config.json` hooks and permissions and the `.devin/mcp_config.json` MCP servers of a `.devin/` directory in the cwd or any parent up to the git root, or up to `/` outside a repository. So a lane whose cwd is under the home directory and outside any git repository also loads the home directory's own `~/.devin/`. No key turns them off.",
       "Each lane gets a run-owned `--config` file in its private `<receipt>.provider/` directory (0700). It turns off subagents, every host rule source (such as `CLAUDE.md`) and MCP tools, and denies web search and the fetch tools. Devin still loads its own skills. Network isolation is not established: shell network access and the fetch denials were not measured.",
       "The preflight passes when `devin auth status` exits 0 and starts with `Logged in (via Devin).`. It also exits 0 when logged out, so output starting with `Not logged in.` is `unauthenticated`/77, and any other output is `child-failed`/70.",

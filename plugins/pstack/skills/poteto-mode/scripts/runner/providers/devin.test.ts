@@ -37,9 +37,10 @@ describe("devin launch", () => {
     expect(devin.launch.argv(lane(), testFacts(devin))).not.toContain("--sandbox");
   });
 
-  it("refuses an isolated-write lane and efforts SWE-2 does not list", () => {
-    expect(() => lane({ mode: "isolated-write" }))
-      .toThrow("provider devin does not support isolated-write; it supports only: read-only");
+  it("runs a bounded writer in Devin's sandbox and an opted-in writer in dangerous mode, and refuses efforts SWE-2 does not list", () => {
+    const flags = (request: Partial<LaneRequest>) => devin.launch.argv(lane({ effort: "max", ...request }), testFacts(devin)).slice(5, -6);
+    expect(flags({ mode: "isolated-write" })).toEqual(["--sandbox"]);
+    expect(flags({ mode: "isolated-write", writerSandbox: "full-access" })).toEqual(["--permission-mode", "dangerous"]);
     expect(() => lane({ effort: "low" })).toThrow("effort low is not offered for devin:swe-2; choose one of: medium, high, max");
     expect(() => lane({ model: "swe-1.6", effort: "max" })).toThrow("choose one of: default");
   });

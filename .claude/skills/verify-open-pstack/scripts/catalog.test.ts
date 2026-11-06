@@ -197,18 +197,18 @@ for (const harness of ['claude', 'codex'] as const) {
     else expect(await readFile(join(f.dir, 'AGENTS.md'), 'utf8')).toBe('mirror\n');
     const path = join(f.dir, 'pstack-models.md'), prepared = await readFile(path, 'utf8'), lines = await sheet(path);
     expect([...lines.keys()]).toEqual([...installed.defaults.keys()]);
-    for (const [role, lanes] of installed.defaults) expect(lines.get(role)).toEqual(role === 'how explorer' ? ['devin:swe-2@max'] : lanes);
+    for (const [role, lanes] of installed.defaults) expect(lines.get(role)).toEqual(role === 'how explorer' ? ['opencode:opencode/deepseek-v4.1-flash-free@max'] : lanes);
 
     await writeFile(path, prepared + BOUNDED);
     if (harness === 'codex') await mirror(f, prepared + BOUNDED);
     const probed = record(harness, 'pstack:setup-pstack');
     expect((await c.assert(probed, f)).assertions).toEqual([
-      'skill-loaded', 'file:pstack-models.md', ...(harness === 'codex' ? ['codex-mirror'] : []), 'sheet:devin:swe-2@max',
+      'skill-loaded', 'file:pstack-models.md', ...(harness === 'codex' ? ['codex-mirror'] : []), 'sheet:opencode:opencode/deepseek-v4.1-flash-free@max',
       'setting:codex writer sandbox: bounded',
     ]);
     await rejectsUnbounded(c, f, prepared + BOUNDED);
 
-    for (const wrong of [prepared.replace('how explorer: devin:swe-2@max', `how explorer: ${installed.defaults.get('how explorer')!.join(', ')}`), prepared.replace(/\nbug-fix: [^\n]*/, '')]) {
+    for (const wrong of [prepared.replace('how explorer: opencode:opencode/deepseek-v4.1-flash-free@max', `how explorer: ${installed.defaults.get('how explorer')!.join(', ')}`), prepared.replace(/\nbug-fix: [^\n]*/, '')]) {
       await writeFile(path, wrong);
       await expect(c.assert(probed, f)).rejects.toThrow('read-only-provider-sheet-mismatch');
     }
@@ -232,14 +232,14 @@ for (const harness of ['claude', 'codex'] as const) {
     await writeFile(join(f.dir, 'AGENTS.md'), 'mirror\n');
     await c.prepare!(f);
     const path = join(f.dir, 'pstack-models.md'), prepared = await readFile(path, 'utf8');
-    expect((await sheet(path)).get('bug-fix')).toEqual(['devin:swe-2@max']);
+    expect((await sheet(path)).get('bug-fix')).toEqual(['opencode:opencode/deepseek-v4.1-flash-free@max']);
     if (harness === 'codex') await expect(readFile(join(f.dir, 'AGENTS.md'))).rejects.toThrow();
     const done = record(harness, 'pstack:setup-pstack');
     await expect(c.assert(done, f)).rejects.toThrow('writer-refusal-missing');
-    await writeFile(join(f.dir, 'refusal.txt'), 'Refusing bug-fix on devin:swe-2@max: Devin runs read-only lanes only.\n');
-    expect((await c.assert(done, f)).assertions).toEqual(['skill-loaded', 'refused:bug-fix:devin:swe-2@max']);
+    await writeFile(join(f.dir, 'refusal.txt'), 'Refusing bug-fix on opencode:opencode/deepseek-v4.1-flash-free@max: OpenCode writes only with the full-access opt-in.\n');
+    expect((await c.assert(done, f)).assertions).toEqual(['skill-loaded', 'refused:bug-fix:opencode:opencode/deepseek-v4.1-flash-free@max']);
 
-    await writeFile(path, prepared.replace('bug-fix: devin:swe-2@max', 'bug-fix: codex:gpt-6.1-sol@max'));
+    await writeFile(path, prepared.replace('bug-fix: opencode:opencode/deepseek-v4.1-flash-free@max', 'bug-fix: codex:gpt-6.1-sol@max'));
     await expect(c.assert(done, f)).rejects.toThrow('writer-refusal-sheet-changed');
     await writeFile(path, prepared);
     if (harness === 'codex') {
@@ -440,4 +440,29 @@ test('the bounded writer case requires a bounded receipt from a sheet without th
   await place(receipt);
   await writeFile(join(f.dir, 'bounded-lane/result.json'), JSON.stringify({ written: 'guess' }));
   await expect(c.assert(run, f)).rejects.toThrow('bounded-effect-mismatch');
+});
+
+test('each provider writer case puts its setting line in the sheet only for an opt-in provider and requires the executed hash', async () => {
+  const run = { ...record('claude', 'pstack:poteto-mode'), commands: ['"$RUNNER/pstack-runner" --provider x'] };
+  for (const [name, model, effort, optIn] of [
+    ['devin', 'swe-2', 'medium', false], ['dsh', 'deepseek-flash', 'low', false], ['opencode', 'opencode/deepseek-v4.1-flash-free', 'low', true],
+    ['agy', 'gemini-3.8-flash', 'low', true], ['cursor', 'composer-2.5', 'default', true], ['muse', 'muse-spark-1.3', 'low', true],
+  ] as const) {
+    const f = await fixture('claude'), c = recipe('writers', 'claude').find(c => c.id === `${name}-writer`)!;
+    await c.prepare!(f);
+    if (name === 'muse') expect(c.prompt(f)).toContain('--mode isolated-write --writer-sandbox full-access');
+    else expect((await readFile(join(f.dir, `${name}.sheet.md`), 'utf8')).split('\n').filter(line => line.includes('writer sandbox:'))).toEqual(optIn ? [`${name} writer sandbox: full-access`] : []);
+    const nonce = /b"([0-9a-f-]+)"/.exec(await readFile(join(f.dir, `${name}.prompt.md`), 'utf8'))![1]!;
+    const receipt = { status: 'complete', provider: name, model, effort, mode: 'isolated-write', cwd: join(f.dir, `${name}-lane`),
+      outputPath: join(f.dir, `${name}.output.md`), startedAt: new Date().toISOString(), writerSandbox: optIn ? 'full-access' : 'bounded' };
+    const place = (value: object) => writeFile(join(f.dir, `${name}.receipt.json`), JSON.stringify(value));
+    await place(receipt);
+    await writeFile(join(f.dir, `${name}-lane/result.txt`), `${nonce}\n`);
+    await expect(c.assert(run, f)).rejects.toThrow(`${name}-effect-mismatch`);
+    await writeFile(join(f.dir, `${name}-lane/result.txt`), `${new Bun.CryptoHasher('sha256').update(nonce).digest('hex')}\n`);
+    expect((await c.assert(run, f)).assertions)
+      .toEqual(['runner-ran', 'receipt-complete', `writer-sandbox:${optIn ? 'full-access' : 'bounded'}`, 'file:result.txt', 'executed']);
+    await place({ ...receipt, writerSandbox: optIn ? 'bounded' : 'full-access' });
+    await expect(c.assert(run, f)).rejects.toThrow('writer-sandbox:');
+  }
 });

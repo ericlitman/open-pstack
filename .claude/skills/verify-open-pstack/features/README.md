@@ -8,7 +8,7 @@ The ownership table below says which features a changed path reaches. `SKILL.md`
 | --- | --- |
 | `skills` | One `skill-invocation:<name>` exercise per selected skill, in both harnesses |
 | `shared` | All listed skills, setup, runner, shipped tools, and `hook:startup` in both harnesses, and Claude's `agent-preload:poteto-agent`; a version-only manifest change reaches less, as described below |
-| `catalog` | The generated model catalog and native agents, and the registry sources: `catalog`, `setup`, and `runner`, and no skill check |
+| `catalog` | The generated model catalog and native agents, and the registry sources: `catalog`, `setup`, and `runner`, and no skill check; a provider adapter under `runner/providers/` also reaches `writers` |
 | `assets` | Installed UI/resource surface for each actual consumer found in the pinned plugin manifests |
 | `setup` | Installed setup/model configuration with byte-exact daily Claude file restoration before publication |
 | `runner` | Installed parent invoking real configured provider lanes |

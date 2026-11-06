@@ -1,0 +1,109 @@
+muse — interactive terminal coding agent
+
+If no subcommand is given, options run the interactive TUI; pass a prompt to start
+a session, or use a command below.
+
+Usage: muse [OPTIONS] [PROMPT]
+       muse [OPTIONS] <COMMAND>
+
+Commands:
+  resume           Resume a previous session (--last or <session-ref>)
+  exec             Run one prompt non-interactively (headless)
+  config           Validate enterprise configuration documents
+  export           Export a session transcript to a file
+  trace            Inspect a recorded session or run trace
+  model-profile    Show what a model resolves to per knob and effort tier
+  skills           List, inspect, enable, or disable skills
+  voice            Transcribe an audio clip into text
+  plugins          Validate and manage plugin bundles
+  sandbox          Check or set up the OS sandbox
+  schema           Export the MSP wire schema (JSON Schema or TypeScript)
+  serve            Serve an MSP session host over stdio
+  session-message  List or send cross-session messages
+  mcp              Log in to or out of an MCP server (OAuth)
+  auth             Store provider API credentials
+  login            Log in to a provider
+  logout           Remove stored provider credentials
+  usage            Show your subscription allowance
+  init             Scaffold agent config in this workspace
+
+Options:
+  -h, --help
+          Print help
+  -V, --version
+          Print version
+      --agents <JSON>
+          Supply one ephemeral agent-definition overlay
+      --provider <MODE>
+          Startup provider: echo, meta, or local (default: meta)
+      --preset <NAME>
+          Run a built-in preset: native-basic, miniswe, empty, ac_orch,
+          openai-apply-patch
+      --model <MODEL>
+          Model id for non-echo providers
+      --contributor-mode <on|off>
+          Per-run contributor mode override (this run only; never persisted)
+  -c, --config <KEY=VALUE>
+          Set one setting for this run (repeatable; values are JSON). Secrets
+          only as whole-value ${VAR}; unknown or clashing keys refuse the run.
+      --reasoning-effort <EFFORT>
+          Meta reasoning effort: none|minimal|low|medium|high|xhigh|max|ultra
+          (default: high; alias: --effort)
+      --base-url <URL>
+          Override the Meta provider base URL
+      --image <PATH>
+          Attach a local image file to the next submitted prompt
+      --workspace <PATH>
+          Register policy-gated workspace tools rooted at PATH
+  -w, --worktree [<MODE>]
+          Session Git worktree: off|create|existing; a bare -w means create
+          (default: off)
+      --worktree-base <REF>
+          Base ref for --worktree create (default: HEAD)
+      --worktree-existing <PATH>
+          Existing worktree path for --worktree existing
+      --parallel-tool-calls
+          Enable Meta API parallel tool calls
+      --no-parallel-tool-calls
+          Disable Meta API parallel tool calls
+      --subagent-worktree-isolation
+          Compatibility flag; capability defaults on. Only an affirmative
+          per-child request asks for isolation; omission stays shared. Requests
+          may reject when capability, provider, or Git prerequisites are
+          unavailable.
+      --approval-mode <MODE>
+          Tool approval mode: untrusted|on-request|never (default: on-request)
+      --permission-profile <ID>
+          Select a named permission profile for this session.
+      --approval-judge <off|on>
+          LLM approval judge for Prompt-bound calls (default: on)
+      --no-session-log
+          Do not persist session event logs to disk
+      --echo-delay-ms <MS>
+          Deterministic echo reply delay (echo provider only)
+
+Safety (approval and the sandbox are ON by default):
+      --yolo
+          Disable approval and sandbox, trust this workspace, enable async
+          questions (this run)
+      --disable-request-user-input
+          Withhold request_user_input for this run
+      --trust-workspace
+          Trust this workspace for this run (load its skills and rules); does
+          not save trust
+      --disable-approval
+          Disable tool approval prompts for this workspace run
+      --disable-sandbox
+          Disable shell filesystem/network sandboxing for this run
+      --sandbox-network <MODE>
+          Sandbox network mode: restricted|enabled|proxy-only (default:
+          proxy-only)
+      --disable-write
+          Disable non-shell workspace filesystem writes
+      --disable-shell
+          Disable workspace shell execution
+      --enable-shell-tool
+          Use the legacy shell tool instead of the managed platform shell
+
+Run `muse <command> --help` for command-specific options.
+
