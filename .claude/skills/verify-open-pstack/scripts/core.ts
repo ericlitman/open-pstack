@@ -22,15 +22,7 @@ const T3_DISPATCH_PATHS = [
   'plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/features/recipes.ts',
   '.claude/skills/verify-open-pstack/scripts/harness.ts', '.claude/skills/verify-open-pstack/scripts/doctor.ts',
 ];
-const GROK_TRANSPORT = '.claude/skills/verify-open-pstack/scripts/grok.ts';
-const GROK_REACH: Readonly<Record<string, readonly string[]>> = {
-  'grok:dispatch': [...T3_DISPATCH_PATHS, GROK_TRANSPORT, 'plugins/pstack/.grok-plugin/plugin.json',
-    'plugins/pstack/grok-agents/poteto-agent.md', 'plugins/pstack/grok-agents/comment-sicko.md', 'plugins/pstack/skills/poteto-mode/SKILL.md',
-    'plugins/pstack/skills/poteto-mode/references/model-catalog.md', 'plugins/pstack/skills/poteto-mode/scripts/runner/types.ts',
-    'plugins/pstack/skills/poteto-mode/scripts/runner/registry/index.ts', 'plugins/pstack/skills/poteto-mode/scripts/runner/registry/render.ts'],
-  'grok:setup': ['plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/features/recipes.ts',
-    '.claude/skills/verify-open-pstack/scripts/harness.ts', '.claude/skills/verify-open-pstack/scripts/isolation.ts', GROK_TRANSPORT],
-};
+const GROK_FEATURES = ['grok:dispatch', 'grok:setup'] as const;
 
 export const VERSION_MANIFESTS: Readonly<Record<string, Harness>> = {
   'plugins/pstack/.claude-plugin/plugin.json': 'claude', '.claude-plugin/marketplace.json': 'claude', 'plugins/pstack/.codex-plugin/plugin.json': 'codex',
@@ -41,6 +33,7 @@ export function classify(files: ChangedFile[], registry: Registry): Selection {
   const versionOnly = new Set(files.filter(f => f.versionOnly && !f.previous_filename).map(f => f.filename));
   const skills = new Set<string>(), features = new Set<string>();
   const both = (...names: string[]): void => names.forEach(f => HARNESSES.forEach(h => features.add(`${h}:${f}`)));
+  const grok = (): void => GROK_FEATURES.forEach(f => features.add(f));
   for (const path of paths) {
     if (!path || path.startsWith('/') || path.split('/').includes('..')) throw new Error(`Unsafe path: ${path}`);
     if (versionOnly.has(path) && Object.hasOwn(VERSION_MANIFESTS, path)) { features.add(`${VERSION_MANIFESTS[path]}:hook:startup`); continue; }
@@ -50,28 +43,27 @@ export function classify(files: ChangedFile[], registry: Registry): Selection {
       features.add('codex:assets:codex'); covered = true;
     }
     if (T3_DISPATCH_PATHS.includes(path)) features.add('t3:dispatch');
-    for (const [feature, reach] of Object.entries(GROK_REACH)) if (reach.includes(path)) features.add(feature);
     const sharedRecipe = path === '.claude/skills/verify-open-pstack/features/recipes.ts';
     if (sharedRecipe) both('catalog', 'writers', ...WRITER_PROVIDERS.map(provider => `writers:${provider}`));
     const catalog = registry.catalog.some(p => matches(path, p));
-    if (catalog) { both('catalog', 'setup', 'runner'); covered = true; }
+    if (catalog) { both('catalog', 'setup', 'runner'); grok(); covered = true; }
     if (sharedRecipe || (!catalog && registry.shared.some(p => matches(path, p)))) {
       registry.skills.forEach(s => skills.add(s));
       both('setup', 'runner', 'shipped-tools', 'hook:startup');
       features.add('claude:agent-preload:poteto-agent');
-      covered = true;
+      grok(); covered = true;
     }
     for (const [key, feature] of [['setup', 'setup'], ['runner', 'runner'], ['tools', 'shipped-tools'], ['project', 'project-skill']] as const) {
-      if (registry[key].some(p => matches(path, p))) { both(feature); covered = true; }
+      if (registry[key].some(p => matches(path, p))) { both(feature); grok(); covered = true; }
     }
-    if (/^plugins\/pstack\/skills\/poteto-mode\/scripts\/resolve-codex-transcript(?:\.ts)?$/.test(path)) { skills.add('reflect'); covered = true; }
+    if (/^plugins\/pstack\/skills\/poteto-mode\/scripts\/resolve-codex-transcript(?:\.ts)?$/.test(path)) { skills.add('reflect'); grok(); covered = true; }
     const provider = /^plugins\/pstack\/skills\/poteto-mode\/scripts\/runner\/providers\/(?:fixtures\/)?([a-z]+)?/.exec(path);
     if (provider) both((WRITER_PROVIDERS as readonly string[]).includes(provider[1] ?? '') ? `writers:${provider[1]}` : 'writers');
     const skill = /^plugins\/pstack\/skills\/([^/]+)\/(.+)$/.exec(path);
     if (!catalog && skill && registry.skills.includes(skill[1]!)) {
       const leaf = skill[2]!;
       if (leaf === 'SKILL.md' || leaf.startsWith('references/') || leaf.startsWith('playbooks/')) {
-        skills.add(skill[1]!); covered = true;
+        skills.add(skill[1]!); grok(); covered = true;
       }
       if (skill[1] === 'poteto-mode' && leaf === 'SKILL.md') features.add('claude:agent-preload:poteto-agent');
     }

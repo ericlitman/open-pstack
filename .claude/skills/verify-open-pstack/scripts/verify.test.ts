@@ -53,7 +53,7 @@ describe('exact-head evidence publication', () => {
 
   test('a runtime change runs only the named features, plus project-skill in both harnesses under self-test', async () => {
     const f = fixture(true, true), receipt = await verify(f.options);
-    expect(receipt.selection.features).toEqual(['claude:skill-invocation:architect', 'codex:skill-invocation:architect']);
+    expect(receipt.selection.features).toEqual(['claude:skill-invocation:architect', 'codex:skill-invocation:architect', 'grok:dispatch', 'grok:setup']);
     expect(receipt.runFeatures).toEqual(['claude:skill-invocation:architect']);
     expect(receipt.installations.map(record => record.harness).sort()).toEqual([...HARNESSES]);
     expect(receipt.observations.map(record => `${record.harness}/${record.feature}`).sort()).toEqual(['claude/project-skill', 'claude/skill-invocation:architect', 'codex/project-skill']);
