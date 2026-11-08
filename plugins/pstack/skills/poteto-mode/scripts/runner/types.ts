@@ -2,7 +2,7 @@ export const PARENTS = {
   claude: {
     harness: "Claude Code",
     native: "Agent",
-    externalSelf: false,
+    explicitLaneRoute: "native",
     identity: [
       "CLAUDECODE",
       "CLAUDE_CODE_CHILD_SESSION",
@@ -13,7 +13,7 @@ export const PARENTS = {
   codex: {
     harness: "Codex",
     native: "spawn_agent",
-    externalSelf: false,
+    explicitLaneRoute: "native",
     identity: [
       "CODEX_THREAD_ID",
       "CODEX_SESSION_ID",
@@ -27,7 +27,7 @@ export const PARENTS = {
   grok: {
     harness: "Grok",
     native: "spawn_subagent",
-    externalSelf: true,
+    explicitLaneRoute: "runner",
     identity: ["GROK_SESSION_ID", "GROK_AGENT"],
   },
 } as const;

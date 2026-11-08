@@ -10,12 +10,11 @@ const HELP = `Usage: pstack-runner --parent <${Object.keys(PARENTS).join("|")}> 
   --prompt <file> --cwd <dir> --output <file> --receipt <file> [--timeout <seconds>]
 
 Runs exactly one external model lane. A Claude or Codex parent rejects its own
-provider; use that parent's native subagent primitive. A Grok parent may run a
-Grok provider here when spawn_subagent cannot carry the model or the effort.
-Output and receipt
-paths must not already exist. There is no implicit timeout. Pass --timeout only
-when the user or task supplies a real deadline; it is one end-to-end launcher
-deadline shared by setup, preflight, and model execution. --writer-sandbox
+provider; use that parent's native subagent primitive. A Grok parent runs every
+explicit Grok descriptor here. Output and receipt paths must not already exist.
+There is no implicit timeout. Pass --timeout only when the user or task supplies
+a real deadline; it is one end-to-end launcher deadline shared by setup,
+preflight, and model execution. --writer-sandbox
 defaults to bounded; full-access applies only to an isolated-write lane on a
 provider that supports it, and only when the model sheet opts in.
 `;

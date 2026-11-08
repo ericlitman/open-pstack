@@ -151,7 +151,9 @@ describe("registry data", () => {
       expect(cells.slice(1, 4)).toEqual([
         adapter.id === "claude" ? "native `Agent`" : "external runner",
         adapter.id === "codex" ? "native `spawn_agent`" : "external runner",
-        adapter.id === "grok" ? "native `spawn_subagent` or external runner" : "external runner",
+        adapter.id === "grok"
+          ? "explicit descriptor: external runner; `inherit-parent`, `auto`: native `spawn_subagent`"
+          : "external runner",
       ]);
       expect(routes).toContain("| Provider | Claude Code parent | Codex parent | Grok parent |");
     }
@@ -569,7 +571,7 @@ describe("resolveLane", () => {
           effort: family?.defaultEffort ?? "default",
         });
         const sameProvider = adapter.id === parent;
-        if (sameProvider && !PARENTS[parent].externalSelf) {
+        if (sameProvider && PARENTS[parent].explicitLaneRoute === "native") {
           expect(() => resolveLane(laneRequest)).toThrow("use the parent subagent primitive");
           continue;
         }

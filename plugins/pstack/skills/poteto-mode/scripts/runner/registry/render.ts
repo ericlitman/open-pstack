@@ -32,7 +32,9 @@ const table = (header: readonly string[], rows: readonly (readonly string[])[]):
 function route(adapter: ProviderAdapter, parent: Parent): string {
   if (adapter.id !== parent) return "external runner";
   const native = `native ${code(PARENTS[parent].native)}`;
-  return PARENTS[parent].externalSelf ? `${native} or external runner` : native;
+  return PARENTS[parent].explicitLaneRoute === "native"
+    ? native
+    : `explicit descriptor: external runner; ${code("inherit-parent")}, ${code("auto")}: ${native}`;
 }
 
 function policy(value: EnvPolicy, long: boolean): string {

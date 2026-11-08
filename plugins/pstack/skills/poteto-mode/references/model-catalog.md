@@ -67,7 +67,7 @@ Rolling aliases:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | claude | native `Agent` | external runner | external runner | `read-only`, `isolated-write` | stdin | provider report | read-only: inherited; isolated-write: inherited without `GIT_*` | - |
 | codex | external runner | native `spawn_agent` | external runner | `read-only`, `isolated-write`, `isolated-write-full-access` | stdin | pinned argv | inherited | - |
-| grok | external runner | external runner | native `spawn_subagent` or external runner | `read-only`, `isolated-write` | file | provider report | allowlist | Linux: Landlock and `bwrap`; macOS: any `/var/run/docker.sock` symlink points inside Grok's runtime-socket list |
+| grok | external runner | external runner | explicit descriptor: external runner; `inherit-parent`, `auto`: native `spawn_subagent` | `read-only`, `isolated-write` | file | provider report | allowlist | Linux: Landlock and `bwrap`; macOS: any `/var/run/docker.sock` symlink points inside Grok's runtime-socket list |
 | devin | external runner | external runner | external runner | `read-only`, `isolated-write`, `isolated-write-full-access` | file | provider report | allowlist | - |
 | opencode | external runner | external runner | external runner | `read-only`, `isolated-write-full-access` | stdin | pinned argv | allowlist | - |
 | dsh | external runner | external runner | external runner | `read-only`, `isolated-write` | stdin | pinned argv | allowlist | dsh 0.2.1-rc.2 exactly |

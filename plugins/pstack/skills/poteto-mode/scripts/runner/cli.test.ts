@@ -82,7 +82,7 @@ describe("runner CLI parsing", () => {
       "Usage: pstack-runner --parent <claude|codex|grok> --provider <claude|codex|grok|devin|opencode|dsh|amp|agy|cursor|muse> \\\n"
     );
     const help = stdout.replaceAll("\n", " ");
-    expect(help).toContain("A Grok parent may run a Grok provider here");
+    expect(help).toContain("A Grok parent runs every explicit Grok descriptor here");
     expect(help).toContain("A Claude or Codex parent rejects its own provider");
   });
 
