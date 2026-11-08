@@ -5,6 +5,12 @@ import { BASE_ALLOWLIST, BASE_PREFIXES, effortArgs, finiteNumber, nullableString
 // SIGINT exits 130 and SIGTERM 143, each with no terminal event. Measured with Muse Code 1.4.14.
 const SIGNAL_EXITS = [130, 143];
 
+const SIGNED_IN_USAGE: readonly (readonly [prefix: string, evidence: string])[] = [
+  ["Tier: ", "authenticated"],
+  ["No subscription allowance (api_key)", "api-key"],
+  ["No usage data (server_sent_no_usage)", "subscription-no-usage-data"],
+];
+
 function events(stdout: string): JsonObject[] | null {
   const parsed: JsonObject[] = [];
   for (const line of stdout.split("\n")) {
@@ -74,10 +80,9 @@ export const muse = adapter({
     argv: () => ["usage"],
     retryAfterUnauthenticatedMs: null,
     classify(run) {
-      if (run.exitCode === 0 && run.stdout.startsWith("Tier: ")) return { kind: "passed", evidence: "authenticated" };
-      if (run.exitCode === 0 && run.stdout.startsWith("No subscription allowance (api_key)")) return { kind: "passed", evidence: "api-key" };
-      if (run.exitCode === 0 && run.stdout.startsWith("No usage data (server_sent_no_usage)")) {
-        return { kind: "passed", evidence: "subscription-no-usage-data" };
+      if (run.exitCode === 0) {
+        const signedIn = SIGNED_IN_USAGE.find(([prefix]) => run.stdout.startsWith(prefix));
+        if (signedIn !== undefined) return { kind: "passed", evidence: signedIn[1] };
       }
       return run.exitCode === 1 && /^muse usage: not logged in:/m.test(run.stderr) ? { kind: "unauthenticated" } : { kind: "inconclusive" };
     },
