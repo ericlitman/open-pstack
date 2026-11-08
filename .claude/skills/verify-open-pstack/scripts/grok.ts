@@ -1,12 +1,12 @@
 import { existsSync } from 'node:fs';
 import { copyFile, open, readdir, realpath } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { track, treeHash } from './io.ts';
 import type { SessionRecord } from './types.ts';
 
 export const GROK_PARENT = { model: 'grok-4.7', effort: 'low' } as const;
 export const GROK_TOOLS = ['read_file', 'list_dir', 'grep', 'write', 'search_replace', 'todo_write', 'run_terminal_command', 'spawn_subagent', 'get_command_or_subagent_output'];
-export const GROK_NATIVE_FILES = ['summary.json', 'tool_definitions.json'] as const;
+export const GROK_NATIVE_FILES = ['summary.json', 'tool_definitions.json', 'chat_history.jsonl'] as const;
 const DEPENDENCIES = ['skills/poteto-mode/scripts/node_modules'];
 
 type Message = Record<string, any>;
@@ -110,7 +110,15 @@ export async function grokSession(options: Options): Promise<{ exitCode: number;
   }
 }
 
-export function parseGrok(text: string, exitCode: number, started: number, toolDefinitions: string): SessionRecord {
+export function referencedSkills(chatHistory: string): string[] {
+  return chatHistory.split('\n').filter(line => line.trim()).map(line => JSON.parse(line) as Message)
+    .filter(entry => entry.type === 'user' && Array.isArray(entry.content))
+    .flatMap(entry => entry.content.map((part: Message) => typeof part.text === 'string' ? part.text : '').join('\n')
+      .match(/<skills_referenced>[\s\S]*?<\/skills_referenced>/g) ?? [])
+    .flatMap(block => [...block.matchAll(/<skill name="[^"]+" path="([^"]+)"\/>/g)].map(match => dirname(resolve(match[1]!))));
+}
+
+export function parseGrok(text: string, exitCode: number, started: number, toolDefinitions: string, chatHistory: string): SessionRecord {
   if (exitCode !== 0) throw new Error(`exit:${exitCode}`);
   const lines = text.split('\n').filter(line => line.trim()).map(line => JSON.parse(line) as { from: 'agent' | 'client'; message: Message });
   const agent = lines.filter(l => l.from === 'agent').map(l => l.message), client = lines.filter(l => l.from === 'client').map(l => l.message);
@@ -146,7 +154,8 @@ export function parseGrok(text: string, exitCode: number, started: number, toolD
     result: call.output === undefined ? undefined : typeof call.output === 'string' ? call.output : JSON.stringify(call.output) }));
   const skills = [...calls.values()].filter(call => call.session === main && call.name === 'read_file' && call.status === 'completed' &&
     typeof call.input.target_file === 'string' && call.input.target_file.endsWith('/SKILL.md'))
-    .map(call => dirname((call.output as Message | undefined)?.FileContent?.absolute_path ?? call.input.target_file));
+    .map(call => dirname((call.output as Message | undefined)?.FileContent?.absolute_path ?? call.input.target_file))
+    .concat(referencedSkills(chatHistory));
   const definitions = JSON.parse(toolDefinitions) as Message[];
   const agents = definitions.find(d => d.function?.name === 'spawn_subagent')?.function.parameters?.properties?.subagent_type?.enum;
   return { harness: 'grok', exitCode, started, skills, context: [], agents: Array.isArray(agents) ? agents : [],

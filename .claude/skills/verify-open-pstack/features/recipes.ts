@@ -803,8 +803,8 @@ const t3Dispatch: Case = {
 
 const GROK_LANES = [
   { role: 'why investigators, synthesizer', descriptor: 'inherit-parent' },
-  { role: 'how explorer', descriptor: 'grok:grok-4.7@low', provider: 'grok', model: 'grok-4.7', effort: 'low' },
-  { role: 'how explainer', descriptor: 'claude:claude-haiku-5-5@low', provider: 'claude', model: 'claude-haiku-5-5', effort: 'low' },
+  { role: 'how explorer', descriptor: 'grok:grok-4.7@low', provider: 'grok', model: 'grok-4.7', effort: 'low', proof: 'provider-report' },
+  { role: 'how explainer', descriptor: 'codex:gpt-6-luna@low', provider: 'codex', model: 'gpt-6-luna', effort: 'low', proof: 'pinned-argv' },
 ] as const;
 const GROK_AGENTS = ['pstack:poteto-agent', 'pstack:comment-sicko'];
 
@@ -815,10 +815,13 @@ export function grokAgents(agents: string[] | undefined): string {
   return 'agents:model-free-only';
 }
 
-export function grokReceipt(receipt: Record<string, any>, lane: { provider: string; model: string; effort: string }, output: string, started: number): void {
+export function grokReceipt(receipt: Record<string, any>, lane: { provider: string; model: string; effort: string; proof: 'provider-report' | 'pinned-argv' }, output: string, started: number): void {
   if (receipt.status !== 'complete') throw new Error(`receipt-status:${receipt.status}`);
   if (receipt.parent !== 'grok' || receipt.provider !== lane.provider || receipt.model !== lane.model || receipt.effort !== lane.effort || receipt.mode !== 'read-only') throw new Error(`receipt-route-mismatch:${lane.provider}`);
-  if (receipt.modelVerified !== true || receipt.modelEvidence !== 'provider-report') throw new Error(`receipt-model-unverified:${lane.provider}`);
+  const proved = lane.proof === 'provider-report'
+    ? receipt.modelVerified === true && receipt.modelEvidence === 'provider-report'
+    : receipt.modelVerified === false && receipt.modelEvidence === 'pinned-argv' && receipt.reportedModel === null;
+  if (!proved) throw new Error(`receipt-model-unverified:${lane.provider}`);
   if (receipt.outputPath !== output || !(Date.parse(receipt.startedAt) >= started)) throw new Error(`receipt-not-this-session:${lane.provider}`);
 }
 
@@ -860,15 +863,16 @@ const grokDispatch: Case = {
   },
 };
 
+const GROK_SETUP_DESCRIPTOR = 'grok:grok-4.7@low';
 const grokSetup: Case = {
   id: 'configure',
-  prompt: f => `${invoke(f.harness, 'setup-pstack', `Use these answers and ask nothing else. Role assignments: change every role assigned to a model-matrix family to the Opus family, and keep inherit-parent and auto roles unchanged. Opus requested effort: high. Decline every writer sandbox opt-in. I confirm every write. Write the setup report to ${join(f.dir, 'result.md')}.`)} Do not push, post, or contact GitHub.`,
+  prompt: f => `${invoke(f.harness, 'setup-pstack', `Use these answers and ask nothing else. Role assignments: change every role assigned to a model-matrix family to the Grok family, and keep inherit-parent and auto roles unchanged. Grok requested effort: low. Decline every writer sandbox opt-in. I confirm every write. Write the setup report to ${join(f.dir, 'result.md')}.`)} Do not push, post, or contact GitHub.`,
   async assert(record, f) {
     const sheet = join(f.configHome, 'rules/pstack-models.md'), assertions = [await grokSkill(record, f, 'setup-pstack'), await written(record, sheet)];
     const text = await readFile(sheet, 'utf8'), descriptors = text.match(DESCRIPTOR) ?? [];
-    if (!descriptors.length || descriptors.some(d => d !== SETUP_DESCRIPTOR)) throw new Error('sheet-descriptors-mismatch');
+    if (!descriptors.length || descriptors.some(d => d !== GROK_SETUP_DESCRIPTOR)) throw new Error('sheet-descriptors-mismatch');
     if (settingLines(text).some(line => line.endsWith(': full-access'))) throw new Error('setting-full-access');
-    return { assertions: [...assertions, `sheet:${SETUP_DESCRIPTOR}`, 'no-full-access'], files: [sheet] };
+    return { assertions: [...assertions, `sheet:${GROK_SETUP_DESCRIPTOR}`, 'no-full-access'], files: [sheet] };
   },
 };
 

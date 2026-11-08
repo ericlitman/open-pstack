@@ -218,7 +218,7 @@ export class MacDriver implements Driver {
               const text = await readFile(stdout, 'utf8');
               const rollout = harness === 'codex' ? await this.rollout(env.CODEX_HOME!, text, join(records, `${c.id}.rollout.jsonl`)) : '';
               if (rollout) evidence.push(join(records, `${c.id}.rollout.jsonl`));
-              record = harness === 'grok' ? parseGrok(text, exitCode, started, await readFile(join(records, `${c.id}.tool_definitions.json`), 'utf8')) : parseSession(harness, text, exitCode, started, rollout);
+              record = harness === 'grok' ? parseGrok(text, exitCode, started, await readFile(join(records, `${c.id}.tool_definitions.json`), 'utf8'), await readFile(join(records, `${c.id}.chat_history.jsonl`), 'utf8')) : parseSession(harness, text, exitCode, started, rollout);
               result = await c.assert(record, fixture);
             } catch (error) { throw new Error(`${harness}/${feature}/${c.id}: ${error instanceof Error ? error.message : String(error)}`); }
             assertions.push(...['exit-0', ...result.assertions].map(id => `${c.id}:${id}`));

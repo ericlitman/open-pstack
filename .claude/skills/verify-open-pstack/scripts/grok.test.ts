@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { grokAgents, grokReceipt } from '../features/recipes.ts';
-import { candidatePlugin, grokLaunch, parentServed, parseGrok, permissionAnswer } from './grok.ts';
+import { candidatePlugin, grokLaunch, parentServed, parseGrok, permissionAnswer, referencedSkills } from './grok.ts';
 import { treeHash } from './io.ts';
 
 const MAIN = '01a1bc71-6890-7753-8fe5-126e7a38df5c', CHILD = '01a1bc71-7514-7380-a5ac-8381a8802b0c';
@@ -32,7 +32,7 @@ describe('ACP stream parsing', () => {
   ].join('\n');
 
   test('maps native tool calls, child calls to their spawn call, skill loads and commands', () => {
-    const record = parseGrok(stream, 0, 1, DEFINITIONS);
+    const record = parseGrok(stream, 0, 1, DEFINITIONS, '');
     expect(record.skills).toEqual(['/private/candidate/plugins/pstack/skills/poteto-mode']);
     expect(record.commands).toEqual(['pstack-runner --parent grok']);
     expect(record.agents).toEqual(['pstack:poteto-agent', 'pstack:comment-sicko']);
@@ -42,16 +42,24 @@ describe('ACP stream parsing', () => {
     expect(record.tools.find(t => t.id === 'mcp')?.failed).toBe(true);
   });
 
+  test('a slash command expansion in the parent chat history counts as a load from its recorded path', () => {
+    const text = '<skills_referenced>\n<skill name="pstack:poteto-mode" path="/private/candidate/plugins/pstack/./skills/poteto-mode/SKILL.md"/>\n</skills_referenced>';
+    const history = [JSON.stringify({ type: 'system', content: '<skills_referenced><skill name="x" path="/system/x/SKILL.md"/></skills_referenced>' }),
+      JSON.stringify({ type: 'user', content: [{ type: 'text', text }] })].join('\n');
+    expect(referencedSkills(history)).toEqual(['/private/candidate/plugins/pstack/skills/poteto-mode']);
+    expect(parseGrok([...opened].join('\n'), 0, 1, DEFINITIONS, history).skills).toEqual(['/private/candidate/plugins/pstack/skills/poteto-mode']);
+  });
+
   test('a refused or failed skill read does not count as a load', () => {
     const failed = [...opened, call(MAIN, 'skill', 'read_file', { target_file: '/x/SKILL.md' }), done(MAIN, 'skill', null, 'failed')].join('\n');
-    expect(parseGrok(failed, 0, 1, DEFINITIONS).skills).toEqual([]);
+    expect(parseGrok(failed, 0, 1, DEFINITIONS, '').skills).toEqual([]);
   });
 
   test('a turn that ends while a tool call or a child session is still running fails', () => {
-    expect(() => parseGrok([...opened, call(MAIN, 'spawn', 'spawn_subagent', {})].join('\n'), 0, 1, DEFINITIONS)).toThrow('grok-tool-pending:spawn_subagent');
+    expect(() => parseGrok([...opened, call(MAIN, 'spawn', 'spawn_subagent', {})].join('\n'), 0, 1, DEFINITIONS, '')).toThrow('grok-tool-pending:spawn_subagent');
     const orphan = [...opened, call(CHILD, 'child-read', 'read_file', {}), done(CHILD, 'child-read', {})].join('\n');
-    expect(() => parseGrok(orphan, 0, 1, DEFINITIONS)).toThrow('grok-children-pending');
-    expect(() => parseGrok(stream, 3, 1, DEFINITIONS)).toThrow('exit:3');
+    expect(() => parseGrok(orphan, 0, 1, DEFINITIONS, '')).toThrow('grok-children-pending');
+    expect(() => parseGrok(stream, 3, 1, DEFINITIONS, '')).toThrow('exit:3');
   });
 });
 
@@ -95,13 +103,17 @@ describe('grok:dispatch predicates', () => {
     expect(() => grokAgents(['pstack:poteto-agent', 'pstack:comment-sicko', 'pstack:pstack-opus-low'])).toThrow('grok-claude-lane-agent-offered:pstack:pstack-opus-low');
   });
   test('a runner lane receipt must be complete, on its route, provider-verified and from this session', () => {
-    const lane = { provider: 'grok', model: 'grok-4.7', effort: 'low' };
+    const lane = { provider: 'grok', model: 'grok-4.7', effort: 'low', proof: 'provider-report' } as const;
     const receipt = { status: 'complete', parent: 'grok', ...lane, mode: 'read-only', modelVerified: true, modelEvidence: 'provider-report', outputPath: '/f/out.md', startedAt: '2026-11-08T00:00:01Z' };
     const started = Date.parse('2026-11-08T00:00:00Z');
     expect(() => grokReceipt(receipt, lane, '/f/out.md', started)).not.toThrow();
     expect(() => grokReceipt({ ...receipt, parent: 'claude' }, lane, '/f/out.md', started)).toThrow('receipt-route-mismatch:grok');
     expect(() => grokReceipt({ ...receipt, modelVerified: false, modelEvidence: 'pinned-argv' }, lane, '/f/out.md', started)).toThrow('receipt-model-unverified:grok');
     expect(() => grokReceipt({ ...receipt, status: 'failed' }, lane, '/f/out.md', started)).toThrow('receipt-status:failed');
+    const pinned = { provider: 'codex', model: 'gpt-6-luna', effort: 'low', proof: 'pinned-argv' } as const;
+    const codex = { ...receipt, ...pinned, modelVerified: false, modelEvidence: 'pinned-argv', reportedModel: null };
+    expect(() => grokReceipt(codex, pinned, '/f/out.md', started)).not.toThrow();
+    expect(() => grokReceipt({ ...codex, modelEvidence: null }, pinned, '/f/out.md', started)).toThrow('receipt-model-unverified:codex');
     expect(() => grokReceipt(receipt, lane, '/f/out.md', started + 5000)).toThrow('receipt-not-this-session:grok');
   });
 });
