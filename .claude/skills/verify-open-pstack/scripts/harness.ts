@@ -5,6 +5,7 @@ import { CLAUDE_TOOLS, recipe, type Fixture } from '../features/recipes.ts';
 import { requiredFeatures, requiredHarnesses } from './core.ts';
 import { command, isolatedEnv, retainedFile, save, session, treeHash, type Command, type Session } from './io.ts';
 import { doctor, t3Binary } from './doctor.ts';
+import { grokSession, parseGrok } from './grok.ts';
 import { assertCodexAuth, linkCodexAuth, linkMuseConfig, removeCodexHome, restoreSetup, snapshotSetup, type SetupSnapshot } from './isolation.ts';
 import { sourceDigest, sourceHash } from './provenance.ts';
 import { publishable } from './verify.ts';
@@ -12,7 +13,7 @@ import { REPO, type Driver, type Harness, type Installation, type Observation, t
 
 const T3_PARENT_MODEL = 'claude-sonnet-5-5';
 const setupFeature = (feature: string): boolean => feature === 'setup' || feature === 'skill-invocation:setup-pstack';
-export function launch(harness: Exclude<Harness, 't3'>, workspace: string, options: { cwd: string; addDirs: string[]; codexSandbox?: 'danger-full-access'; claudePermission?: 'bypassPermissions' }): string[] {
+export function launch(harness: Exclude<Harness, 't3' | 'grok'>, workspace: string, options: { cwd: string; addDirs: string[]; codexSandbox?: 'danger-full-access'; claudePermission?: 'bypassPermissions' }): string[] {
   const addDirs = options.addDirs.flatMap(dir => ['--add-dir', dir]);
   return harness === 'claude'
     ? ['claude', '-p', '--input-format', 'stream-json', '--replay-user-messages', '--output-format', 'stream-json', '--verbose', '--no-session-persistence',
@@ -133,7 +134,7 @@ export class MacDriver implements Driver {
         verifyCodexEnabled(listed);
         await save(join(root, 'codex-plugins.json'), JSON.parse(listed));
       }
-      const manifest = JSON.parse(await readFile(join(location, harness === 'codex' ? '.codex-plugin/plugin.json' : '.claude-plugin/plugin.json'), 'utf8'));
+      const manifest = JSON.parse(await readFile(join(location, { codex: '.codex-plugin', grok: '.grok-plugin', claude: '.claude-plugin', t3: '.claude-plugin' }[harness], 'plugin.json'), 'utf8'));
       if (await sourceDigest(workspace) !== pinnedSource) throw new Error('Pinned source changed during installation');
       installs.push({ harness, sha: receipt.sha, home, location, treeHash: expected, sourceHash: pinnedSource, pluginVersion: manifest.version,
         cliVersion: (await candidateRun([harness === 't3' ? await t3Binary() : harness, '--version'], { env })).trim() });
@@ -197,7 +198,7 @@ export class MacDriver implements Driver {
         const slug = feature.replace(/[^a-z0-9-]/g, '-'), dir = join(home, 'fixtures', slug), records = join(receipt.artifactRoot, 'sessions', harness, slug);
         for (const path of [dir, records]) await mkdir(path, { recursive: true, mode: 0o700 });
         const fixture: Fixture = { harness, dir, workspace, location: installation.location, run: this.candidate(home),
-          configHome: harness === 'codex' ? env.CODEX_HOME! : env.CLAUDE_CONFIG_DIR ?? join(env.HOME!, '.claude') };
+          configHome: harness === 'codex' ? env.CODEX_HOME! : harness === 'grok' ? env.GROK_HOME ?? join(env.HOME!, '.grok') : env.CLAUDE_CONFIG_DIR ?? join(env.HOME!, '.claude') };
         const assertions: string[] = [], evidence: string[] = [];
         if (setupFeature(feature)) this.setup = await snapshotSetup();
         try {
@@ -205,17 +206,19 @@ export class MacDriver implements Driver {
             await c.prepare?.(fixture);
             const stdout = join(records, `${c.id}.jsonl`), stderr = join(records, `${c.id}.stderr`), cwd = c.cwd === 'workspace' ? workspace : dir;
             const started = Date.now(), thread = join(records, `${c.id}.thread.json`);
-            let exitCode = 0;
-            if (harness === 't3') await this.t3Thread(installation.location, cwd, join(home, 'server', `${slug}.${c.id}`), env, c.prompt(fixture), { thread, stderr, transcript: stdout });
+            let exitCode = 0, native: string[] = [];
+            if (harness === 'grok') ({ exitCode, files: native } = await grokSession({ location: installation.location, tree: installation.treeHash, cwd, env, prompt: c.prompt(fixture),
+              transcript: stdout, stderr, prefix: join(records, c.id) }));
+            else if (harness === 't3') await this.t3Thread(installation.location, cwd, join(home, 'server', `${slug}.${c.id}`), env, c.prompt(fixture), { thread, stderr, transcript: stdout });
             else exitCode = await this.record(launch(harness, workspace, { cwd, addDirs: cwd === dir ? [] : [dir], codexSandbox: c.codexSandbox, claudePermission: c.claudePermission }),
               { cwd, env, input: sessionInput(harness, c.prompt(fixture)), stdout, stderr });
-            evidence.push(stdout, ...harness === 't3' ? [thread] : [], ...(await stat(stderr)).size ? [stderr] : []);
+            evidence.push(stdout, ...harness === 't3' ? [thread] : [], ...native, ...(await stat(stderr)).size ? [stderr] : []);
             let record: SessionRecord, result;
             try {
               const text = await readFile(stdout, 'utf8');
               const rollout = harness === 'codex' ? await this.rollout(env.CODEX_HOME!, text, join(records, `${c.id}.rollout.jsonl`)) : '';
               if (rollout) evidence.push(join(records, `${c.id}.rollout.jsonl`));
-              record = parseSession(harness, text, exitCode, started, rollout);
+              record = harness === 'grok' ? parseGrok(text, exitCode, started, await readFile(join(records, `${c.id}.tool_definitions.json`), 'utf8')) : parseSession(harness, text, exitCode, started, rollout);
               result = await c.assert(record, fixture);
             } catch (error) { throw new Error(`${harness}/${feature}/${c.id}: ${error instanceof Error ? error.message : String(error)}`); }
             assertions.push(...['exit-0', ...result.assertions].map(id => `${c.id}:${id}`));
@@ -234,7 +237,8 @@ export class MacDriver implements Driver {
         const passed = `passed: ${assertions.join(' ')}`;
         observations.push({ harness, feature, reviewer: 'recipe', assertions,
           surface: { claude: 'claude -p stream-json with the candidate plugin-dir', codex: 'codex exec --json with the run-owned candidate installation',
-            t3: 't3 thread start on a run-owned T3 server whose Claude provider loads the candidate plugin-dir' }[harness],
+            t3: 't3 thread start on a run-owned T3 server whose Claude provider loads the candidate plugin-dir',
+            grok: 'grok agent stdio (ACP) with the candidate plugin-dir' }[harness],
           action: `recipe ${feature}: ${cases.map(c => c.id).join(', ')}`,
           observed: publishable(passed) ? passed : `passed ${assertions.length} assertions; ids retained privately`,
           transcript: transcript!.path, transcriptHash: transcript!.sha256, artifacts });

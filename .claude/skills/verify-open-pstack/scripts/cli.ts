@@ -26,7 +26,7 @@ export function parse(args: string[]): Options {
         if (!ROUTE.test(value) || routes.includes(value)) throw new Error('Runner route must be a distinct PROVIDER:MODEL@EFFORT');
         routes.push(value);
       } else if (arg === '--feature') {
-        if (!/^(claude|codex|t3):[a-z][a-z0-9:-]+$/.test(value) || features.includes(value)) throw new Error('Feature must be a distinct HARNESS:FEATURE, such as claude:agent-preload:poteto-agent');
+        if (!/^(claude|codex|t3|grok):[a-z][a-z0-9:-]+$/.test(value) || features.includes(value)) throw new Error('Feature must be a distinct HARNESS:FEATURE, such as claude:agent-preload:poteto-agent');
         features.push(value);
       } else if (arg === '--wide') {
         if (!value.trim() || !publishable(value)) throw new Error('Wide reason must be nonblank printable ASCII, at most 160 characters, without backticks or angle brackets');

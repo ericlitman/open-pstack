@@ -81,3 +81,22 @@ test('doctor refuses non-Mac live verification before commands', async () => {
   await expect(doctor(root, async args => { calls.push(args); return ''; }, 'linux')).rejects.toThrow('operator Mac');
   expect(calls).toEqual([]);
 });
+test('parent doctor checks Grok only when a grok feature is named, from CLI output only', async () => {
+  const root = await fixture(), calls: string[][] = [];
+  const run: Command = async args => {
+    calls.push(args);
+    if (args.join(' ') === 'grok models') return 'You are logged in with grok.com.\n\nAvailable models:\n  * grok-4.7 (default)\n';
+    if (args.join(' ') === 'grok agent --help') return '--plugin-dir --no-leader --model --reasoning-effort';
+    if (args.join(' ') === 'claude auth status') return '{"loggedIn": true}';
+    return capability(args)!;
+  };
+  await doctor(root, run, 'darwin', false, ['claude']);
+  expect(calls.some(args => args[0] === 'grok')).toBe(false);
+  await rm(join(root, 'doctor.json'));
+  await doctor(root, run, 'darwin', false, ['grok']);
+  const report = JSON.parse(await readFile(join(root, 'doctor.json'), 'utf8'));
+  expect(report.checks['grok login']).toBe('logged in');
+  expect(calls.filter(args => args[0] === 'grok').map(args => args.join(' '))).toEqual(['grok --version', 'grok agent --help', 'grok models']);
+  await expect(doctor(await fixture(), async args => args.join(' ') === 'grok models' ? 'Not logged in' : run(args), 'darwin', false, ['grok'])).rejects.toBeInstanceOf(LoginRequired);
+  await expect(doctor(await fixture(), async args => args.join(' ') === 'grok agent --help' ? '--model' : run(args), 'darwin', false, ['grok'])).rejects.toThrow('Grok agent missing --plugin-dir');
+});

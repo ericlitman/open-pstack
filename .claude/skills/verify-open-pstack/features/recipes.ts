@@ -54,7 +54,7 @@ export async function readCatalog(location: string): Promise<Catalog> {
   const kept = new Map(rows(section('Kept predecessors and normalization').split('\nRolling aliases:')[0]!).slice(1)
     .map(([provider, model, , current]): [string, string] => [`${provider}:${model}`, `${provider}:${current}`]));
   const [header = [], ...routes] = rows(section('Routes'));
-  const column = { claude: header.indexOf('Claude Code parent'), codex: header.indexOf('Codex parent'), t3: -1 };
+  const column = { claude: header.indexOf('Claude Code parent'), codex: header.indexOf('Codex parent'), t3: -1, grok: -1 };
   if (!defaults.size || column.claude < 0 || column.codex < 0) throw new Error('catalog-unreadable');
   return { defaults, kept, route(harness, descriptor) {
     if (!descriptor.includes(':')) return 'native';
@@ -801,9 +801,85 @@ const t3Dispatch: Case = {
   },
 };
 
+const GROK_LANES = [
+  { role: 'why investigators, synthesizer', descriptor: 'inherit-parent' },
+  { role: 'how explorer', descriptor: 'grok:grok-4.7@low', provider: 'grok', model: 'grok-4.7', effort: 'low' },
+  { role: 'how explainer', descriptor: 'claude:claude-haiku-5-5@low', provider: 'claude', model: 'claude-haiku-5-5', effort: 'low' },
+] as const;
+const GROK_AGENTS = ['pstack:poteto-agent', 'pstack:comment-sicko'];
+
+export function grokAgents(agents: string[] | undefined): string {
+  if (!agents || GROK_AGENTS.some(agent => !agents.includes(agent))) throw new Error('grok-model-free-agents-missing');
+  const lane = agents.find(agent => agent.startsWith('pstack:pstack-'));
+  if (lane) throw new Error(`grok-claude-lane-agent-offered:${lane}`);
+  return 'agents:model-free-only';
+}
+
+export function grokReceipt(receipt: Record<string, any>, lane: { provider: string; model: string; effort: string }, output: string, started: number): void {
+  if (receipt.status !== 'complete') throw new Error(`receipt-status:${receipt.status}`);
+  if (receipt.parent !== 'grok' || receipt.provider !== lane.provider || receipt.model !== lane.model || receipt.effort !== lane.effort || receipt.mode !== 'read-only') throw new Error(`receipt-route-mismatch:${lane.provider}`);
+  if (receipt.modelVerified !== true || receipt.modelEvidence !== 'provider-report') throw new Error(`receipt-model-unverified:${lane.provider}`);
+  if (receipt.outputPath !== output || !(Date.parse(receipt.startedAt) >= started)) throw new Error(`receipt-not-this-session:${lane.provider}`);
+}
+
+async function grokSkill(record: SessionRecord, f: Fixture, skill: string): Promise<string> {
+  if (!record.skills.includes(await realpath(join(f.location, 'skills', skill)))) throw new Error(`skill-not-loaded-from-candidate:pstack:${skill}`);
+  return 'skill-loaded-from-candidate';
+}
+
+const grokDispatch: Case = {
+  id: 'dispatch',
+  async prepare(f) {
+    await files(f.dir, { 'pstack-models.md': sheetText(GROK_LANES.map(lane => [lane.role, [lane.descriptor]])),
+      ...Object.fromEntries(GROK_LANES.map((_, index) => [`marker-${index + 1}.txt`, `${crypto.randomUUID()}\n`])) });
+  },
+  prompt: f => `${invoke(f.harness, 'poteto-mode', `Do no engineering work. For this task the pstack model sheet is ${join(f.dir, 'pstack-models.md')}; use it in place of any configured sheet. Dispatch exactly one read-only lane for each of these roles, in this order, and nothing else: ${GROK_LANES.map(lane => JSON.stringify(lane.role)).join(', ')}. Lane N's whole task: "Read ${join(f.dir, 'marker-N.txt')} and reply with its exact contents. Do not edit files." A lane that needs an output or receipt path uses ${join(f.dir, 'lane-N.output.md')} and ${join(f.dir, 'lane-N.receipt.json')}. Wait for every lane to finish, then reply with each lane's result.`)} ${rules(f.dir)}`,
+  async assert(record, f) {
+    const assertions = [await grokSkill(record, f, 'poteto-mode'), grokAgents(record.agents)];
+    const markers = await Promise.all(GROK_LANES.map(async (_, index) => (await readFile(join(f.dir, `marker-${index + 1}.txt`), 'utf8')).trim()));
+    const spawned = record.tools.filter(t => t.name === 'spawn_subagent' && !t.failed);
+    if (spawned.length !== 1 || spawned[0]!.input.subagent_type !== 'pstack:poteto-agent') throw new Error(`native-lanes:${spawned.map(t => t.input.subagent_type).join(',')}`);
+    const native = spawned[0]!, completed = parseJson(native.result) as Record<string, any> | undefined;
+    if (completed?.type !== 'SubagentCompleted' || completed.subagent_type !== 'pstack:poteto-agent' || !String(completed.output).includes(markers[0]!)) throw new Error('native-lane-result-mismatch');
+    if (!record.tools.some(t => t.parent === native.id)) throw new Error('native-child-did-not-run');
+    if (await lstat(join(f.dir, 'lane-1.receipt.json')).catch(() => undefined)) throw new Error('native-lane-used-runner');
+    assertions.push('native:pstack:poteto-agent');
+    const paths = [join(f.dir, 'pstack-models.md')];
+    for (const [index, lane] of GROK_LANES.entries()) {
+      if (!('provider' in lane)) continue;
+      const at = (name: string) => join(f.dir, `lane-${index + 1}.${name}`);
+      if (!record.commands.some(c => c.includes('pstack-runner') && c.includes('--parent grok') && c.includes(`--provider ${lane.provider}`))) throw new Error(`runner-not-run:${lane.provider}`);
+      grokReceipt(JSON.parse(await readFile(at('receipt.json'), 'utf8')), lane, at('output.md'), record.started);
+      if (!(await readFile(at('output.md'), 'utf8')).includes(markers[index]!)) throw new Error(`marker-missing:${lane.provider}`);
+      assertions.push(`runner:${lane.descriptor}`);
+      paths.push(at('receipt.json'), at('output.md'));
+    }
+    const exchange = join(f.dir, 'native-lane.json');
+    await writeFile(exchange, JSON.stringify({ request: native.input, response: completed }, null, 2));
+    return { assertions: [...assertions, 'markers-returned'], files: [exchange, ...paths] };
+  },
+};
+
+const grokSetup: Case = {
+  id: 'configure',
+  prompt: f => `${invoke(f.harness, 'setup-pstack', `Use these answers and ask nothing else. Role assignments: change every role assigned to a model-matrix family to the Opus family, and keep inherit-parent and auto roles unchanged. Opus requested effort: high. Decline every writer sandbox opt-in. I confirm every write. Write the setup report to ${join(f.dir, 'result.md')}.`)} Do not push, post, or contact GitHub.`,
+  async assert(record, f) {
+    const sheet = join(f.configHome, 'rules/pstack-models.md'), assertions = [await grokSkill(record, f, 'setup-pstack'), await written(record, sheet)];
+    const text = await readFile(sheet, 'utf8'), descriptors = text.match(DESCRIPTOR) ?? [];
+    if (!descriptors.length || descriptors.some(d => d !== SETUP_DESCRIPTOR)) throw new Error('sheet-descriptors-mismatch');
+    if (settingLines(text).some(line => line.endsWith(': full-access'))) throw new Error('setting-full-access');
+    return { assertions: [...assertions, `sheet:${SETUP_DESCRIPTOR}`, 'no-full-access'], files: [sheet] };
+  },
+};
+
 export function recipe(feature: string, harness: Harness, routes: string[] = []): Case[] {
   if (harness === 't3') {
     if (feature === 'dispatch') return [t3Dispatch];
+    throw new Error(`missing-recipe:${harness}/${feature}`);
+  }
+  if (harness === 'grok') {
+    if (feature === 'dispatch') return [grokDispatch];
+    if (feature === 'setup') return [grokSetup];
     throw new Error(`missing-recipe:${harness}/${feature}`);
   }
   if (feature === 'assets:codex') throw new Error('unsupported-native-consumer:assets:codex');
