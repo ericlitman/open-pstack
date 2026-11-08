@@ -57,6 +57,9 @@ export const session: Session = async (args, options) => {
     } finally { await stderr.close(); }
   } finally { await stdout.close(); }
 };
+export function grokHome(env: Readonly<Record<string, string | undefined>>): string {
+  return env.GROK_HOME || join(env.HOME!, '.grok');
+}
 export function isolatedEnv(state: string, _harness?: 'claude' | 'codex'): Record<string, string> {
   if (!isAbsolute(state)) throw new Error('Candidate state must be an absolute run-owned directory');
   const { HOME, USER, LOGNAME } = process.env;
@@ -69,7 +72,7 @@ export function isolatedEnv(state: string, _harness?: 'claude' | 'codex'): Recor
     GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_SYSTEM: '/dev/null', GIT_CONFIG_NOSYSTEM: '1',
     GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'credential.helper', GIT_CONFIG_VALUE_0: '',
     ...(process.env.CLAUDE_CONFIG_DIR !== undefined ? { CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR } : {}),
-    ...(process.env.GROK_HOME !== undefined ? { GROK_HOME: process.env.GROK_HOME } : {}),
+    ...(process.env.GROK_HOME ? { GROK_HOME: process.env.GROK_HOME } : {}),
     CODEX_HOME: join(state, '.codex') };
 }
 export async function save(path: string, value: unknown): Promise<void> {

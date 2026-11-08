@@ -46,6 +46,7 @@ Reflect never edits a skill inside the plugin cache, `<config-home>/plugins/cach
 | --- | --- | --- |
 | Claude Code | `.claude/skills/<skill>/` | `<config-home>/skills/<skill>/` |
 | Codex | `.agents/skills/<skill>/` | `$HOME/.agents/skills/<skill>/` |
+| Grok | `.grok/skills/<skill>/` | `<config-home>/skills/<skill>/` |
 
 The copy registers under its plain name beside the plugin's `pstack:<skill>`, and does not replace it. In the copy, rewrite each relative link that leaves the skill folder, such as `../poteto-mode/`, to the absolute path of that folder in the installed plugin.
 

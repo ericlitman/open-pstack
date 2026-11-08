@@ -79,12 +79,15 @@ describe('registry and ownership', () => {
   test('only the Grok surfaces reach grok:dispatch and grok:setup, and self-test never adds a Grok session', () => {
     const reach = (filename: string) => classify([{ filename }], registry).features.filter(f => f.startsWith('grok:'));
     for (const filename of ['plugins/pstack/skills/poteto-mode/references/provider-dispatch.md', 'plugins/pstack/skills/poteto-mode/references/codex-tools.md',
-      'plugins/pstack/.grok-plugin/plugin.json', '.claude/skills/verify-open-pstack/scripts/doctor.ts']) expect(reach(filename)).toEqual(['grok:dispatch']);
+      'plugins/pstack/.grok-plugin/plugin.json', '.claude/skills/verify-open-pstack/scripts/doctor.ts',
+      'plugins/pstack/grok-agents/poteto-agent.md', 'plugins/pstack/grok-agents/comment-sicko.md',
+      'plugins/pstack/skills/poteto-mode/references/model-catalog.md', 'plugins/pstack/skills/poteto-mode/SKILL.md',
+      'plugins/pstack/skills/poteto-mode/scripts/runner/types.ts', 'plugins/pstack/skills/poteto-mode/scripts/runner/registry/index.ts',
+      'plugins/pstack/skills/poteto-mode/scripts/runner/registry/render.ts']) expect(reach(filename)).toEqual(['grok:dispatch']);
     expect(reach('.claude/skills/verify-open-pstack/scripts/isolation.ts')).toEqual(['grok:setup']);
     for (const filename of ['plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/scripts/grok.ts',
       '.claude/skills/verify-open-pstack/scripts/harness.ts']) expect(reach(filename)).toEqual(['grok:dispatch', 'grok:setup']);
-    for (const filename of ['plugins/pstack/skills/poteto-mode/references/model-catalog.md', 'plugins/pstack/skills/poteto-mode/SKILL.md',
-      'plugins/pstack/hooks/hooks.json', '.claude/skills/verify-open-pstack/scripts/verify.ts']) expect(reach(filename)).toEqual([]);
+    for (const filename of ['plugins/pstack/hooks/hooks.json', '.claude/skills/verify-open-pstack/scripts/verify.ts']) expect(reach(filename)).toEqual([]);
     const r = receipt(true);
     r.runFeatures = ['grok:dispatch', 'grok:setup'];
     expect(requiredHarnesses(r)).toEqual(['claude', 'codex', 'grok']);
@@ -102,7 +105,7 @@ describe('registry and ownership', () => {
   });
   test('poteto-mode SKILL.md also reaches the Claude agent that preloads it', () => {
     const s = classify([{ filename: 'plugins/pstack/skills/poteto-mode/SKILL.md' }], registry);
-    expect(s.features).toEqual([...both('skill-invocation:poteto-mode'), 'claude:agent-preload:poteto-agent'].sort());
+    expect(s.features).toEqual([...both('skill-invocation:poteto-mode'), 'claude:agent-preload:poteto-agent', 'grok:dispatch'].sort());
   });
   const CATALOG = 'plugins/pstack/skills/poteto-mode/references/model-catalog.md';
   test('catalog-only changes select catalog, setup and runner and no skill check', () => {
@@ -111,7 +114,7 @@ describe('registry and ownership', () => {
       'plugins/pstack/skills/poteto-mode/scripts/runner/registry/models.ts']) {
       const s = classify([{ filename }], registry);
       expect(s.skills).toEqual([]);
-      expect(s.features).toEqual(both('catalog', 'runner', 'setup'));
+      expect(s.features).toEqual(filename === CATALOG ? [...both('catalog', 'runner', 'setup'), 'grok:dispatch'].sort() : both('catalog', 'runner', 'setup'));
     }
     const PROVIDERS = 'plugins/pstack/skills/poteto-mode/scripts/runner/providers/';
     for (const [filename, writers] of [
@@ -125,7 +128,8 @@ describe('registry and ownership', () => {
   });
   test('a renamed or deleted catalog path keeps catalog ownership', () => {
     for (const previous_filename of [CATALOG, 'plugins/pstack/agents/pstack-opus-max.md']) {
-      expect(classify([{ filename: 'docs/moved.md', previous_filename }], registry).features).toEqual(both('catalog', 'runner', 'setup'));
+      expect(classify([{ filename: 'docs/moved.md', previous_filename }], registry).features)
+        .toEqual(previous_filename === CATALOG ? [...both('catalog', 'runner', 'setup'), 'grok:dispatch'].sort() : both('catalog', 'runner', 'setup'));
     }
   });
   test('a catalog change mixed with a shared reference or a skill keeps their checks', () => {

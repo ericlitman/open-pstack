@@ -24,7 +24,10 @@ const T3_DISPATCH_PATHS = [
 ];
 const GROK_TRANSPORT = '.claude/skills/verify-open-pstack/scripts/grok.ts';
 const GROK_REACH: Readonly<Record<string, readonly string[]>> = {
-  'grok:dispatch': [...T3_DISPATCH_PATHS, GROK_TRANSPORT, 'plugins/pstack/.grok-plugin/plugin.json'],
+  'grok:dispatch': [...T3_DISPATCH_PATHS, GROK_TRANSPORT, 'plugins/pstack/.grok-plugin/plugin.json',
+    'plugins/pstack/grok-agents/poteto-agent.md', 'plugins/pstack/grok-agents/comment-sicko.md', 'plugins/pstack/skills/poteto-mode/SKILL.md',
+    'plugins/pstack/skills/poteto-mode/references/model-catalog.md', 'plugins/pstack/skills/poteto-mode/scripts/runner/types.ts',
+    'plugins/pstack/skills/poteto-mode/scripts/runner/registry/index.ts', 'plugins/pstack/skills/poteto-mode/scripts/runner/registry/render.ts'],
   'grok:setup': ['plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/features/recipes.ts',
     '.claude/skills/verify-open-pstack/scripts/harness.ts', '.claude/skills/verify-open-pstack/scripts/isolation.ts', GROK_TRANSPORT],
 };

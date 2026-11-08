@@ -3,7 +3,7 @@ import { copyFile, mkdir, open, readdir, readFile, realpath, stat, writeFile } f
 import { basename, join } from 'node:path';
 import { CLAUDE_TOOLS, recipe, type Fixture } from '../features/recipes.ts';
 import { requiredFeatures, requiredHarnesses } from './core.ts';
-import { command, isolatedEnv, retainedFile, save, session, treeHash, type Command, type Session } from './io.ts';
+import { command, grokHome, isolatedEnv, retainedFile, save, session, treeHash, type Command, type Session } from './io.ts';
 import { doctor, t3Binary } from './doctor.ts';
 import { grokSession, parseGrok } from './grok.ts';
 import { assertCodexAuth, linkCodexAuth, linkMuseConfig, removeCodexHome, restoreSetup, snapshotSetup, type SetupSnapshot } from './isolation.ts';
@@ -198,7 +198,7 @@ export class MacDriver implements Driver {
         const slug = feature.replace(/[^a-z0-9-]/g, '-'), dir = join(home, 'fixtures', slug), records = join(receipt.artifactRoot, 'sessions', harness, slug);
         for (const path of [dir, records]) await mkdir(path, { recursive: true, mode: 0o700 });
         const fixture: Fixture = { harness, dir, workspace, location: installation.location, run: this.candidate(home),
-          configHome: harness === 'codex' ? env.CODEX_HOME! : harness === 'grok' ? env.GROK_HOME ?? join(env.HOME!, '.grok') : env.CLAUDE_CONFIG_DIR ?? join(env.HOME!, '.claude') };
+          configHome: harness === 'codex' ? env.CODEX_HOME! : harness === 'grok' ? grokHome(env) : env.CLAUDE_CONFIG_DIR ?? join(env.HOME!, '.claude') };
         const assertions: string[] = [], evidence: string[] = [];
         if (setupFeature(feature)) this.setup = await snapshotSetup();
         try {
