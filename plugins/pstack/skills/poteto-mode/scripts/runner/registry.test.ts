@@ -106,6 +106,7 @@ describe("registry data", () => {
       ["gemini-3.8-flash", "high"],
       ["composer-2.5", "default"],
       ["gemini-3.7-flash", "high"],
+      ["muse-wonder-full-1.0", "max"],
     ]);
     expect(REGISTRY.families.filter((entry) => entry.provider === "claude").map((entry) => [entry.name, entry.model]))
       .toEqual([["fable", "fable"], ["opus", "opus"], ["sonnet", "sonnet"], ["opus-5-5", "claude-opus-5-5"], ["haiku-5-5", "claude-haiku-5-5"]]);
@@ -501,6 +502,18 @@ describe("resolveLane", () => {
     const ultra = resolveLane(request({ parent: "claude", provider: "codex", model: "gpt-6-astra", effort: "ultra" }));
     expect(ultra.adapter.launch.argv(ultra, { sharedGitDir: null, providerSidecar: null }))
       .toEqual(expect.arrayContaining(["gpt-6-astra", 'model_reasoning_effort="ultra"']));
+  });
+
+  it("resolves Muse Wonder Full 1.0 at max by default, passes each listed effort as a flag, and rejects ultra", () => {
+    const muse = (effort = "max") => resolveLane(request({ parent: "claude", provider: "muse", model: "muse-wonder-full-1.0", effort }));
+    const lane = muse();
+    expect([lane.family?.name, lane.family?.label, lane.model, lane.cliModel, lane.effort])
+      .toEqual(["muse-wonder-full-1.0", "Muse Wonder Full 1.0", "muse-wonder-full-1.0", "muse-wonder-full-1.0", "max"]);
+    expect(effortsOf(REGISTRY.families.find((entry) => entry.name === "muse-wonder-full-1.0")!)).toEqual(["low", "medium", "high", "xhigh", "max"]);
+    expect(muse("high").adapter.launch.argv(muse("high"), { sharedGitDir: null, providerSidecar: null }))
+      .toEqual(expect.arrayContaining(["--model", "muse-wonder-full-1.0", "--reasoning-effort", "high"]));
+    expect(() => muse("ultra")).toThrow("effort ultra is not offered for muse:muse-wonder-full-1.0; choose one of: low, medium, high, xhigh, max");
+    expect(resolveLane(request({ parent: "claude", provider: "muse", model: "muse-wonder-1.0", effort: "high" })).family).toBeNull();
   });
 
   it("maps each Devin effort to its CLI model ID and keeps the descriptor's model for the receipt", () => {
