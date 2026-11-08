@@ -45,6 +45,15 @@ describe("muse preflight", () => {
     expect(muse.preflight.classify({ exitCode: 0, stdout: "No subscription allowance (api_key)\n", stderr: "" }, lane()))
       .toEqual({ kind: "passed", evidence: "api-key" });
   });
+
+  it("passes a signed-in `muse usage` whose server sent no usage data, and keeps any other output inconclusive", () => {
+    expect(muse.preflight.classify({ exitCode: 0, stdout: fixture("usage-no-usage-data.txt"), stderr: "" }, lane()))
+      .toEqual({ kind: "passed", evidence: "subscription-no-usage-data" });
+    expect(muse.preflight.classify({ exitCode: 1, stdout: fixture("usage-no-usage-data.txt"), stderr: "" }, lane()))
+      .toEqual({ kind: "inconclusive" });
+    expect(muse.preflight.classify({ exitCode: 0, stdout: "No usage data (network_error): offline\n", stderr: "" }, lane()))
+      .toEqual({ kind: "inconclusive" });
+  });
 });
 
 describe("muse parse", () => {

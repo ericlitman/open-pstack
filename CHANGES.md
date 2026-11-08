@@ -3,6 +3,10 @@
 Open Pstack lands on green: Mergify merges a ready PR to main once verify and exact-head live-gate pass and no review thread is unresolved, and a workflow resolves Unfret's own threads. A PR that touches `.github/` or the Mergify config also waits for Unfret, and workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## Unreleased
+
+**Muse Wonder Full 1.0 lanes.** The model catalog registers `muse:muse-wonder-full-1.0` as an optional family with efforts `low` to `max` and a default of `max`, so `/setup-pstack` can place it in a role or panel. Muse lanes keep the external runner from every parent, and a Muse writer still needs `muse writer sandbox: full-access`. The Muse preflight also passes a signed-in `muse usage` that prints `No usage data (server_sent_no_usage)`, with the evidence `subscription-no-usage-data`; measured with Muse Code 1.4.14, that output proves the login, and the model call still checks the allowance. Default roles and panels are unchanged.
+
 ## 1.21.0 adds Grok as a parent harness
 
 Open Pstack 1.21.0 keeps the Cursor pstack 0.15.36 sync. Default roles and panels are unchanged.

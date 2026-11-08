@@ -5,6 +5,12 @@ import { BASE_ALLOWLIST, BASE_PREFIXES, effortArgs, finiteNumber, nullableString
 // SIGINT exits 130 and SIGTERM 143, each with no terminal event. Measured with Muse Code 1.4.14.
 const SIGNAL_EXITS = [130, 143];
 
+const SIGNED_IN_USAGE: readonly (readonly [prefix: string, evidence: string])[] = [
+  ["Tier: ", "authenticated"],
+  ["No subscription allowance (api_key)", "api-key"],
+  ["No usage data (server_sent_no_usage)", "subscription-no-usage-data"],
+];
+
 function events(stdout: string): JsonObject[] | null {
   const parsed: JsonObject[] = [];
   for (const line of stdout.split("\n")) {
@@ -74,8 +80,10 @@ export const muse = adapter({
     argv: () => ["usage"],
     retryAfterUnauthenticatedMs: null,
     classify(run) {
-      if (run.exitCode === 0 && run.stdout.startsWith("Tier: ")) return { kind: "passed", evidence: "authenticated" };
-      if (run.exitCode === 0 && run.stdout.startsWith("No subscription allowance (api_key)")) return { kind: "passed", evidence: "api-key" };
+      if (run.exitCode === 0) {
+        const signedIn = SIGNED_IN_USAGE.find(([prefix]) => run.stdout.startsWith(prefix));
+        if (signedIn !== undefined) return { kind: "passed", evidence: signedIn[1] };
+      }
       return run.exitCode === 1 && /^muse usage: not logged in:/m.test(run.stderr) ? { kind: "unauthenticated" } : { kind: "inconclusive" };
     },
   },
@@ -119,13 +127,13 @@ export const muse = adapter({
       "`~/.local/share/muse/` (the session index, model catalog cache, plugins, skills and runtime state it writes) and `~/Library/Application Support/Muse/` on macOS",
     ],
     notes: [
-      "Measured with Muse Code 1.4.14 on macOS. Every flag in the argv is in the recorded `muse --help` and `muse exec --help`. A lane runs `exec --json --model <model> --prompt-file <prompt> --workspace <cwd> --worktree off --approval-mode never --approval-judge off` with web tools, reminders, `request_user_input`, foreign personal context and the session log turned off. The effort is `--reasoning-effort <effort>`, omitted for `default`; Muse also accepts `none` and `minimal`, which the runner does not offer. The parent owns the worktree, so Muse creates none. No Muse family is registered, so a lane names a catalog model, such as `muse-spark-1.3` or `muse-wonder-1.0`.",
+      "Measured with Muse Code 1.4.14 on macOS. Every flag in the argv is in the recorded `muse --help` and `muse exec --help`. A lane runs `exec --json --model <model> --prompt-file <prompt> --workspace <cwd> --worktree off --approval-mode never --approval-judge off` with web tools, reminders, `request_user_input`, foreign personal context and the session log turned off. The effort is `--reasoning-effort <effort>`, omitted for `default`; Muse also accepts `none` and `minimal`, which the runner does not offer. The parent owns the worktree, so Muse creates none. The registered family is Muse Wonder Full 1.0; a lane may also name any other Muse catalog model, such as `muse-spark-1.3`, as an unregistered pair.",
       "A read-only lane adds `--disable-write --disable-shell`. The file-reading tools remain, and a write request fails with `writes are disabled for this session`.",
       "No Muse writer is confined, so a writer needs the model sheet's opt-in (`isolated-write-full-access`); the runner refuses a bounded `isolated-write` lane before launch. An opted-in writer drops `--disable-write` and `--disable-shell` and keeps Muse's sandbox on. Measured in a linked worktree under the home directory, whose main repository and a sibling directory sat beside it: edits, shell writes and a Python run inside the worktree succeeded. The file tools refused every path outside the workspace (`absolute path is outside the workspace`, `path escapes workspace`) except the system temporary folders. The sandboxed shell failed outside the worktree with `Operation not permitted`, except that it wrote into the main repository's shared `.git`, `/tmp` and `$TMPDIR`. With `--disable-sandbox`, the file tools and the shell wrote into every outside target, so the runner never passes it.",
       "With `--approval-mode never --approval-judge off`, a refused tool call returns its error to the model and the run continues. Muse reports `Agent delegation: auto unavailable: workspace is untrusted` on stderr, and the lane never passes `--trust-workspace`, so the workspace's skills and rules do not load.",
       "Muse reads `~/.config/muse/settings.json` in every lane. Its `endpoint_transport` key reroutes every lane to another endpoint: on the measured host, a value that another tool wrote sent each lane to a proxy, and every turn failed with `still unauthorized after a token refresh`. The runner does not override it.",
       "The environment is the base allowlist plus `META_API_KEY`. The account login is found through `HOME`. `muse login --help` says `META_API_KEY` always takes priority over the account login.",
-      "The preflight runs `muse usage`. It passes when it exits 0 and starts with `Tier: `, with the fixed evidence `authenticated`, because the output names the subscription tier. It also passes when it exits 0 and starts with `No subscription allowance (api_key)`, with the fixed evidence `api-key`, because `META_API_KEY` is the login and the model call checks access. Exit 1 with `muse usage: not logged in:` is `unauthenticated`/77. Any other output is `child-failed`/70.",
+      "The preflight runs `muse usage`. It passes when it exits 0 and starts with `Tier: `, with the fixed evidence `authenticated`, because the output names the subscription tier. It also passes when it exits 0 and starts with `No subscription allowance (api_key)`, with the fixed evidence `api-key`, because `META_API_KEY` is the login and the model call checks access. It also passes when it exits 0 and starts with `No usage data (server_sent_no_usage)`, with the fixed evidence `subscription-no-usage-data`: measured with Muse Code 1.4.14 on Linux, a signed-in account whose window had seen no use printed `No usage data (server_sent_no_usage): the server sent no usage data for this subscription; this can happen before your first use in a new window`, and `muse usage --json` gave `{\"allowance\":null,\"reason\":\"server_sent_no_usage\"}`. The server answered for the subscription, so the login holds and the model call checks access; on that host the model call then returned `API error 429 ... Subscription quota exhausted` as `child-failed`/70, so this output proves the login, not an allowance. Exit 1 with `muse usage: not logged in:` is `unauthenticated`/77. Any other output is `child-failed`/70.",
       "The `--json` stream is one envelope per line, dispatched on `payload_type`. The reply is the text of the last `run.terminal.*` event, accepted only when its `terminal` is `completed` and the text is not empty. Another terminal is `child-failed`/70 with its reason, except that `model `<id>` does not exist or you lack access` is `unavailable-model`/69. SIGINT exits 130 and SIGTERM 143, each with no terminal event, which is `cancelled`/130; a stream with no terminal event otherwise is `malformed-output`/65. The session is the `session` stream ID, and usage sums the `run.usage` event's per-model tokens. No cost is reported.",
       "`run.model.configured` repeats the requested model, and no event was shown to name a different served model, so the model proof is the pinned argv (`pinned-argv`).",
     ],

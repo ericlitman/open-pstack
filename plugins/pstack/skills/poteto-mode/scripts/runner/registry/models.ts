@@ -174,6 +174,15 @@ export const FAMILIES = [
     defaultEffort: "high",
     upstream: null,
   }),
+  family({
+    name: "muse-wonder-full-1.0",
+    label: "Muse Wonder Full 1.0",
+    provider: "muse",
+    model: "muse-wonder-full-1.0",
+    efforts: UP_TO_MAX,
+    defaultEffort: "max",
+    upstream: null,
+  }),
 ] as const;
 export type FamilyName = (typeof FAMILIES)[number]["name"];
 
@@ -219,4 +228,5 @@ export const RELEASED_PAIRS = [
   { pair: "cursor:gemini-3.7-flash", family: "gemini-3.7-flash" },
   { pair: "claude:claude-haiku-5-5", family: "haiku-5-5" },
   { pair: "codex:gpt-6-astra", family: "astra" },
+  { pair: "muse:muse-wonder-full-1.0", family: "muse-wonder-full-1.0" },
 ] as const satisfies readonly ReleasedPair<FamilyName>[];
