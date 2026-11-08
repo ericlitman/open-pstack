@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import {
@@ -15,6 +15,7 @@ import {
   CATALOG_PATH,
   driftMessage,
   driftReport,
+  GROK_AGENTS_DIR,
   main,
   renderCatalog,
   renderNativeAgents,
@@ -203,10 +204,16 @@ describe("generated files", () => {
       writeFileSync(join(dir, "agents", name), `${name}\n`);
     }
 
+    mkdirSync(join(dir, GROK_AGENTS_DIR));
+    writeFileSync(join(dir, GROK_AGENTS_DIR, "pstack-opus-low.md"), "lane\n");
+
     expect(driftReport(REGISTRY, dir)).toEqual([
       `stale ${CATALOG_PATH}`,
       `missing ${agent!.path}`,
+      `missing ${GROK_AGENTS_DIR}/poteto-agent.md`,
+      `missing ${GROK_AGENTS_DIR}/comment-sicko.md`,
       "stray agents/pstack-retired-max.md",
+      `stray ${GROK_AGENTS_DIR}/pstack-opus-low.md`,
     ]);
     expect(driftMessage(driftReport(REGISTRY, dir))).toContain(WRITE_COMMAND);
     expect(main(["--check"], dir)).toBe(1);
@@ -215,6 +222,8 @@ describe("generated files", () => {
     expect(driftReport(REGISTRY, dir)).toEqual([]);
     expect(readFileSync(join(dir, "agents/poteto-agent.md"), "utf8")).toBe("poteto-agent.md\n");
     expect(readFileSync(join(dir, "agents/comment-sicko.md"), "utf8")).toBe("comment-sicko.md\n");
+    expect(readdirSync(join(dir, GROK_AGENTS_DIR)).sort()).toEqual(["comment-sicko.md", "poteto-agent.md"]);
+    expect(readFileSync(join(dir, GROK_AGENTS_DIR, "poteto-agent.md"), "utf8")).toBe("poteto-agent.md\n");
     expect(main([], dir)).toBe(64);
   });
 });

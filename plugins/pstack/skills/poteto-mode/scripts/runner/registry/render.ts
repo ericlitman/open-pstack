@@ -14,6 +14,8 @@ export const WRITE_COMMAND = "bun runner/registry/render.ts --write";
 const WRITE_HINT = `Run \`${WRITE_COMMAND}\` from plugins/pstack/skills/poteto-mode/scripts.`;
 const PLUGIN_ROOT = join(import.meta.dir, "../../../../..");
 const AGENT = /^pstack-.*\.md$/;
+export const GROK_AGENTS_DIR = "grok-agents";
+const GROK_AGENTS = ["poteto-agent", "comment-sicko"] as const;
 
 const SHEET_HEADER = [
   "# pstack model configuration",
@@ -197,8 +199,15 @@ export function renderNativeAgents(registry: Registry): readonly GeneratedFile[]
   );
 }
 
-function generated(registry: Registry): readonly GeneratedFile[] {
-  return [renderCatalog(registry), ...renderNativeAgents(registry)];
+export function renderGrokAgents(pluginRoot: string): readonly GeneratedFile[] {
+  return GROK_AGENTS.flatMap((name) => {
+    const content = read(join(pluginRoot, `agents/${name}.md`));
+    return content === null ? [] : [{ path: `${GROK_AGENTS_DIR}/${name}.md`, content }];
+  });
+}
+
+function generated(registry: Registry, pluginRoot: string): readonly GeneratedFile[] {
+  return [renderCatalog(registry), ...renderNativeAgents(registry), ...renderGrokAgents(pluginRoot)];
 }
 
 function read(path: string): string | null {
@@ -209,18 +218,22 @@ function read(path: string): string | null {
   }
 }
 
+function listed(pluginRoot: string, dir: string, pattern: RegExp): string[] {
+  const path = join(pluginRoot, dir);
+  return (existsSync(path) ? readdirSync(path) : []).filter((name) => pattern.test(name)).map((name) => `${dir}/${name}`);
+}
+
 function strays(registry: Registry, pluginRoot: string): string[] {
-  const expected = new Set(renderNativeAgents(registry).map((file) => file.path));
-  const agents = join(pluginRoot, "agents");
-  return (existsSync(agents) ? readdirSync(agents) : [])
-    .filter((name) => AGENT.test(name))
-    .map((name) => `agents/${name}`)
+  const expected = new Set(
+    [...renderNativeAgents(registry), ...renderGrokAgents(pluginRoot)].map((file) => file.path)
+  );
+  return [...listed(pluginRoot, "agents", AGENT), ...listed(pluginRoot, GROK_AGENTS_DIR, /\.md$/)]
     .filter((path) => !expected.has(path))
     .sort();
 }
 
 export function driftReport(registry: Registry, pluginRoot: string): readonly string[] {
-  const report = generated(registry).flatMap((file) => {
+  const report = generated(registry, pluginRoot).flatMap((file) => {
     const actual = read(join(pluginRoot, file.path));
     if (actual === null) return [`missing ${file.path}`];
     return actual === file.content ? [] : [`stale ${file.path}`];
@@ -233,7 +246,7 @@ export function driftMessage(report: readonly string[]): string {
 }
 
 export function writeGenerated(registry: Registry, pluginRoot: string): void {
-  for (const file of generated(registry)) {
+  for (const file of generated(registry, pluginRoot)) {
     const path = join(pluginRoot, file.path);
     if (read(path) === file.content) continue;
     mkdirSync(dirname(path), { recursive: true });
