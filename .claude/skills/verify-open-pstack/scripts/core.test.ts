@@ -76,6 +76,30 @@ describe('registry and ownership', () => {
     expect(requiredHarnesses(r)).toEqual(['claude', 'codex', 't3']);
     expect(requiredFeatures(r, 't3')).toEqual(['dispatch']);
   });
+  test('only the Grok surfaces reach grok:dispatch and grok:setup, and self-test never adds a Grok session', () => {
+    const reach = (filename: string) => classify([{ filename }], registry).features.filter(f => f.startsWith('grok:'));
+    for (const filename of ['plugins/pstack/skills/poteto-mode/references/provider-dispatch.md', 'plugins/pstack/skills/poteto-mode/references/codex-tools.md',
+      'plugins/pstack/.grok-plugin/plugin.json', '.claude/skills/verify-open-pstack/scripts/doctor.ts']) expect(reach(filename)).toEqual(['grok:dispatch']);
+    expect(reach('.claude/skills/verify-open-pstack/scripts/isolation.ts')).toEqual(['grok:setup']);
+    for (const filename of ['plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/scripts/grok.ts',
+      '.claude/skills/verify-open-pstack/scripts/harness.ts']) expect(reach(filename)).toEqual(['grok:dispatch', 'grok:setup']);
+    for (const filename of ['plugins/pstack/skills/poteto-mode/references/model-catalog.md', 'plugins/pstack/skills/poteto-mode/SKILL.md',
+      'plugins/pstack/hooks/hooks.json', '.claude/skills/verify-open-pstack/scripts/verify.ts']) expect(reach(filename)).toEqual([]);
+    const r = receipt(true);
+    r.runFeatures = ['grok:dispatch', 'grok:setup'];
+    expect(requiredHarnesses(r)).toEqual(['claude', 'codex', 'grok']);
+    expect(requiredFeatures(r, 'grok')).toEqual(['dispatch', 'setup']);
+    for (const feature of requiredFeatures(r, 'grok')) expect(recipe(feature, 'grok')).toHaveLength(1);
+    expect(() => recipe('project-skill', 'grok')).toThrow('missing-recipe:grok/project-skill');
+  });
+  test('the Grok manifest is shared runtime with no version-only startup reach, because the hook does not fire in Grok', () => {
+    for (const versionOnly of [false, true]) {
+      const s = classify([{ filename: 'plugins/pstack/.grok-plugin/plugin.json', versionOnly }], registry);
+      for (const feature of both('setup', 'runner', 'shipped-tools')) expect(s.features).toContain(feature);
+      expect(s.features).toContain('grok:dispatch');
+      expect(s.skills).toEqual([...registry.skills].sort());
+    }
+  });
   test('poteto-mode SKILL.md also reaches the Claude agent that preloads it', () => {
     const s = classify([{ filename: 'plugins/pstack/skills/poteto-mode/SKILL.md' }], registry);
     expect(s.features).toEqual([...both('skill-invocation:poteto-mode'), 'claude:agent-preload:poteto-agent'].sort());
@@ -208,7 +232,7 @@ describe('registry and ownership', () => {
     const path = '.claude/skills/verify-open-pstack/features/recipes.ts';
     const expected = [...both('catalog', 'setup', 'runner', 'shipped-tools', 'hook:startup', 'project-skill', 'writers',
       ...WRITER_PROVIDERS.map(provider => `writers:${provider}`),
-      ...registry.skills.map(skill => `skill-invocation:${skill}`)), 'claude:agent-preload:poteto-agent', 't3:dispatch'].sort();
+      ...registry.skills.map(skill => `skill-invocation:${skill}`)), 'claude:agent-preload:poteto-agent', 'grok:dispatch', 'grok:setup', 't3:dispatch'].sort();
     for (const file of [{ filename: path }, { filename: 'docs/moved.md', previous_filename: path }]) {
       const s = classify([file], registry);
       expect(s.features).toEqual(expected);

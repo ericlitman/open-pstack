@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { assertCodexAuth, linkCodexAuth, linkMuseConfig, removeCodexHome, restoreSetup, snapshotSetup } from './isolation.ts';
 
 const roots: string[] = [];
-const environment = { HOME: process.env.HOME, XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME, CODEX_HOME: process.env.CODEX_HOME, CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR };
+const environment = { HOME: process.env.HOME, XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME, CODEX_HOME: process.env.CODEX_HOME, CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR, GROK_HOME: process.env.GROK_HOME };
 afterEach(async () => {
   for (const [name, value] of Object.entries(environment)) {
     if (value === undefined) delete process.env[name]; else process.env[name] = value;
@@ -18,6 +18,7 @@ async function fixture() {
   process.env.HOME = root;
   process.env.CODEX_HOME = join(root, 'daily-codex');
   process.env.CLAUDE_CONFIG_DIR = join(root, 'daily-claude');
+  delete process.env.GROK_HOME;
   const home = join(root, 'run');
   for (const directory of [home, process.env.CODEX_HOME, process.env.CLAUDE_CONFIG_DIR]) await mkdir(directory, { mode: 0o700 });
   return { root, home, auth: join(process.env.CODEX_HOME, 'auth.json'), claude: process.env.CLAUDE_CONFIG_DIR };
@@ -111,16 +112,32 @@ describe('setup-only snapshot and restoration', () => {
       await mkdir(directory, { recursive: true });
       for (const name of ['pstack-models.md', 'CLAUDE.md']) await writeFile(join(directory, name), original);
     }
+    await mkdir(join(root, '.grok/rules'), { recursive: true });
     const snapshot = await snapshotSetup();
-    expect(snapshot).toHaveLength(12);
+    expect(snapshot).toHaveLength(13);
     for (const { path } of snapshot) await writeFile(path, 'setup mutation');
     await restoreSetup(snapshot);
     for (const directory of directories) {
       for (const name of ['pstack-models.md', 'CLAUDE.md']) expect(await readFile(join(directory, name))).toEqual(original);
       expect(await Bun.file(join(directory, 'AGENTS.md')).exists()).toBe(false);
     }
+    expect(await Bun.file(join(root, '.grok/rules/pstack-models.md')).exists()).toBe(false);
     process.env.CLAUDE_CONFIG_DIR = directories[0]; process.env.CODEX_HOME = directories[1];
-    expect(await snapshotSetup()).toHaveLength(6);
+    expect(await snapshotSetup()).toHaveLength(7);
+  });
+
+  test('restores the Grok sheet under GROK_HOME byte for byte', async () => {
+    const { root } = await fixture();
+    process.env.GROK_HOME = join(root, 'daily-grok');
+    const sheet = join(root, 'daily-grok/rules/pstack-models.md'), original = Buffer.from('# pstack model configuration\r\n\x00');
+    await mkdir(join(root, 'daily-grok/rules'), { recursive: true });
+    await writeFile(sheet, original, { mode: 0o640 });
+    const snapshot = await snapshotSetup();
+    await writeFile(sheet, 'setup rewrite');
+    await restoreSetup(snapshot);
+    expect(await readFile(sheet)).toEqual(original);
+    expect((await lstat(sheet)).mode & 0o777).toBe(0o640);
+    expect(await Bun.file(join(root, '.grok/rules/pstack-models.md')).exists()).toBe(false);
   });
 
   test('defaults to HOME/.claude and restores deleted existing files', async () => {

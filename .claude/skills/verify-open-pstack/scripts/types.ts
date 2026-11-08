@@ -1,7 +1,7 @@
 export const REPO = 'ericlitman/open-pstack';
 export const HARNESSES = ['claude', 'codex'] as const;
 export type CoreHarness = typeof HARNESSES[number];
-export const LIVE_HARNESSES = [...HARNESSES, 't3'] as const;
+export const LIVE_HARNESSES = [...HARNESSES, 't3', 'grok'] as const;
 export const WRITER_PROVIDERS = ['devin', 'dsh', 'opencode', 'agy', 'cursor', 'amp', 'muse'] as const;
 export type Harness = typeof LIVE_HARNESSES[number];
 export type Phase = 'resolve' | 'classify' | 'prepare' | 'exercise' | 'publish' | 'failed' | 'head-moved';
@@ -55,6 +55,7 @@ export interface SessionRecord {
   commands: string[];
   tools: { name: string; id: string; input: Record<string, any>; parent: string | null; result?: string; failed: boolean }[];
   context: string[];
+  agents?: string[];
 }
 export interface Driver {
   preflight(receipt: Receipt): Promise<void>;

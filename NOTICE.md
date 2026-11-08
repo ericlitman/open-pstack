@@ -43,6 +43,7 @@ Summary of structural changes:
 - `plugins/pstack/agents/poteto-agent.md` keeps the upstream prompt and adds Claude Code `skills` frontmatter so the isolated subagent preloads `pstack:poteto-mode`.
 - Claude-native lanes are port-authored agent definitions. Fable, Opus and Sonnet select their rolling family alias, and the Opus 5.5 and Haiku 5.5 pins select their exact model, each with the requested effort, for every selectable Claude-native pair in the model catalog. `registry/render.ts` generates them from the runner registry.
 - A Codex build shares the same `skills/` tree. It adds `plugins/pstack/.codex-plugin/plugin.json`, a root `.agents/plugins/marketplace.json`, and `plugins/pstack/skills/poteto-mode/references/codex-tools.md` (the Claude-to-Codex tool, model, and built-in map), plus a one-line Platform note in the skills that name a Claude primitive. The skill content itself is unchanged. See [CHANGES.md](CHANGES.md#codex-port).
+- A Grok build shares the same `skills/` tree. It adds `plugins/pstack/.grok-plugin/plugin.json`, the generated `plugins/pstack/grok-agents/` copies of `poteto-agent` and `comment-sicko`, and Grok rows in `codex-tools.md`, `provider-dispatch.md` and `setup-pstack/SKILL.md` (#281, started from max-metaplanet's PR #282).
 
 ## Modifications
 
@@ -53,6 +54,7 @@ Files authored for this port (not derived from upstream):
 - `plugins/pstack/.claude-plugin/plugin.json`
 - `.claude-plugin/marketplace.json` (repo root)
 - `plugins/pstack/.codex-plugin/plugin.json`
+- `plugins/pstack/.grok-plugin/plugin.json`
 - `.agents/plugins/marketplace.json` (repo root)
 - `plugins/pstack/skills/poteto-mode/references/codex-tools.md`
 - `plugins/pstack/skills/poteto-mode/scripts/bootstrap.test.ts`

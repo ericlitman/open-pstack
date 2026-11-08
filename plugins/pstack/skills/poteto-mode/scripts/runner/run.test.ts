@@ -1969,6 +1969,25 @@ describe("childEnvironment", () => {
       CODEX_CI: "1",
       KEEP_ME: "yes",
     });
+    const grokParent = {
+      ...source,
+      GROK_SESSION_ID: "sess",
+      GROK_AGENT: "agent",
+      GROK_HOME: "/grok",
+    };
+    expect(childEnvironment(laneOf({ ...options("claude"), parent: "grok", mode: "read-only" }), grokParent)).toEqual({
+      PATH: "/bin",
+      CODEX_THREAD_ID: "codex",
+      CODEX_CI: "1",
+      CLAUDECODE: "1",
+      CLAUDE_CODE_CHILD_SESSION: "1",
+      KEEP_ME: "yes",
+      GROK_HOME: "/grok",
+    });
+    expect(childEnvironment(laneOf({ ...options("grok"), parent: "grok", mode: "read-only" }), grokParent)).toEqual({
+      PATH: "/bin",
+      GROK_HOME: "/grok",
+    });
   });
 
   it("passes a Grok lane only allowlisted variables in both modes", () => {

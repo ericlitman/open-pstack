@@ -5,7 +5,7 @@ import { linkCodexAuth, removeCodexHome } from './isolation.ts';
 import { HARNESSES, type Harness } from './types.ts';
 
 export class LoginRequired extends Error {}
-const CLAUDE_FIX = 'run `claude auth login` from a shell on this Mac, not over SSH', CODEX_FIX = 'run `codex login` on this Mac';
+const CLAUDE_FIX = 'run `claude auth login` from a shell on this Mac, not over SSH', CODEX_FIX = 'run `codex login` on this Mac', GROK_FIX = 'run `grok login` on this Mac';
 
 export async function t3Binary(): Promise<string> {
   const runtime = join(process.env.HOME ?? '', '.t3/runtime');
@@ -24,6 +24,12 @@ export async function doctor(root: string, run: Command = command, platform = pr
     const env = isolatedEnv(home);
     for (const binary of candidate ? ['bun', 'git', 'claude', 'codex'] : ['bun', 'git', 'claude', 'codex', 'gh']) checks[binary] = (await run([binary, '--version'], { env })).trim();
     if (harnesses.includes('t3')) checks.t3 = (await run([await t3Binary(), '--version'], { env })).trim();
+    if (harnesses.includes('grok')) {
+      checks.grok = (await run(['grok', '--version'], { env })).trim();
+      const help = await run(['grok', 'agent', '--help'], { env });
+      for (const flag of ['--plugin-dir', '--no-leader', '--model', '--reasoning-effort']) if (!help.includes(flag)) throw new Error(`Grok agent missing ${flag}`);
+      checks['grok agent --help'] = help;
+    }
     const claude = await run(['claude', '--help'], { env });
     for (const flag of ['--plugin-dir', '--settings']) if (!claude.includes(flag)) throw new Error(`Claude isolation missing ${flag}`);
     checks.claudeHelp = claude;
@@ -38,6 +44,12 @@ export async function doctor(root: string, run: Command = command, platform = pr
       try { loggedIn = JSON.parse(await run(['claude', 'auth', 'status'], { env })).loggedIn; } catch {}
       if (loggedIn !== true) throw new LoginRequired(`Claude login check failed: \`claude auth status\` did not report "loggedIn": true; ${CLAUDE_FIX}`);
       checks['claude login'] = 'logged in';
+    }
+    if (!candidate && harnesses.includes('grok')) {
+      let models = '';
+      try { models = await run(['grok', 'models'], { env }); } catch {}
+      if (!/^You are logged in\b/m.test(models)) throw new LoginRequired(`Grok login check failed: \`grok models\` did not report a login; ${GROK_FIX}`);
+      checks['grok login'] = 'logged in';
     }
     if (!candidate && harnesses.includes('codex')) {
       let linked = false;

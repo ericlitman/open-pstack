@@ -1,6 +1,6 @@
 ---
 name: verify-open-pstack
-description: Verify an Open Pstack PR's exact candidate head in native Claude Code, Codex and T3 Code sessions, judge them with machine-checked assertions, and publish the exact-SHA live gate.
+description: Verify an Open Pstack PR's exact candidate head in native Claude Code, Codex, T3 Code and Grok sessions, judge them with machine-checked assertions, and publish the exact-SHA live gate.
 ---
 
 # Verify Open Pstack
@@ -53,11 +53,13 @@ Claude runs with normal operator config/login and session-only `claude --plugin-
 
 `t3:` features run through the T3 transport in `features/t3.md`: a run-owned disposable T3 server whose Claude provider gets the same session-only plugin flags, one `t3 thread start --wait --json` per case, and the parent's Claude transcript parsed like the Claude stream. Classification never adds `t3` on its own and self-test does not reach it; the doctor checks the T3 service binary only when a `t3:` feature is named.
 
+`grok:` features run through the Grok transport in `features/grok.md`: one `grok agent --no-leader --plugin-dir <exact-head checkout>/plugins/pstack --model grok-4.7 --reasoning-effort low stdio` process per case, driven over ACP, with permission requests answered from the recipe tools and the rest refused. Before the prompt, `_x.ai/plugins/list` must show the candidate as the only loaded `pstack`, by path and tree hash. Classification never adds `grok` on its own and self-test does not reach it; the doctor checks the Grok binary, its agent flags and the `grok models` login line only when a `grok:` feature is named.
+
 Candidate commands and provider descendants use the recorded native-login arrangement, never GitHub publisher credentials. No extra login, implicit timeout, or weaker-model fallback is permitted. If Claude's plugin flags fail to exclude installed pstack or Codex replaces the auth symlink instead of writing through it, stop and reopen the design.
 
 For every named feature, exercise its native surface and retain real native tool calls and concrete fixture effects. Asset consumers come from the pinned plugin manifests; the current `plugins/pstack/assets/logo.png` is consumed by the Codex manifest only and therefore requires the Codex installed surface, not an invented Claude asset exercise. The session recorder streams each session's stdout and stderr to private files under `sessions/<harness>/<feature>/` in the run root and keeps them on any exit. For Codex it also copies the session's rollout from the run-owned home, because only the rollout records which `SKILL.md` each skill mention resolved to. A nonzero session exit fails the case. The trusted parent then parses the native stream and evaluates the case's assertions on the native skill load, the commands that ran, and files the session wrote in its fixture, and copies those files next to the stream. A model's claim that something passed never counts, and neither do direct CLI tests.
 
-For setup only, snapshot real `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/pstack-models.md` and `CLAUDE.md`, including original absence, before exercise. Restore exact bytes or absence afterwards on success or failure and verify restoration before any publication. Restoration failure stops the run and publishes nothing.
+For setup only, snapshot real `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/pstack-models.md` and `CLAUDE.md`, and `${GROK_HOME:-$HOME/.grok}/rules/pstack-models.md`, including original absence, before exercise. Restore exact bytes or absence afterwards on success or failure and verify restoration before any publication. Restoration failure stops the run and publishes nothing.
 
 For `project-skill`, invoke `/verify-open-pstack` in Claude and `$verify-open-pstack` in Codex from the candidate checkout. Ask the discovered pinned skill to run `verify.sh doctor --candidate --output <fresh-run-owned-directory>`. Assert the skill load, the doctor command, and the canonical-path doctor output; forbid recursive verification or publication. This does not replace required plugin exercises.
 
@@ -92,6 +94,8 @@ Read receipts as data, never shell input. Do not put credentials in prompts or p
 - scripts/core.ts
 - scripts/doctor.ts
 - scripts/github.ts
+- scripts/grok.test.ts
+- scripts/grok.ts
 - scripts/harness.test.ts
 - scripts/harness.ts
 - scripts/io.test.ts

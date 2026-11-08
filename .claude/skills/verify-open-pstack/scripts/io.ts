@@ -35,6 +35,10 @@ export const command: Command = async (args, options = {}) => {
     activeCommands.delete(child.pid);
   }
 };
+export function track(pid: number, exited: Promise<number>): () => void {
+  activeCommands.set(pid, exited);
+  return () => { activeCommands.delete(pid); };
+}
 export type Session = (args: string[], options: { cwd: string; env: Record<string, string>; input: string; stdout: string; stderr: string }) => Promise<number>;
 export const session: Session = async (args, options) => {
   interruption.signal.throwIfAborted();
@@ -65,6 +69,7 @@ export function isolatedEnv(state: string, _harness?: 'claude' | 'codex'): Recor
     GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_SYSTEM: '/dev/null', GIT_CONFIG_NOSYSTEM: '1',
     GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'credential.helper', GIT_CONFIG_VALUE_0: '',
     ...(process.env.CLAUDE_CONFIG_DIR !== undefined ? { CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR } : {}),
+    ...(process.env.GROK_HOME !== undefined ? { GROK_HOME: process.env.GROK_HOME } : {}),
     CODEX_HOME: join(state, '.codex') };
 }
 export async function save(path: string, value: unknown): Promise<void> {

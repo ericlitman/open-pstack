@@ -63,18 +63,18 @@ Rolling aliases:
 
 ## Routes
 
-| Provider | Claude Code parent | Codex parent | Access modes | Prompt | Model proof | Child environment | Host prerequisites |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| claude | native `Agent` | external runner | `read-only`, `isolated-write` | stdin | provider report | read-only: inherited; isolated-write: inherited without `GIT_*` | - |
-| codex | external runner | native `spawn_agent` | `read-only`, `isolated-write`, `isolated-write-full-access` | stdin | pinned argv | inherited | - |
-| grok | external runner | external runner | `read-only`, `isolated-write` | file | provider report | allowlist | Linux: Landlock and `bwrap`; macOS: any `/var/run/docker.sock` symlink points inside Grok's runtime-socket list |
-| devin | external runner | external runner | `read-only`, `isolated-write`, `isolated-write-full-access` | file | provider report | allowlist | - |
-| opencode | external runner | external runner | `read-only`, `isolated-write-full-access` | stdin | pinned argv | allowlist | - |
-| dsh | external runner | external runner | `read-only`, `isolated-write` | stdin | pinned argv | allowlist | dsh 0.2.1-rc.2 exactly |
-| amp | external runner | external runner | `read-only`, `isolated-write-full-access` | stdin | pinned argv | allowlist | - |
-| agy | external runner | external runner | `read-only`, `isolated-write-full-access` | stdin | pinned argv | allowlist | - |
-| cursor | external runner | external runner | `read-only`, `isolated-write-full-access` | stdin | pinned argv | allowlist | - |
-| muse | external runner | external runner | `read-only`, `isolated-write-full-access` | file | pinned argv | allowlist | - |
+| Provider | Claude Code parent | Codex parent | Grok parent | Access modes | Prompt | Model proof | Child environment | Host prerequisites |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| claude | native `Agent` | external runner | external runner | `read-only`, `isolated-write` | stdin | provider report | read-only: inherited; isolated-write: inherited without `GIT_*` | - |
+| codex | external runner | native `spawn_agent` | external runner | `read-only`, `isolated-write`, `isolated-write-full-access` | stdin | pinned argv | inherited | - |
+| grok | external runner | external runner | explicit descriptor: external runner; `inherit-parent`, `auto`: native `spawn_subagent` | `read-only`, `isolated-write` | file | provider report | allowlist | Linux: Landlock and `bwrap`; macOS: any `/var/run/docker.sock` symlink points inside Grok's runtime-socket list |
+| devin | external runner | external runner | external runner | `read-only`, `isolated-write`, `isolated-write-full-access` | file | provider report | allowlist | - |
+| opencode | external runner | external runner | external runner | `read-only`, `isolated-write-full-access` | stdin | pinned argv | allowlist | - |
+| dsh | external runner | external runner | external runner | `read-only`, `isolated-write` | stdin | pinned argv | allowlist | dsh 0.2.1-rc.2 exactly |
+| amp | external runner | external runner | external runner | `read-only`, `isolated-write-full-access` | stdin | pinned argv | allowlist | - |
+| agy | external runner | external runner | external runner | `read-only`, `isolated-write-full-access` | stdin | pinned argv | allowlist | - |
+| cursor | external runner | external runner | external runner | `read-only`, `isolated-write-full-access` | stdin | pinned argv | allowlist | - |
+| muse | external runner | external runner | external runner | `read-only`, `isolated-write-full-access` | file | pinned argv | allowlist | - |
 
 The runner refuses an access mode outside a provider's Access modes cell before launch. `isolated-write-full-access` is a writer capability, not a `--mode` value: the runner takes it as `--mode isolated-write --writer-sandbox full-access`, which a parent passes only when the model sheet opts in, as [`provider-dispatch.md`](provider-dispatch.md#writer-sandbox) says. A provider whose cell lists `isolated-write-full-access` without `isolated-write` has no confined writer and writes only with that opt-in.
 
