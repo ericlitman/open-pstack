@@ -1,0 +1,21 @@
+# Grok parent
+
+## Sub-features
+
+`grok:dispatch`: a Grok parent running the installed `poteto-mode` routes an `inherit-parent` lane natively through `spawn_subagent` with `pstack:poteto-agent`, an explicit `grok:` lane through `pstack-runner --parent grok --provider grok`, and a Claude lane through `pstack-runner --parent grok`, and Grok offers only the model-free pstack agents. `grok:setup`: `/pstack:setup-pstack` on a Grok parent writes `${GROK_HOME:-$HOME/.grok}/rules/pstack-models.md`. Select them for a change to the Grok manifest, `provider-dispatch.md`, `codex-tools.md`, `setup-pstack/SKILL.md`, `recipes.ts` or the Grok transport. A path that reaches them never adds them to every run; name them with `--feature grok:dispatch` or `--feature grok:setup`.
+
+## How to get to it (user POV)
+
+Start a Grok session with the candidate plugin loaded and invoke `/pstack:poteto-mode` or `/pstack:setup-pstack` by name. pstack's startup hook does not fire in Grok.
+
+## Driving it with verify-open-pstack
+
+Each case starts one `grok agent --no-leader --plugin-dir <exact-head checkout>/plugins/pstack --model grok-4.7 --reasoning-effort low stdio` process with the operator's real HOME and Grok home, and drives it over ACP: `initialize`, `session/new` with the fixture cwd, `_x.ai/plugins/list`, and one `session/prompt`. The transport answers `session/request_permission` with allow-once for the tools in `GROK_TOOLS` and reject-once for every other tool, so no prompt waits and no always-approve mode is set. It closes stdin after the turn, and the process exits. Every message in both directions goes to `sessions/grok/<feature>/<case>.jsonl`. No operator Grok config is written.
+
+## Gotchas
+
+Grok also discovers the operator's installed pstack through its Claude-compat scan of `~/.claude/plugins`, and the `--plugin-dir` copy shadows it. Before the prompt, the transport requires `_x.ai/plugins/list` to report exactly one enabled `pstack`, whose root is the candidate path and whose tree hash equals the pinned candidate's, and otherwise stops. The response is retained as `<case>.plugins.json`. Grok has no Skill tool: a slash command stays text and the model reads the skill's `SKILL.md`, so a skill counts as loaded when a parent `read_file` of the candidate's `SKILL.md` completed. A subagent's updates arrive under its own session id, and its `SubagentCompleted` output names that id. A turn that ends with a tool call still running, or with a child session that has no `turn_completed`, fails the case. The transport copies the session's `summary.json`, which must show `grok-4.7` at `low`, and `tool_definitions.json`, which holds the `spawn_subagent` `subagent_type` enum, from `${GROK_HOME:-$HOME/.grok}/sessions/<cwd>/<session>/` into the run root. On macOS the Grok runner lane needs the `/var/run/docker.sock` prerequisite in the model catalog.
+
+## Headless
+
+The `dispatch` case writes a fixture sheet with three read-only roles: `why investigators, synthesizer` on `inherit-parent`, `how explorer` on `grok:grok-4.7@low` and `how explainer` on `claude:claude-haiku-5-5@low`, and a `marker-N.txt` per lane holding a per-run `crypto.randomUUID()` the prompt never contains. It asserts the candidate `poteto-mode` load; an agent enum holding `pstack:poteto-agent` and `pstack:comment-sicko` and no `pstack:pstack-*` agent; exactly one `spawn_subagent` call, with `pstack:poteto-agent`, whose `SubagentCompleted` output holds lane 1's marker and whose child ran tools; no runner receipt for lane 1; and for lanes 2 and 3 a `pstack-runner --parent grok` command for that provider and a receipt that is `complete`, on that route, `read-only`, `modelVerified` with `provider-report` evidence, from this session, with the lane's marker in its output. The `configure` setup case answers setup with every model-family role on Opus at high effort and every writer sandbox opt-in declined, and asserts that the Grok sheet was written this session, holds only `claude:opus@high`, and has no `full-access` setting line. The parent snapshots the Grok sheet with the other setup files, and restores and verifies it on success or failure before any publication.
