@@ -20,7 +20,7 @@
     "unslop", "what-did-i-get-done", "why"
   ],
   "shared": [
-    "plugins/pstack/.claude-plugin/plugin.json", "plugins/pstack/.codex-plugin/plugin.json",
+    "plugins/pstack/.claude-plugin/plugin.json", "plugins/pstack/.codex-plugin/plugin.json", "plugins/pstack/.grok-plugin/plugin.json",
     ".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json",
     "plugins/pstack/agents/poteto-agent.md", "plugins/pstack/agents/comment-sicko.md", "plugins/pstack/hooks/**",
     "plugins/pstack/skills/poteto-mode/references/**"

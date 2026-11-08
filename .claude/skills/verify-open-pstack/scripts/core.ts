@@ -22,6 +22,12 @@ const T3_DISPATCH_PATHS = [
   'plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/features/recipes.ts',
   '.claude/skills/verify-open-pstack/scripts/harness.ts', '.claude/skills/verify-open-pstack/scripts/doctor.ts',
 ];
+const GROK_TRANSPORT = '.claude/skills/verify-open-pstack/scripts/grok.ts';
+const GROK_REACH: Readonly<Record<string, readonly string[]>> = {
+  'grok:dispatch': [...T3_DISPATCH_PATHS, GROK_TRANSPORT, 'plugins/pstack/.grok-plugin/plugin.json'],
+  'grok:setup': ['plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/features/recipes.ts',
+    '.claude/skills/verify-open-pstack/scripts/harness.ts', '.claude/skills/verify-open-pstack/scripts/isolation.ts', GROK_TRANSPORT],
+};
 
 export const VERSION_MANIFESTS: Readonly<Record<string, Harness>> = {
   'plugins/pstack/.claude-plugin/plugin.json': 'claude', '.claude-plugin/marketplace.json': 'claude', 'plugins/pstack/.codex-plugin/plugin.json': 'codex',
@@ -41,6 +47,7 @@ export function classify(files: ChangedFile[], registry: Registry): Selection {
       features.add('codex:assets:codex'); covered = true;
     }
     if (T3_DISPATCH_PATHS.includes(path)) features.add('t3:dispatch');
+    for (const [feature, reach] of Object.entries(GROK_REACH)) if (reach.includes(path)) features.add(feature);
     const sharedRecipe = path === '.claude/skills/verify-open-pstack/features/recipes.ts';
     if (sharedRecipe) both('catalog', 'writers', ...WRITER_PROVIDERS.map(provider => `writers:${provider}`));
     const catalog = registry.catalog.some(p => matches(path, p));
