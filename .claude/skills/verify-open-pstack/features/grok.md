@@ -2,7 +2,7 @@
 
 ## Sub-features
 
-`grok:dispatch`: a Grok parent running the installed `poteto-mode` routes an `inherit-parent` lane natively through `spawn_subagent` with `pstack:poteto-agent`, an explicit `grok:` lane through `pstack-runner --parent grok --provider grok`, and a Codex lane through `pstack-runner --parent grok`, and Grok offers only the model-free pstack agents. `grok:setup`: `/pstack:setup-pstack` on a Grok parent writes `${GROK_HOME:-$HOME/.grok}/rules/pstack-models.md`. Select them for a change to the Grok manifest or its `grok-agents/` copies, `provider-dispatch.md`, `codex-tools.md`, `model-catalog.md`, poteto-mode's `SKILL.md`, the runner's `types.ts`, `registry/index.ts` or `registry/render.ts`, `setup-pstack/SKILL.md`, `recipes.ts` or the Grok transport. A path that reaches them never adds them to every run; name them with `--feature grok:dispatch` or `--feature grok:setup`.
+`grok:dispatch`: a Grok parent running the installed `poteto-mode` routes an `inherit-parent` lane natively through `spawn_subagent` with `pstack:poteto-agent`, an explicit `grok:` lane through `pstack-runner --parent grok --provider grok`, and a Codex lane through `pstack-runner --parent grok`, and Grok offers only the model-free pstack agents. `grok:setup`: `/pstack:setup-pstack` on a Grok parent writes `${GROK_HOME:-$HOME/.grok}/rules/pstack-models.md`. Any path that the registry owns as runtime code or instructions permits naming them. Assets keep their manifest consumer, and a version-only manifest change keeps its `hook:startup` reach. A path that reaches them never adds them to every run; name them with `--feature grok:dispatch` or `--feature grok:setup`.
 
 ## How to get to it (user POV)
 

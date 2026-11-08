@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import registryData from '../features/registry.json';
 import { recipe } from '../features/recipes.ts';
 import { classify, completeEvidence, matches, newReceipt, requiredFeatures, requiredHarnesses, validateRegistry } from './core.ts';
-import { HARNESSES, LIVE_HARNESSES, WRITER_PROVIDERS, type Receipt } from './types.ts';
+import { HARNESSES, LIVE_HARNESSES, WRITER_PROVIDERS, type ChangedFile, type Receipt } from './types.ts';
 import codexManifest from '../../../../plugins/pstack/.codex-plugin/plugin.json';
 import claudeManifest from '../../../../plugins/pstack/.claude-plugin/plugin.json';
 
@@ -15,6 +15,7 @@ export function receipt(selfTest = false): Receipt {
   r.selection = classify([{ filename: 'README.md' }], registry);
   return r;
 }
+const withGrok = (features: string[]) => [...features, 'grok:dispatch', 'grok:setup'].sort();
 const both = (...features: string[]): string[] => HARNESSES.flatMap(h => features.map(f => `${h}:${f}`)).sort();
 export function evidence(r: Receipt): void {
   for (const harness of requiredHarnesses(r)) {
@@ -52,7 +53,7 @@ describe('registry and ownership', () => {
   test('markdown instructions are runtime', () => {
     for (const filename of ['plugins/pstack/skills/architect/SKILL.md', 'plugins/pstack/skills/architect/references/guide.md']) {
       const s = classify([{ filename }], registry);
-      expect(s.features).toEqual(both('skill-invocation:architect'));
+      expect(s.features).toEqual(withGrok(both('skill-invocation:architect')));
       expect(s.noRuntime).toBe(false);
     }
   });
@@ -76,18 +77,20 @@ describe('registry and ownership', () => {
     expect(requiredHarnesses(r)).toEqual(['claude', 'codex', 't3']);
     expect(requiredFeatures(r, 't3')).toEqual(['dispatch']);
   });
-  test('only the Grok surfaces reach grok:dispatch and grok:setup, and self-test never adds a Grok session', () => {
-    const reach = (filename: string) => classify([{ filename }], registry).features.filter(f => f.startsWith('grok:'));
+  test('every runtime ownership permits naming both Grok features; assets, version-only manifests and non-runtime paths do not', () => {
+    const reach = (file: ChangedFile) => classify([file], registry).features.filter(f => f.startsWith('grok:'));
     for (const filename of ['plugins/pstack/skills/poteto-mode/references/provider-dispatch.md', 'plugins/pstack/skills/poteto-mode/references/codex-tools.md',
-      'plugins/pstack/.grok-plugin/plugin.json', '.claude/skills/verify-open-pstack/scripts/doctor.ts',
-      'plugins/pstack/grok-agents/poteto-agent.md', 'plugins/pstack/grok-agents/comment-sicko.md',
+      'plugins/pstack/.grok-plugin/plugin.json', 'plugins/pstack/grok-agents/poteto-agent.md', 'plugins/pstack/grok-agents/comment-sicko.md',
       'plugins/pstack/skills/poteto-mode/references/model-catalog.md', 'plugins/pstack/skills/poteto-mode/SKILL.md',
       'plugins/pstack/skills/poteto-mode/scripts/runner/types.ts', 'plugins/pstack/skills/poteto-mode/scripts/runner/registry/index.ts',
-      'plugins/pstack/skills/poteto-mode/scripts/runner/registry/render.ts']) expect(reach(filename)).toEqual(['grok:dispatch']);
-    expect(reach('.claude/skills/verify-open-pstack/scripts/isolation.ts')).toEqual(['grok:setup']);
-    for (const filename of ['plugins/pstack/skills/setup-pstack/SKILL.md', '.claude/skills/verify-open-pstack/scripts/grok.ts',
-      '.claude/skills/verify-open-pstack/scripts/harness.ts']) expect(reach(filename)).toEqual(['grok:dispatch', 'grok:setup']);
-    for (const filename of ['plugins/pstack/hooks/hooks.json', '.claude/skills/verify-open-pstack/scripts/verify.ts']) expect(reach(filename)).toEqual([]);
+      'plugins/pstack/skills/poteto-mode/scripts/runner/registry/render.ts', 'plugins/pstack/skills/setup-pstack/SKILL.md',
+      '.claude/skills/verify-open-pstack/scripts/io.ts', '.claude/skills/verify-open-pstack/scripts/grok.ts',
+      '.claude/skills/verify-open-pstack/scripts/a-new-helper.ts', 'plugins/pstack/skills/arena/references/a-new-reference.md',
+      'plugins/pstack/skills/poteto-mode/scripts/resolve-codex-transcript.ts']) expect(reach({ filename })).toEqual(['grok:dispatch', 'grok:setup']);
+    expect(reach({ filename: 'plugins/pstack/assets/logo.png' })).toEqual([]);
+    expect(reach({ filename: 'plugins/pstack/.claude-plugin/plugin.json', versionOnly: true })).toEqual([]);
+    expect(reach({ filename: '.mergify.yml' })).toEqual([]);
+    expect(() => classify([{ filename: 'plugins/pstack/unknown/file.ts' }], registry)).toThrow('Unmapped path');
     const r = receipt(true);
     r.runFeatures = ['grok:dispatch', 'grok:setup'];
     expect(requiredHarnesses(r)).toEqual(['claude', 'codex', 'grok']);
@@ -105,7 +108,7 @@ describe('registry and ownership', () => {
   });
   test('poteto-mode SKILL.md also reaches the Claude agent that preloads it', () => {
     const s = classify([{ filename: 'plugins/pstack/skills/poteto-mode/SKILL.md' }], registry);
-    expect(s.features).toEqual([...both('skill-invocation:poteto-mode'), 'claude:agent-preload:poteto-agent', 'grok:dispatch'].sort());
+    expect(s.features).toEqual(withGrok([...both('skill-invocation:poteto-mode'), 'claude:agent-preload:poteto-agent']));
   });
   const CATALOG = 'plugins/pstack/skills/poteto-mode/references/model-catalog.md';
   test('catalog-only changes select catalog, setup and runner and no skill check', () => {
@@ -114,7 +117,7 @@ describe('registry and ownership', () => {
       'plugins/pstack/skills/poteto-mode/scripts/runner/registry/models.ts']) {
       const s = classify([{ filename }], registry);
       expect(s.skills).toEqual([]);
-      expect(s.features).toEqual(filename === CATALOG ? [...both('catalog', 'runner', 'setup'), 'grok:dispatch'].sort() : both('catalog', 'runner', 'setup'));
+      expect(s.features).toEqual(withGrok(both('catalog', 'runner', 'setup')));
     }
     const PROVIDERS = 'plugins/pstack/skills/poteto-mode/scripts/runner/providers/';
     for (const [filename, writers] of [
@@ -123,13 +126,13 @@ describe('registry and ownership', () => {
       ['amp.test.ts', 'writers:amp'], ['fixtures/amp/lockdown-settings.json', 'writers:amp'], ['dsh-preflight.yml', 'writers:dsh'],
     ]) {
       expect([filename, classify([{ filename: `${PROVIDERS}${filename}` }], registry).features])
-        .toEqual([filename, both('catalog', 'runner', 'setup', writers!)]);
+        .toEqual([filename, withGrok(both('catalog', 'runner', 'setup', writers!))]);
     }
   });
   test('a renamed or deleted catalog path keeps catalog ownership', () => {
     for (const previous_filename of [CATALOG, 'plugins/pstack/agents/pstack-opus-max.md']) {
       expect(classify([{ filename: 'docs/moved.md', previous_filename }], registry).features)
-        .toEqual(previous_filename === CATALOG ? [...both('catalog', 'runner', 'setup'), 'grok:dispatch'].sort() : both('catalog', 'runner', 'setup'));
+        .toEqual(withGrok(both('catalog', 'runner', 'setup')));
     }
   });
   test('a catalog change mixed with a shared reference or a skill keeps their checks', () => {
@@ -137,7 +140,7 @@ describe('registry and ownership', () => {
     expect(shared.skills).toEqual([...registry.skills].sort());
     for (const feature of both('catalog', 'setup', 'runner', 'shipped-tools')) expect(shared.features).toContain(feature);
     const skill = classify([{ filename: 'plugins/pstack/agents/pstack-opus-max.md' }, { filename: 'plugins/pstack/skills/arena/SKILL.md' }], registry);
-    expect(skill.features).toEqual(both('catalog', 'runner', 'setup', 'skill-invocation:arena'));
+    expect(skill.features).toEqual(withGrok(both('catalog', 'runner', 'setup', 'skill-invocation:arena')));
   });
   test('an unlisted generated agent fails closed', () => {
     expect(() => classify([{ filename: 'plugins/pstack/agents/pstack-retired-max.md' }], registry)).toThrow('Unmapped path');
@@ -202,14 +205,14 @@ describe('registry and ownership', () => {
   test('bootstrap changes require its shipped tool consumers, not the unrelated runner', () => {
     const s = classify([{ filename: 'plugins/pstack/skills/poteto-mode/scripts/bootstrap.ts' }], registry);
     expect(s.noRuntime).toBe(false);
-    expect(s.features).toEqual(both('shipped-tools'));
+    expect(s.features).toEqual(withGrok(both('shipped-tools')));
   });
   test('the transcript resolver belongs to Reflect rather than unrelated shipped tools', () => {
     const path = 'plugins/pstack/skills/poteto-mode/scripts/resolve-codex-transcript.ts';
     for (const file of [{ filename: path }, { filename: path.replace('.ts', '') }, { filename: 'docs/removed-resolver.md', previous_filename: path }]) {
       const s = classify([file], registry);
       expect(s.skills).toEqual(['reflect']);
-      expect(s.features).toEqual(both('skill-invocation:reflect'));
+      expect(s.features).toEqual(withGrok(both('skill-invocation:reflect')));
     }
     expect(() => classify([{ filename: path.replace('.ts', '.py') }], registry)).toThrow('Unmapped path');
     expect(classify([{ filename: path.replace('.ts', '.test.ts') }], registry).noRuntime).toBe(true);
@@ -228,7 +231,7 @@ describe('registry and ownership', () => {
     const r = receipt(true);
     r.selection = classify([{ filename: '.claude/skills/verify-open-pstack/scripts/verify.ts' }], registry);
     expect(r.selection.noRuntime).toBe(false);
-    expect(r.selection.features).toEqual(both('project-skill'));
+    expect(r.selection.features).toEqual(withGrok(both('project-skill')));
     evidence(r);
     expect(() => completeEvidence(r)).not.toThrow();
   });
@@ -252,7 +255,7 @@ describe('registry and ownership', () => {
   test('nearby verifier documentation retains only project proof', () => {
     for (const filename of ['.claude/skills/verify-open-pstack/features/README.md',
       '.claude/skills/verify-open-pstack/features/skill-invocation.md']) {
-      expect(classify([{ filename }], registry).features).toEqual(both('project-skill'));
+      expect(classify([{ filename }], registry).features).toEqual(withGrok(both('project-skill')));
     }
   });
   test('shared recipe expansion survives overlapping catalog ownership without broadening ordinary catalog paths', () => {
@@ -271,7 +274,7 @@ describe('registry and ownership', () => {
     for (const filename of ['AGENTS.md', 'CLAUDE.md', 'tests/skill-collision-repro.sh', '.github/workflows/ci.yml', 'package.json']) {
       const s = classify([{ filename }], registry);
       expect(s.noRuntime).toBe(false);
-      expect(s.features).toEqual(both('project-skill'));
+      expect(s.features).toEqual(withGrok(both('project-skill')));
       expect(classify([{ filename: 'docs/moved.md', previous_filename: filename }], registry).noRuntime).toBe(false);
     }
   });
