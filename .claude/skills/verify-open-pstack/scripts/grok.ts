@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { copyFile, open, readdir, realpath } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { track, treeHash } from './io.ts';
+import { grokHome, track, treeHash } from './io.ts';
 import type { SessionRecord } from './types.ts';
 
 export const GROK_PARENT = { model: 'grok-4.7', effort: 'low' } as const;
@@ -88,7 +88,7 @@ export async function grokSession(options: Options): Promise<{ exitCode: number;
     child.stdin.end();
     const exitCode = await child.exited;
     await reader;
-    const sessions = join(options.env.GROK_HOME ?? join(options.env.HOME!, '.grok'), 'sessions');
+    const sessions = join(grokHome(options.env), 'sessions');
     const folder = (await readdir(sessions)).find(cwd => existsSync(join(sessions, cwd, sessionId, 'summary.json')));
     if (!folder) throw new Error('grok-session-record-missing');
     const record = join(sessions, folder, sessionId);

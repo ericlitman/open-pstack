@@ -126,6 +126,19 @@ describe('setup-only snapshot and restoration', () => {
     expect(await snapshotSetup()).toHaveLength(7);
   });
 
+  test('an empty GROK_HOME snapshots the default Grok sheet, as setup resolves it', async () => {
+    const { root } = await fixture();
+    process.env.GROK_HOME = '';
+    const sheet = join(root, '.grok/rules/pstack-models.md');
+    await mkdir(join(root, '.grok/rules'), { recursive: true });
+    await writeFile(sheet, 'operator sheet');
+    const snapshot = await snapshotSetup();
+    expect(snapshot.map(entry => entry.path)).toContain(sheet);
+    await writeFile(sheet, 'setup mutation');
+    await restoreSetup(snapshot);
+    expect(await readFile(sheet, 'utf8')).toBe('operator sheet');
+  });
+
   test('restores the Grok sheet under GROK_HOME byte for byte', async () => {
     const { root } = await fixture();
     process.env.GROK_HOME = join(root, 'daily-grok');

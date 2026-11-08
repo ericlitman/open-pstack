@@ -1,5 +1,6 @@
 import { lstat, mkdir, readFile, readlink, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
+import { grokHome } from './io.ts';
 
 function codexAuth(): string {
   return resolve(process.env.CODEX_HOME ?? join(process.env.HOME!, '.codex'), 'auth.json');
@@ -61,7 +62,7 @@ export async function snapshotSetup(): Promise<SetupSnapshot> {
   const directories = new Set([join(process.env.HOME!, '.claude'), join(process.env.HOME!, '.codex'),
     process.env.CLAUDE_CONFIG_DIR, process.env.CODEX_HOME].filter((directory): directory is string => !!directory).map(directory => resolve(directory)));
   const paths = [...directories].flatMap(directory => ['pstack-models.md', 'CLAUDE.md', 'AGENTS.md'].map(name => join(directory, name)));
-  paths.push(join(resolve(process.env.GROK_HOME ?? join(process.env.HOME!, '.grok')), 'rules/pstack-models.md'));
+  paths.push(join(resolve(grokHome(process.env)), 'rules/pstack-models.md'));
   const snapshot: SetupSnapshot = [];
   for (const path of paths) {
     const link = (await lstat(path).catch(() => undefined))?.isSymbolicLink() ? await readlink(path) : undefined;
