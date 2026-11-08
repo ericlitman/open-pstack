@@ -4,11 +4,12 @@ pstack skills retain Claude Code tool language (`Skill`, `Agent`, `AskUserQuesti
 
 ## Harness config homes
 
-Resolve the current parent's config home once: Claude Code uses nonempty `CLAUDE_CONFIG_DIR`, otherwise `$HOME/.claude`; Codex uses nonempty `CODEX_HOME`, otherwise `$HOME/.codex`. The equivalent quoted shell expressions are:
+Resolve the current parent's config home once: Claude Code uses nonempty `CLAUDE_CONFIG_DIR`, otherwise `$HOME/.claude`; Codex uses nonempty `CODEX_HOME`, otherwise `$HOME/.codex`; Grok uses nonempty `GROK_HOME`, otherwise `$HOME/.grok`. The equivalent quoted shell expressions are:
 
 ```bash
 "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 "${CODEX_HOME:-$HOME/.codex}"
+"${GROK_HOME:-$HOME/.grok}"
 ```
 
 Empty and unset variables both select the default. Preserve spaces in the resolved path by quoting shell file operands. In shared instructions, `<config-home>` means this resolved parent-specific directory, not literal text to write. Use that same home for setup's sheet and integration writes, snapshots, restoration, and readback.
@@ -50,22 +51,22 @@ The copy registers under its plain name beside the plugin's `pstack:<skill>`, an
 
 ## Tool actions
 
-| pstack / Claude action | Codex equivalent |
-|------------------------|------------------|
-| Read a file | `shell` (`cat`, `head`, `tail`) |
-| Create / edit / delete a file | `apply_patch` |
-| Run a shell command | `shell` |
-| Search file contents / find files | `shell` (`rg`, `grep`, `find`, `ls`) |
-| Fetch a URL | `shell` with `curl` / `wget` |
-| Search the web | `web_search` |
-| Invoke a skill (the `Skill` tool, `/command`) | Skills load natively. Follow the instructions presented. |
-| `paths` frontmatter scopes automatic loading | Claude Code only. On Codex, invoke `pstack:typescript-best-practices` by name. |
-| Dispatch a subagent (the `Agent`/`Task` tool) | `spawn_agent`. On Grok this is `spawn_subagent`. |
-| Dispatch N parallel subagents in one turn | N `spawn_agent` calls in one response |
-| Wait for a subagent result | `wait_agent` |
-| Free a finished subagent slot | `close_agent` |
-| Track tasks (the todolist / `TodoWrite`) | `update_plan` |
-| Ask the human a fixed-choice question (`AskUserQuestion`) | Ask in plain text and let the user answer. Codex has no structured-choice tool. |
+| pstack / Claude action | Codex equivalent | Grok equivalent |
+|------------------------|------------------|-----------------|
+| Read a file | `shell` (`cat`, `head`, `tail`) | `read_file` |
+| Create / edit / delete a file | `apply_patch` | `search_replace` |
+| Run a shell command | `shell` | `run_terminal_command` |
+| Search file contents / find files | `shell` (`rg`, `grep`, `find`, `ls`) | `grep`, `list_dir` |
+| Fetch a URL | `shell` with `curl` / `wget` | `web_fetch` |
+| Search the web | `web_search` | `web_search` |
+| Invoke a skill (the `Skill` tool, `/command`) | Skills load natively. Follow the instructions presented. | Skills load natively. Follow the instructions presented. |
+| `paths` frontmatter scopes automatic loading | Claude Code only. On Codex, invoke `pstack:typescript-best-practices` by name. | Invoke `pstack:typescript-best-practices` by name. |
+| Dispatch a subagent (the `Agent`/`Task` tool) | `spawn_agent` | `spawn_subagent` with `subagent_type: pstack:poteto-agent` |
+| Dispatch N parallel subagents in one turn | N `spawn_agent` calls in one response | N `spawn_subagent` calls in one response |
+| Wait for a subagent result | `wait_agent` | `get_command_or_subagent_output`, as [Waits on Grok](#waits-on-grok) says |
+| Free a finished subagent slot | `close_agent` | None |
+| Track tasks (the todolist / `TodoWrite`) | `update_plan` | `todo_write` |
+| Ask the human a fixed-choice question (`AskUserQuestion`) | Ask in plain text and let the user answer. Codex has no structured-choice tool. | `ask_user_question` |
 
 Subagent dispatch needs `multi_agent` enabled. Add to `<config-home>/config.toml`, using Codex's [config-home rule](#harness-config-homes):
 
@@ -83,6 +84,7 @@ poteto-mode's Subagents section sets the Claude-specific default `subagent_type:
 - There is no `poteto-agent` subagent type. Route an ad-hoc subagent through poteto-mode's style by dispatching a `spawn_agent` whose instructions tell it to read the `poteto-mode` skill in full first.
 - `spawn_agent` calls already run concurrently with your turn, so `run_in_background: true` has no separate flag. Issue the dispatch and continue.
 - There is no `comment-sicko` subagent type either. The **no-comments** skill spawns it on Claude Code; on Codex dispatch a `spawn_agent` whose instructions tell it to read `agents/comment-sicko.md` in full first.
+- On Grok, the pstack subagent types are `pstack:poteto-agent` and `pstack:comment-sicko`. The Grok manifest does not offer the `pstack-<family>-<effort>` Claude lane agents.
 - A Claude Code native lane cannot start agents: each `agents/pstack-*.md` lane disallows `Agent` and `Task`.
 - Claude Code runs every subagent on this machine, so the **swarm** skill's workers and the fan-out playbooks (`orchestrate`, `autopilot-full`, `autopilot-stack`) isolate writers with worktrees. The same holds on Codex.
 - Keep the rest of the policy unchanged. Pass file pointers not inlined context, give each worker its own worktree or branch when they write, review every subagent's diff yourself.
@@ -97,9 +99,19 @@ poteto-mode's Subagents section sets the Claude-specific default `subagent_type:
 - These windows bound one observation call. They are never a lane or runner deadline, and never go to `pstack-runner --timeout`.
 - Codex is unaffected: `spawn_agent` runs concurrently, `wait_agent` blocks, and exec sessions return a handle.
 
+## Waits on Grok
+
+- Background shell: `run_terminal_command` with `block_until_ms: 0` returns a task ID. Start the external launcher this way.
+- Native lanes: `spawn_subagent` runs in the background and returns a subagent ID. Retain every task and subagent ID.
+- Waiting: `get_command_or_subagent_output` with retained IDs and a positive `timeout_ms`. Grok clamps one wait to 1 hour and takes at most 20 IDs. If a lane is still running when the wait returns, wait again on the same ID. Never kill a lane because it runs long.
+- Cancelling: `kill_command_or_subagent` with the retained ID, then read the runner lane's retained receipt.
+- Writers: give a writer a prepared checkout with `cwd` and `isolation: none`. Use `isolation: worktree` only where the calling skill allows a checkout that Grok creates.
+- MCP reaches native lanes only. Read-only on a native lane is advisory: add "Do not edit files." to its task and record it as advisory.
+- Children are depth one and cannot spawn. A child returns any further delegation it needs to the parent.
+
 ## Models and providers
 
-Do not replace every configured entry with a Codex model. `/setup-pstack` writes portable descriptors, such as the [role defaults](model-catalog.md#role-defaults). In a Codex parent, only `codex:*` is native. Route Claude and Grok descriptors through the external launcher exactly as `provider-dispatch.md` specifies. In a Grok parent, `inherit-parent`, `auto`, and a Grok descriptor that already matches the parent's model and effort use `spawn_subagent`. Every other provider, and any other Grok descriptor, uses the runner with `--parent grok`. The runner still rejects a Claude provider from a Claude parent and a Codex provider from a Codex parent. It accepts `--parent grok` with a Grok provider. The default panel runs one model from each of three providers and contains no older GPT or Claude substitute.
+Do not replace every configured entry with a Codex model. `/setup-pstack` writes portable descriptors, such as the [role defaults](model-catalog.md#role-defaults). In a Codex parent, only `codex:*` is native. Route Claude and Grok descriptors through the external launcher exactly as `provider-dispatch.md` specifies. In a Grok parent, only `inherit-parent` and `auto` use `spawn_subagent`. Every explicit descriptor, including every `grok:*` descriptor, uses the runner with `--parent grok`. The runner still rejects a Claude provider from a Claude parent and a Codex provider from a Codex parent. The default panel runs one model from each of three providers and contains no older GPT or Claude substitute.
 
 ## Claude built-in skills pstack references
 
@@ -114,7 +126,7 @@ Some triggers name skills that ship with Claude Code, not pstack. They do not ex
 
 ## Vendored scripts
 
-`skills/poteto-mode/scripts/` ships the `watch-pr` PR watcher, `worktree-audit.sh`, and `runner/pstack-runner`. They are plain bun and bash, so they run the same on Codex; invoke them through `shell`. The external runner additionally needs the assigned `claude`, `codex`, or `grok` executable already authenticated. It rejects a Codex provider when Codex is the parent because that lane belongs on native `spawn_agent`. It rejects a Claude provider when Claude Code is the parent for the same reason. A Grok parent may run a Grok provider through the runner when `spawn_subagent` cannot carry the model or the effort. The other scripts need `bun`, `gh` (or Origin's `origin` CLI where the playbook resolves it), and (for `worktree-audit.sh`) `jq` and `rg`. `worktree-audit.sh` reads Claude Code transcripts under `~/.claude/projects/`; point it at your runtime's transcript directory instead when you run it elsewhere.
+`skills/poteto-mode/scripts/` ships the `watch-pr` PR watcher, `worktree-audit.sh`, and `runner/pstack-runner`. They are plain bun and bash, so they run the same on Codex; invoke them through `shell`. The external runner additionally needs the assigned `claude`, `codex`, or `grok` executable already authenticated. It rejects a Codex provider when Codex is the parent because that lane belongs on native `spawn_agent`. It rejects a Claude provider when Claude Code is the parent for the same reason. A Grok parent runs every explicit Grok descriptor through the runner. The other scripts need `bun`, `gh` (or Origin's `origin` CLI where the playbook resolves it), and (for `worktree-audit.sh`) `jq` and `rg`. `worktree-audit.sh` reads Claude Code transcripts under `~/.claude/projects/`; point it at your runtime's transcript directory instead when you run it elsewhere.
 
 ## Instructions file
 
