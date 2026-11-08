@@ -3,9 +3,13 @@
 Open Pstack lands on green: Mergify merges a ready PR to main once verify and exact-head live-gate pass and no review thread is unresolved, and a workflow resolves Unfret's own threads. A PR that touches `.github/` or the Mergify config also waits for Unfret, and workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
-## Unreleased
+## 1.21.0 adds Grok as a parent harness
+
+Open Pstack 1.21.0 keeps the Cursor pstack 0.15.36 sync. Default roles and panels are unchanged.
 
 **Grok is a parent harness (#281).** Started from max-metaplanet's PR #282. In a Grok session, `inherit-parent` and `auto` use `spawn_subagent` with `pstack:poteto-agent`, and every explicit descriptor, including every `grok:*` descriptor, uses the runner with `--parent grok`. A Grok agent file that names a model Grok cannot serve runs the parent's model without an error, so only the runner's receipt proves a pinned Grok model. The runner's `explicitLaneRoute` parent field says this: Claude and Codex keep explicit same-provider lanes `native` and still refuse them, and Grok sends them to the `runner`. A Grok parent's children drop `GROK_AGENT` and `GROK_SESSION_ID` and keep `GROK_HOME`. `plugins/pstack/.grok-plugin/plugin.json` shares `skills/` and points `agents` at the generated `grok-agents/` directory, so Grok offers `poteto-agent` and `comment-sicko` and none of the Claude lane agents. Grok 1.0.77 reads each entry of an `agents` list as a directory, so a list of the two files loaded no agents. `codex-tools.md` gains a Grok column and a Waits on Grok section. `/setup-pstack` writes the Grok sheet to `<config-home>/rules/pstack-models.md`, which Grok loads as a home rule. pstack's startup hook does not fire in Grok, so run `/pstack:poteto-mode` by name.
+
+**Grok in the live gate (#281, #285, #287).** The verifier gains a `grok` harness. It loads the exact candidate into one Grok session with `grok agent --plugin-dir`, writes no operator Grok config, and has two cases. `grok:dispatch` runs a native lane, a Grok runner lane and a Codex runner lane, and checks that Grok offers only the model-free agents. `grok:setup` checks that setup writes the Grok sheet, then restores it byte for byte. Any path the registry owns as runtime code or instructions may name these cases, and they run only when named. Reflect copies a skill to `.grok/skills/` or `<config-home>/skills/` on Grok.
 
 ## 1.20.0 gives Amp an opted-in writer
 
