@@ -71,7 +71,7 @@ The table above is the current Cursor sync point. Open Pstack 1.17.0 imported th
 
 - **#253 — T3 Code parent**: Cursor has no T3 Code route. The port adds the `T3 host` section to `provider-dispatch.md`: a lane whose provider T3 offers and has enabled goes through `delegate_task`, and any other lane takes the standalone route of the Claude Code or Codex runtime. `codex-tools.md` points to it, and `setup-pstack/SKILL.md` routes its probes and smoke panel the same way at its existing steps. No other skill body changes. Keep these lines during syncs.
 
-- **#281 — Grok parent**: Cursor has no Grok parent. The port adds `grok` to `PARENTS` with `externalSelf`, so the generated route table has a Grok parent column and the runner accepts `--parent grok`, including a Grok provider. Claude and Codex stay native-only for their own provider. `provider-dispatch.md`, `codex-tools.md`, and `setup-pstack/SKILL.md` name `spawn_subagent` and that runner exception. Keep these lines during syncs.
+- **#281 — Grok parent**: Cursor has no Grok parent. Started from max-metaplanet's PR #282. The port adds `grok` to `PARENTS` with `explicitLaneRoute: "runner"`, so the generated route table has a Grok parent column and the runner accepts `--parent grok`, including a Grok provider. Claude and Codex keep `native` and stay native-only for their own provider. It adds `plugins/pstack/.grok-plugin/plugin.json` and the generated `grok-agents/` directory, a Grok column and a Waits on Grok section in `codex-tools.md`, the Grok rules in `provider-dispatch.md`, and the Grok sheet in `setup-pstack/SKILL.md` at its existing steps. Keep these lines during syncs.
 
 ## Check for changes
 

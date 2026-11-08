@@ -36,12 +36,13 @@ fi
 verof() { { grep -m1 '"version"' "$1" || true; } | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/'; }
 vc="$(verof "$repo/plugins/pstack/.claude-plugin/plugin.json")"
 vx="$(verof "$repo/plugins/pstack/.codex-plugin/plugin.json")"
+vg="$(verof "$repo/plugins/pstack/.grok-plugin/plugin.json")"
 vm="$(verof "$repo/.claude-plugin/marketplace.json")"
 vu="$(sed -n 's/| open-pstack version | `\([^`]*\)` |/\1/p' "$repo/UPSTREAM.md")"
-if [ -n "$vc" ] && [ "$vc" = "$vx" ] && [ "$vc" = "$vm" ] && [ "$vc" = "$vu" ]; then
-  note "ok: open-pstack version matches across UPSTREAM.md and the 3 manifests ($vc)"
+if [ -n "$vc" ] && [ "$vc" = "$vx" ] && [ "$vc" = "$vg" ] && [ "$vc" = "$vm" ] && [ "$vc" = "$vu" ]; then
+  note "ok: open-pstack version matches across UPSTREAM.md and the 4 manifests ($vc)"
 else
-  note "FAIL: open-pstack version differs: upstream=$vu claude-plugin=$vc codex-plugin=$vx marketplace=$vm"
+  note "FAIL: open-pstack version differs: upstream=$vu claude-plugin=$vc codex-plugin=$vx grok-plugin=$vg marketplace=$vm"
   fail=1
 fi
 
