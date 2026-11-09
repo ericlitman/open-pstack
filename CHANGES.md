@@ -3,6 +3,10 @@
 Open Pstack lands on green: Mergify merges a ready PR to main once verify and exact-head live-gate pass and no review thread is unresolved, and a workflow resolves Unfret's own threads. A PR that touches `.github/` or the Mergify config also waits for Unfret, and workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## Unreleased
+
+**One branch per task.** A lone writer now works in the current checkout on the current branch, in `poteto-mode`'s delegation defaults and the feature, refactoring, bug-fix, perf-issue and hillclimb playbooks. A writer gets its own worktree only when another writer runs at the same time. `opening-a-pr` creates one branch off trunk only when the session is on trunk, makes one PR per task, and stacks only a diff too large to review. Branches and worktrees an agent made are deleted once their work lands. Before this, each task, delegate and narrow PR got a fresh branch or worktree, and one user's repository collected 25 local branches, 31 remote branches and 15 worktrees in four days, most of them already merged.
+
 ## 1.21.0 adds Grok as a parent harness
 
 Open Pstack 1.21.0 keeps the Cursor pstack 0.15.36 sync. Default roles and panels are unchanged.

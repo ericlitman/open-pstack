@@ -14,7 +14,7 @@
    7. Do it cheaper.
 
    When an earlier mantra meets the target, stop.
-3. Plan the fix from the trace. If it crosses a function boundary, `architect` first. Delegate implementation through provider dispatch using your configured `perf-issue` descriptor (or its [role default](../references/model-catalog.md#role-defaults)) with `isolated-write` in a dedicated worktree. Pick each subagent's effort for the job, per the Subagents section. Review the diff. Capture a post-fix trace.
+3. Plan the fix from the trace. If it crosses a function boundary, `architect` first. Delegate implementation through provider dispatch using your configured `perf-issue` descriptor (or its [role default](../references/model-catalog.md#role-defaults)) with `isolated-write` in the current checkout (a dedicated worktree only when another writer runs at the same time). Pick each subagent's effort for the job, per the Subagents section. Review the diff. Capture a post-fix trace.
    Apply the **sequence-verifiable-units** principle skill, verifying each attempt before trying the next.
 4. Parse and compare the artifacts (JSON to sqlite, diff). "Inconclusive" or wrong-surface is not a pass. Flag it.
 5. Cite the measurement in the PR.
