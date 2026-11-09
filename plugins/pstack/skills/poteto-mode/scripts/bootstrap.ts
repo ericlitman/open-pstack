@@ -1,6 +1,17 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join, resolve, sep } from "node:path";
 
 if (typeof Bun === "undefined") {
   console.error(
@@ -10,60 +21,93 @@ if (typeof Bun === "undefined") {
 }
 
 const scriptsDirectory = import.meta.dir;
-const nodeModulesDirectory = join(scriptsDirectory, "node_modules");
-const commanderPackagePath = join(
-  nodeModulesDirectory,
-  "commander",
-  "package.json"
-);
-const installKeyPath = join(
-  nodeModulesDirectory,
-  ".poteto-mode-tools-install-key"
-);
 
-function currentInstallKey(): string {
-  return createHash("sha256")
-    .update(readFileSync(join(scriptsDirectory, "package.json")))
-    .update("\0")
-    .update(readFileSync(join(scriptsDirectory, "bun.lock")))
-    .digest("hex");
+function dependencyCacheRoot(): string {
+  const cacheHome =
+    process.env.XDG_CACHE_HOME ||
+    (process.platform === "win32"
+      ? process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local")
+      : join(homedir(), ".cache"));
+  return resolve(cacheHome, "open-pstack", "poteto-mode-tools");
+}
+
+function hasCommander(directory: string): boolean {
+  try {
+    const entry = Bun.resolveSync("commander", directory);
+    const commanderDirectory = realpathSync(
+      join(directory, "node_modules", "commander")
+    );
+    return realpathSync(entry).startsWith(commanderDirectory + sep);
+  } catch {
+    return false;
+  }
+}
+
+function installDependencies(
+  cacheDirectory: string,
+  packageJson: Buffer,
+  lockfile: Buffer
+): void {
+  const cacheRoot = dirname(cacheDirectory);
+  mkdirSync(cacheRoot, { recursive: true });
+  const stagingDirectory = mkdtempSync(join(cacheRoot, ".staging-"));
+  try {
+    writeFileSync(join(stagingDirectory, "package.json"), packageJson);
+    writeFileSync(join(stagingDirectory, "bun.lock"), lockfile);
+    const result = Bun.spawnSync(
+      [process.execPath, "install", "--frozen-lockfile"],
+      { cwd: stagingDirectory }
+    );
+    if (result.exitCode !== 0) {
+      process.stdout.write(result.stdout);
+      process.stderr.write(result.stderr);
+      throw new Error(
+        `bun install --frozen-lockfile exited with status ${result.exitCode}`
+      );
+    }
+    if (!hasCommander(stagingDirectory)) {
+      throw new Error(
+        "bun install --frozen-lockfile completed without installing commander"
+      );
+    }
+
+    try {
+      renameSync(stagingDirectory, cacheDirectory);
+    } catch (error) {
+      if (!existsSync(cacheDirectory)) throw error;
+    }
+  } finally {
+    rmSync(stagingDirectory, { recursive: true, force: true });
+  }
 }
 
 export function ensureDependenciesInstalled(): void {
-  const installKey = currentInstallKey();
-  if (
-    existsSync(commanderPackagePath) &&
-    existsSync(installKeyPath) &&
-    readFileSync(installKeyPath, "utf8").trim() === installKey
-  ) {
-    return;
+  const packageJson = readFileSync(join(scriptsDirectory, "package.json"));
+  const lockfile = readFileSync(join(scriptsDirectory, "bun.lock"));
+  const installKey = createHash("sha256")
+    .update(packageJson)
+    .update("\0")
+    .update(lockfile)
+    .digest("hex");
+  const cacheDirectory = join(dependencyCacheRoot(), installKey);
+  if (!existsSync(cacheDirectory)) {
+    installDependencies(cacheDirectory, packageJson, lockfile);
   }
-
-  const result = Bun.spawnSync(
-    [process.execPath, "install", "--frozen-lockfile"],
-    { cwd: scriptsDirectory }
-  );
-  if (result.exitCode !== 0) {
-    process.stdout.write(result.stdout);
-    process.stderr.write(result.stderr);
+  if (!hasCommander(cacheDirectory)) {
     throw new Error(
-      `bun install --frozen-lockfile exited with status ${result.exitCode}`
-    );
-  }
-  if (!existsSync(commanderPackagePath)) {
-    throw new Error(
-      "bun install --frozen-lockfile completed without installing commander"
+      `Incomplete poteto-mode dependency cache at ${cacheDirectory}. Remove that cache directory and re-run.`
     );
   }
 
-  writeFileSync(installKeyPath, `${installKey}\n`);
-
-  const restarted = Bun.spawnSync([process.execPath, ...process.argv.slice(1)], {
-    cwd: process.cwd(),
-    env: process.env,
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
+  const load = createRequire(join(cacheDirectory, "package.json"));
+  const commander = load("commander");
+  Bun.plugin({
+    name: "pstack-commander",
+    setup(builder) {
+      builder.module("commander", () => ({
+        loader: "object",
+        exports: commander,
+      }));
+    },
   });
-  process.exit(restarted.exitCode ?? 1);
 }
