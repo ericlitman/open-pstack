@@ -67,10 +67,14 @@ codex plugin marketplace add ericlitman/open-pstack --ref main
 codex plugin add pstack@open-pstack
 ```
 
-Enable native Codex subagents in `~/.codex/config.toml` so pstack can compare work in parallel:
+Enable native Codex subagents in `~/.codex/config.toml` so pstack can compare work in parallel. The task plan tool is optional:
 
 ```toml
 [features.multi_agent_v2]
+enabled = true
+
+# Optional: enable the task plan tool
+[tools.update_plan]
 enabled = true
 ```
 

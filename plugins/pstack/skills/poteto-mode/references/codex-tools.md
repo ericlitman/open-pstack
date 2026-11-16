@@ -65,7 +65,6 @@ The copy registers under its plain name beside the plugin's `pstack:<skill>`, an
 | Dispatch a subagent (the `Agent`/`Task` tool) | `spawn_agent` | `spawn_subagent` with `subagent_type: pstack:poteto-agent` |
 | Dispatch N parallel subagents in one turn | N `spawn_agent` calls in one response | N `spawn_subagent` calls in one response |
 | Wait for a subagent result | `wait_agent` | `get_command_or_subagent_output`, as [Waits on Grok](#waits-on-grok) says |
-| Free a finished subagent slot | Use `close_agent` when exposed; otherwise skip the explicit close step. | None |
 | Track tasks (the todolist / `TodoWrite`) | Use `update_plan` when exposed; otherwise keep a short checklist in the conversation. | `todo_write` |
 | Ask the human a fixed-choice question (`AskUserQuestion`) | Use a structured question tool when exposed; otherwise ask in plain text. | `ask_user_question` |
 
