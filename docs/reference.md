@@ -40,8 +40,6 @@ Codex discovers the plugin skills under the `pstack` namespace, so they list as 
 enabled = true
 ```
 
-Codex [deprecated the explicit `multi_agent` setting](https://github.com/openai/codex/pull/59479) while keeping its V1 fallback on by default. Remove that key from user and project config to clear the startup warning. [V2 is stable but off by default](https://github.com/openai/codex/pull/34383). Its default limit is four total threads, including the root. Set `max_concurrent_threads_per_session` in the V2 table when a larger fan-out needs more slots; the [V2 limit counts the root](https://github.com/openai/codex/pull/19792). Start a new task after changing the setting.
-
 For local plugin development, you can clone the repository and link its skills directly:
 
 ```shell

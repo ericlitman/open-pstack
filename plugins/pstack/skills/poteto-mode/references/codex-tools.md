@@ -76,7 +76,7 @@ For predictable native subagent dispatch, enable stable multi-agent V2 in `<conf
 enabled = true
 ```
 
-Codex [deprecated the explicit `multi_agent` setting](https://github.com/openai/codex/pull/59479); remove it from user and project config to clear the startup warning. [V2 is stable but off by default](https://github.com/openai/codex/pull/34383). Its default limit is four total threads, including the root. If a larger fan-out needs more slots, set `max_concurrent_threads_per_session` in the V2 table to the required total; this [V2 limit includes the root](https://github.com/openai/codex/pull/19792). Start a new Codex task after changing the setting. `update_plan` is [opt-in](https://github.com/openai/codex/pull/41744).
+For larger panels, set `max_concurrent_threads_per_session` in the V2 table. The limit includes the root thread. Start a new Codex task after changing the setting.
 
 Check that the current Codex tool surface exposes `spawn_agent` before a native lane. If it does not, the native lane is a named dropout. Independent external lanes still run, and the parent records the reduced provider count. Never collapse a panel into a sequential single-model pass.
 
