@@ -65,18 +65,20 @@ The copy registers under its plain name beside the plugin's `pstack:<skill>`, an
 | Dispatch a subagent (the `Agent`/`Task` tool) | `spawn_agent` | `spawn_subagent` with `subagent_type: pstack:poteto-agent` |
 | Dispatch N parallel subagents in one turn | N `spawn_agent` calls in one response | N `spawn_subagent` calls in one response |
 | Wait for a subagent result | `wait_agent` | `get_command_or_subagent_output`, as [Waits on Grok](#waits-on-grok) says |
-| Free a finished subagent slot | `close_agent` | None |
-| Track tasks (the todolist / `TodoWrite`) | `update_plan` | `todo_write` |
-| Ask the human a fixed-choice question (`AskUserQuestion`) | Ask in plain text and let the user answer. Codex has no structured-choice tool. | `ask_user_question` |
+| Free a finished subagent slot | Use `close_agent` when exposed; otherwise skip the explicit close step. | None |
+| Track tasks (the todolist / `TodoWrite`) | Use `update_plan` when exposed; otherwise keep a short checklist in the conversation. | `todo_write` |
+| Ask the human a fixed-choice question (`AskUserQuestion`) | Use a structured question tool when exposed; otherwise ask in plain text. | `ask_user_question` |
 
-Subagent dispatch needs `multi_agent` enabled. Add to `<config-home>/config.toml`, using Codex's [config-home rule](#harness-config-homes):
+For predictable native subagent dispatch, enable stable multi-agent V2 in `<config-home>/config.toml`, using Codex's [config-home rule](#harness-config-homes):
 
 ```toml
-[features]
-multi_agent = true
+[features.multi_agent_v2]
+enabled = true
 ```
 
-Without it, the native Codex lane is a named dropout. Independent external lanes still run, and the parent records the reduced provider count. Never collapse a panel into a sequential single-model pass.
+Codex [deprecated the explicit `multi_agent` setting](https://github.com/openai/codex/pull/59479); remove it from user and project config to clear the startup warning. [V2 is stable but off by default](https://github.com/openai/codex/pull/34383). Its default limit is four total threads, including the root. If a larger fan-out needs more slots, set `max_concurrent_threads_per_session` in the V2 table to the required total; this [V2 limit includes the root](https://github.com/openai/codex/pull/19792). Start a new Codex task after changing the setting. `update_plan` is [opt-in](https://github.com/openai/codex/pull/41744).
+
+Check that the current Codex tool surface exposes `spawn_agent` before a native lane. If it does not, the native lane is a named dropout. Independent external lanes still run, and the parent records the reduced provider count. Never collapse a panel into a sequential single-model pass.
 
 ## Subagent policy
 

@@ -67,14 +67,14 @@ codex plugin marketplace add ericlitman/open-pstack --ref main
 codex plugin add pstack@open-pstack
 ```
 
-Turn on Codex subagents in `~/.codex/config.toml` so pstack can compare work in parallel:
+Enable native Codex subagents in `~/.codex/config.toml` so pstack can compare work in parallel:
 
 ```toml
-[features]
-multi_agent = true
+[features.multi_agent_v2]
+enabled = true
 ```
 
-Start a new Codex task after installation so it can discover the new skills and setting.
+Remove any explicit `multi_agent = ...` entry: Codex warns on this deprecated V1 setting. V2 allows three child threads by default, alongside the root thread. For larger fan-outs, set `max_concurrent_threads_per_session` in the same V2 table to the total number of threads you need. Start a new Codex task after installation so it can discover the new skills and setting.
 
 ## Get started
 
