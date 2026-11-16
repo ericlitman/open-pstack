@@ -67,11 +67,15 @@ codex plugin marketplace add ericlitman/open-pstack --ref main
 codex plugin add pstack@open-pstack
 ```
 
-Turn on Codex subagents in `~/.codex/config.toml` so pstack can compare work in parallel:
+Enable native Codex subagents in `~/.codex/config.toml` so pstack can compare work in parallel:
 
 ```toml
-[features]
-multi_agent = true
+[features.multi_agent_v2]
+enabled = true
+
+# Optional: enable the task plan tool
+[tools.update_plan]
+enabled = true
 ```
 
 Start a new Codex task after installation so it can discover the new skills and setting.

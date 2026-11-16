@@ -35,7 +35,7 @@ When the model rule is missing and it matters, ask whether the user wants to pic
 
 ## Get set up
 
-1. Install. In Claude Code, run `/plugin marketplace add ericlitman/open-pstack`, then `/plugin install pstack@open-pstack`, then `/reload-plugins`. In Codex, run `codex plugin marketplace add ericlitman/open-pstack --ref main`, then `codex plugin add pstack@open-pstack`, and turn on `multi_agent` per [`codex-tools.md`](../poteto-mode/references/codex-tools.md).
+1. Install. In Claude Code, run `/plugin marketplace add ericlitman/open-pstack`, then `/plugin install pstack@open-pstack`, then `/reload-plugins`. In Codex, run `codex plugin marketplace add ericlitman/open-pstack --ref main`, then `codex plugin add pstack@open-pstack`, and turn on `multi_agent_v2` per [`codex-tools.md`](../poteto-mode/references/codex-tools.md).
 2. Run [`/setup-pstack`](../setup-pstack/SKILL.md). It maps a model to each role, asks one requested effort for each model family it assigns, probes those models, and writes a model sheet. A rerun that keeps a valid sheet and names no change asks none of these questions: it keeps the sheet's roles and efforts, probes them, and writes when every probe passes. The sheet applies to new sessions. Then it offers once each to generate a verification skill and a formal verification skill for the project, unless the project already has one. On a rerun that keeps the sheet, it mentions each offer in one line instead of asking.
 3. Start a real task with `/poteto-mode`, a goal, and a check that can pass or fail.
 
