@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { ModelRun } from "../registry/contract.ts";
 import type { LaneRequest } from "../registry/index.ts";
 import { modelFailureStatus } from "../types.ts";
@@ -27,7 +27,8 @@ describe("dsh launch", () => {
 
   it("pins read-only mode, the stored login in place, the model and effort, and turns off the lockdown rows", () => {
     const saved = process.env.DSH_HOME;
-    process.env.DSH_HOME = "/srv/dsh";
+    const credentialHome = resolve("/srv/dsh");
+    process.env.DSH_HOME = credentialHome;
     const patch = dsh.launch.sidecar!.config!.content(lane({ model: "deepseek-v4-pro", effort: "low", cwd: "/tmp/a dir: #x" }));
     if (saved === undefined) delete process.env.DSH_HOME;
     else process.env.DSH_HOME = saved;
@@ -42,7 +43,7 @@ describe("dsh launch", () => {
       "- id: credentials",
       "  disabled: false",
       "  config:",
-      "    path: \"/srv/dsh/.credentials.yaml\"",
+      `    path: ${JSON.stringify(join(credentialHome, ".credentials.yaml"))}`,
       "- id: agent-default-model",
       "  config:",
       "    provider: deepseek-official",
@@ -63,8 +64,9 @@ describe("dsh launch", () => {
   it("reads the stored login from the parent's DSH_HOME, resolved as dsh resolves it, else ~/.dsh", () => {
     const saved = process.env.DSH_HOME;
     try {
-      process.env.DSH_HOME = "/srv/dsh home";
-      expect(dsh.launch.sidecar!.config!.content(lane())).toContain("- id: credentials\n  disabled: false\n  config:\n    path: \"/srv/dsh home/.credentials.yaml\"\n");
+      const credentialHome = resolve("/srv/dsh home");
+      process.env.DSH_HOME = credentialHome;
+      expect(dsh.launch.sidecar!.config!.content(lane())).toContain(`- id: credentials\n  disabled: false\n  config:\n    path: ${JSON.stringify(join(credentialHome, ".credentials.yaml"))}\n`);
       for (const [value, home] of [
         [undefined, join(homedir(), ".dsh")],
         [" \t", join(homedir(), ".dsh")],
@@ -101,13 +103,22 @@ describe("dsh launch", () => {
 });
 
 describe("dsh preflight", () => {
+  it("accepts rc.3 only on Windows and preserves the baseline version", () => {
+    const check = (stdout: string) => dsh.preflight.guard!.check({ exitCode: 0, stdout, stderr: "" });
+    expect(check("0.2.1-rc.2\n")).toBeNull();
+    const windowsRelease = check("0.2.2-rc.3\r\n");
+    if (process.platform === "win32") expect(windowsRelease).toBeNull();
+    else expect(windowsRelease).toMatchObject({ status: "unavailable-cli" });
+    expect(check("0.2.2-rc.4")).toMatchObject({ status: "unavailable-cli" });
+  });
+
   it("runs a positional task with the lane's patch, then the shipped preflight patch", () => {
     const argv = dsh.preflight.argv(lane(), testFacts(dsh).providerSidecar);
     expect(argv).toEqual([
       "--profile", "headless", "--patch", "/tmp/receipt.json.provider/patch.yml",
       "--patch", join(import.meta.dir, "dsh-preflight.yml"), "--json", "preflight",
     ]);
-    expect(readFileSync(argv[5]!, "utf8")).toContain("baseURL: http://127.0.0.1:1\n- id: llm-retry\n  disabled: true\n");
+    expect(readFileSync(argv[5]!, "utf8").replace(/\r\n/g, "\n")).toContain("baseURL: http://127.0.0.1:1\n- id: llm-retry\n  disabled: true\n");
   });
 
   it("passes TRANSPORT with fixed evidence that the key is not validated", () => {

@@ -149,7 +149,9 @@ function parse(run: ModelRun): ParseResult {
   return { kind: "complete", text, metadata };
 }
 
-const VERSION = "0.2.1-rc.2";
+const BASELINE_VERSION = "0.2.1-rc.2";
+const WINDOWS_VERSION = "0.2.2-rc.3";
+const supportedVersions = process.platform === "win32" ? [BASELINE_VERSION, WINDOWS_VERSION] : [BASELINE_VERSION];
 
 // dsh has no status command. The preflight turn's error code says only whether a key is stored or exported.
 function classify(run: ChildRun) {
@@ -172,9 +174,9 @@ export const dsh = adapter({
     // dsh ignores a patch row it does not have, so another version could drop the lockdown silently.
     guard: {
       argv: ["--version"],
-      check: (run) => run.stdout.trim() === VERSION ? null : {
+      check: (run) => supportedVersions.includes(run.stdout.trim()) ? null : {
         status: "unavailable-cli",
-        message: `dsh ${run.stdout.trim()} is not the measured ${VERSION}; the adapter must be re-measured before it runs this version`,
+        message: `dsh ${run.stdout.trim()} is outside the measured versions for ${process.platform} (${supportedVersions.join(", ")}); the adapter must be re-measured before it runs this version`,
       },
     },
   },
@@ -198,13 +200,13 @@ export const dsh = adapter({
   },
   docs: {
     name: "DeepSeek Harness",
-    hostPrerequisites: ["dsh 0.2.1-rc.2 exactly"],
+    hostPrerequisites: [`dsh ${BASELINE_VERSION} on all hosts or ${WINDOWS_VERSION} on Windows`],
     statePaths: [
       "`<receipt>.provider/`, the lane's own `DSH_HOME`: the sessions (`sessions/<cwd-slug>/<session-id>/`), projection cache (`storages/session_projcache/`), `profiles/headless/` and `.anonymous-user-id` that dsh writes on every run",
       "The stored key `<DSH_HOME, else ~/.dsh>/.credentials.yaml`, which the lane reads in place and does not copy",
     ],
     notes: [
-      "Measured with dsh 0.2.0-rc.2, a developer preview, and rechecked on 0.2.1-rc.2 for the patch rows, the stored-login preflight and the writer. The runner checks `dsh --version` before the preflight and refuses any version but 0.2.1-rc.2 as `unavailable-cli`/69. Recheck on an upgrade: the config row IDs the patch names (dsh silently ignores a patch row it does not have, so a renamed row would drop that part of the lockdown), the SIGTERM exit 0 with a partial `final`, the hardcoded `/tmp` writable root, the session-log upload being on by default, that dsh reads only the cwd's `.env` and skips a directory there, the transport retry row, and the `credentials` row's `path` config. dsh 0.2.1-rc.2 ships the `credentials` row disabled, so the patch enables it.",
+      "Measured with dsh 0.2.0-rc.2, a developer preview, and rechecked on 0.2.1-rc.2 for the patch rows, the stored-login preflight and the writer. The runner checks `dsh --version` before the preflight and refuses versions outside the host-specific list as `unavailable-cli`/69. On Windows, dsh 0.2.2-rc.3 passed headless patch, stored-login, read-only and bounded-writer checks. Its headless profile has no `tool-subagent-list-agents` row. Recheck on an upgrade: the config row IDs the patch names (dsh silently ignores a patch row it does not have, so a renamed row would drop that part of the lockdown), the SIGTERM exit 0 with a partial `final`, the hardcoded `/tmp` writable root, the session-log upload being on by default, that dsh reads only the cwd's `.env` and skips a directory there, the transport retry row, and the `credentials` row's `path` config. dsh 0.2.1-rc.2 ships the `credentials` row disabled, so the patch enables it.",
       "Model and effort are config, not flags. Each lane gets a run-owned `--patch` file at `<receipt>.provider/patch.yml` (directory 0700, file 0600) that pins `agent-default-model` to provider `deepseek-official`, the lane's model and, unless the effort is `default`, its `reasoningEffort`. dsh offers efforts `off`, `low`, `high` and `max`, and fails `medium` locally.",
       "Each lane runs with `DSH_HOME` set to its `<receipt>.provider/` directory, and the allowlist drops every inherited `DSH_*` name. dsh creates the `headless` profile there on first use with no network or `pnpm` install (about 70 ms), so no user layer (`profiles/headless/cordis.patch.yml`) and no home `.env` from the operator's dsh home loads. Measured with `--dump-config`: a planted user layer that redirected `llm-deepseek.config.baseURL`, moved `fs-sandbox.config.cwd`, picked another `agent-default-model` provider and disabled `bash-sandbox` changed nothing, and the composed tree was the default rows plus the lane's patch. The patch's `credentials` row points the credential store at `<the parent's DSH_HOME, else ~/.dsh>/.credentials.yaml`, read in place. A key kept only in the operator's `<DSH_HOME>/.env` no longer authenticates; store it or export `DEEPSEEK_API_KEY`.",
       "The patch pins `sandbox-policy` to `read-only` for a read-only lane and `workspace-write` for an `isolated-write` lane, with the lane's cwd as the workspace root, and `approval` to `ask`, which overrides `DSH_PERMISSION_MODE`. The other sandbox rows keep dsh's defaults, including the bash tool's own timeout; the runner adds no deadline. Seatbelt enforces it on macOS for bash and the file tools. Headless has no approval channel, so an escalation request fails closed. Bash keeps network access, and the `read` tool is not confined to the cwd.",

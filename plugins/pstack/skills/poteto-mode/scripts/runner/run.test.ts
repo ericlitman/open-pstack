@@ -2494,7 +2494,7 @@ process.exit(130);`);
     expect(existsSync(interrupted.outputPath)).toBe(false);
   });
 
-  it("refuses a dsh other than the measured version before the preflight", async () => {
+  it("refuses an unmeasured dsh version before the preflight", async () => {
     fakeDsh(TRANSPORT, OBSERVE, "0.3.0");
     const input = dshOptions("dsh-version");
     const result = await runLane(laneOf(input));
@@ -2503,7 +2503,7 @@ process.exit(130);`);
       status: "unavailable-cli",
       preflight: { status: "not-run" },
       error: {
-        message: "dsh 0.3.0 is not the measured 0.2.1-rc.2; the adapter must be re-measured before it runs this version",
+        message: expect.stringContaining(`dsh 0.3.0 is outside the measured versions for ${process.platform}`),
         evidence: "0.3.0",
       },
     });
