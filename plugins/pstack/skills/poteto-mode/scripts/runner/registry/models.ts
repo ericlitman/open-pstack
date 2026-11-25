@@ -16,13 +16,16 @@ export const FAMILIES = [
   }),
   family({
     name: "sol",
-    label: "GPT-6.1 Sol",
+    label: "GPT-6.2 Sol",
     provider: "codex",
-    model: "gpt-6.1-sol",
-    efforts: UP_TO_ULTRA, // `codex debug models`, Codex CLI 0.159.0
+    model: "gpt-6.2-sol",
+    efforts: UP_TO_ULTRA,
     defaultEffort: "max",
     upstream: "gpt-5.6-sol-max",
-    predecessors: [{ model: "gpt-5.6-sol", efforts: UP_TO_ULTRA }],
+    predecessors: [
+      { model: "gpt-5.6-sol", efforts: UP_TO_ULTRA },
+      { model: "gpt-6.1-sol", efforts: UP_TO_ULTRA },
+    ],
   }),
   family({
     name: "grok",
@@ -55,12 +58,13 @@ export const FAMILIES = [
   }),
   family({
     name: "astra",
-    label: "GPT-6 Astra",
+    label: "GPT-6.2 Astra",
     provider: "codex",
-    model: "gpt-6-astra",
-    efforts: UP_TO_ULTRA, // `codex debug models`, Codex CLI 0.164.0
+    model: "gpt-6.2-astra",
+    efforts: UP_TO_ULTRA,
     defaultEffort: "max",
     upstream: null,
+    predecessors: [{ model: "gpt-6-astra", efforts: UP_TO_ULTRA }],
   }),
   family({
     name: "sonnet",
@@ -219,4 +223,6 @@ export const RELEASED_PAIRS = [
   { pair: "cursor:gemini-3.7-flash", family: "gemini-3.7-flash" },
   { pair: "claude:claude-haiku-5-5", family: "haiku-5-5" },
   { pair: "codex:gpt-6-astra", family: "astra" },
+  { pair: "codex:gpt-6.2-sol", family: "sol" },
+  { pair: "codex:gpt-6.2-astra", family: "astra" },
 ] as const satisfies readonly ReleasedPair<FamilyName>[];

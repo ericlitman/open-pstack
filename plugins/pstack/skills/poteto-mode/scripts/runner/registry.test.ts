@@ -113,7 +113,7 @@ describe("registry data", () => {
       .map((entry) => [entry.name, entry.rolling!.revisionPrefix]))
       .toEqual([["fable", "claude-fable-"], ["opus", "claude-opus-"], ["sonnet", "claude-sonnet-"]]);
     expect(REGISTRY.families.filter((entry) => entry.provider === "codex").map((entry) => [entry.name, entry.model]))
-      .toEqual([["sol", "gpt-6.1-sol"], ["luna", "gpt-6-luna"], ["astra", "gpt-6-astra"]]);
+      .toEqual([["sol", "gpt-6.2-sol"], ["luna", "gpt-6-luna"], ["astra", "gpt-6.2-astra"]]);
     expect(REGISTRY.families.filter((entry) => effortsOf(entry).includes("ultra")).map((entry) => entry.name)).toEqual(["sol", "astra"]);
   });
 
@@ -495,12 +495,12 @@ describe("resolveLane", () => {
       .toThrow("effort ultra is not offered for claude:sonnet");
   });
 
-  it("resolves Astra at max by default and passes ultra to Codex", () => {
-    const astra = resolveLane(request({ parent: "claude", provider: "codex", model: "gpt-6-astra" }));
+  it("resolves GPT-6.2 Astra at max by default and passes ultra to Codex", () => {
+    const astra = resolveLane(request({ parent: "claude", provider: "codex", model: "gpt-6.2-astra" }));
     expect([astra.family?.name, astra.effort]).toEqual(["astra", "max"]);
-    const ultra = resolveLane(request({ parent: "claude", provider: "codex", model: "gpt-6-astra", effort: "ultra" }));
+    const ultra = resolveLane(request({ parent: "claude", provider: "codex", model: "gpt-6.2-astra", effort: "ultra" }));
     expect(ultra.adapter.launch.argv(ultra, { sharedGitDir: null, providerSidecar: null }))
-      .toEqual(expect.arrayContaining(["gpt-6-astra", 'model_reasoning_effort="ultra"']));
+      .toEqual(expect.arrayContaining(["gpt-6.2-astra", 'model_reasoning_effort="ultra"']));
   });
 
   it("maps each Devin effort to its CLI model ID and keeps the descriptor's model for the receipt", () => {

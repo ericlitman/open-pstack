@@ -175,7 +175,8 @@ The table uses the short upstream names. Claude Code exposes each native skill w
 | `/ketchup-video` | the `/ketchup` catch-up as a short subtitled video of slides (typed only) |
 | `/poteto-help` | find the skill, playbook, or principle for a question about pstack (typed only) |
 | `/in-your-own-words` | play back your goal and the problem before work starts (typed only) |
-| `/sharpen` | rewrite a prompt deeper, not bigger, before you send it; returns the rewritten prompt and does not do the task (typed only) |
+| `/sharpen` | rewrite a prompt with better evidence and propose experiments for choices they can settle (typed only) |
+| `/reframe` | identify the terms for your problem, check examples, and rewrite the original request. For ambiguous requests, compare two or three interpretations (typed only) |
 
 ## Subagents
 

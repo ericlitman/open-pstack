@@ -137,6 +137,7 @@ That is the main workflow. The other skills are there when poteto-mode needs the
 | `poteto-help` | You want to know which skill, playbook, or principle fits a question. |
 | `in-your-own-words` | You want the agent to restate your goal and the problem before it starts. |
 | `sharpen` | You want a prompt rewritten deeper, not bigger, before you send it. It returns the rewritten prompt and does not do the task. |
+| `reframe` | You want to clarify what you're building and rewrite the description with verified terms from your field and related fields. |
 
 Plugin skills include `pstack:` in their name. In Claude Code, invoke a native skill such as `/pstack:architect`. In Codex, ask for the skill, such as `Use pstack:architect for this design.` See the [technical reference](docs/reference.md) for the full list.
 
