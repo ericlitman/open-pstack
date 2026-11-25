@@ -2,7 +2,7 @@
 
 This page contains the full skill, dependency, runtime, and porting reference. For the plain-English introduction and quick start, see the [main README](../README.md).
 
-[Poteto](https://x.com/poteto)'s [pstack](https://github.com/cursor/plugins/tree/main/pstack), adapted to run in Claude Code, Codex, T3 Code and Grok without Cursor. One shared skill tree serves all four harnesses, and in T3 Code the Claude Code or Codex runtime loads it; lanes on other providers' models, including Grok and seven more providers, run through the bundled runner. Version 1.21.0 is synced to Cursor pstack v0.15.36 at `2776ddd2355d6d6c8747d3964600f28daf62f049`. See [UPSTREAM.md](../UPSTREAM.md) for the exact sync contract.
+[Poteto](https://x.com/poteto)'s [pstack](https://github.com/cursor/plugins/tree/main/pstack), adapted to run in Claude Code, Codex, T3 Code and Grok without Cursor. One shared skill tree serves all four harnesses. In T3 Code the Claude Code or Codex runtime loads it. External provider lanes run through the bundled runner. Version 1.21.1 keeps Cursor pstack 0.15.36 at `2776ddd2355d6d6c8747d3964600f28daf62f049` as its full sync point. See [UPSTREAM.md](../UPSTREAM.md) for the selected backports.
 
 Original by Lauren Tan. This distribution builds on Michael Denyer's [pstack-claude](https://github.com/michael-denyer/pstack-claude) port and retains its history and MIT attribution. It imports seven MIT-licensed skills from [cursor-team-kit](https://github.com/cursor/plugins/tree/main/cursor-team-kit): `deslop`, `thermo-nuclear-code-quality-review`, `make-pr-easy-to-review`, `fix-ci`, `fix-merge-conflicts`, `get-pr-comments`, `what-did-i-get-done`.
 
@@ -175,7 +175,8 @@ The table uses the short upstream names. Claude Code exposes each native skill w
 | `/ketchup-video` | the `/ketchup` catch-up as a short subtitled video of slides (typed only) |
 | `/poteto-help` | find the skill, playbook, or principle for a question about pstack (typed only) |
 | `/in-your-own-words` | play back your goal and the problem before work starts (typed only) |
-| `/sharpen` | rewrite a prompt deeper, not bigger, before you send it; returns the rewritten prompt and does not do the task (typed only) |
+| `/sharpen` | rewrite a prompt with better evidence and propose experiments for choices they can settle (typed only) |
+| `/reframe` | identify the terms for your problem, check examples, and rewrite the original request. For ambiguous requests, compare two or three interpretations (typed only) |
 
 ## Subagents
 

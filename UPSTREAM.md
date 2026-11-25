@@ -10,9 +10,19 @@ open-pstack tracks [Cursor's pstack](https://github.com/cursor/plugins/tree/main
 | Path | `pstack/` |
 | Commit | `2776ddd2355d6d6c8747d3964600f28daf62f049` |
 | Upstream version | `0.15.36` |
-| open-pstack version | `1.21.0` |
+| open-pstack version | `1.21.1` |
 
-The table above is the current Cursor sync point. Open Pstack 1.17.0 imported this 0.15.36 sync, and 1.18.0 to 1.21.0 keep it. `README-UPSTREAM.md` preserves the upstream pstack README verbatim. `CHANGES.md` and `NOTICE.md` describe the adaptations and provenance.
+The table above is the current Cursor sync point. Open Pstack 1.17.0 imported this 0.15.36 sync, and 1.18.0 to 1.21.1 keep it. `README-UPSTREAM.md` preserves the upstream pstack README verbatim. `CHANGES.md` and `NOTICE.md` describe the adaptations and provenance.
+
+## Selected backports after the sync point
+
+| Cursor source | Ported behavior |
+| --- | --- |
+| [#1324](https://github.com/cursor/plugins/pull/1324), [#1326](https://github.com/cursor/plugins/pull/1326) | Add the explicit `/reframe` skill with source checks and two or three interpretations of ambiguous requests. |
+| [#1236](https://github.com/cursor/plugins/pull/1236) | Ask `/sharpen` to propose an experiment for choices an experiment can settle. |
+| [#1292](https://github.com/cursor/plugins/pull/1292) | Port the `/statechart` Windows process handling, CRLF parsing, and the earlier SANY error reporting needed by those paths. Keep the port's strict exit code type. |
+
+The cross-harness skill routing and the full-tree sync point remain at the recorded baseline. Cursor's shared worker and model-default rewrite is outside this backport.
 
 ## Upstream-only exclusions
 

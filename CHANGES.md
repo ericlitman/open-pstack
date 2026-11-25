@@ -3,6 +3,14 @@
 Open Pstack lands on green: Mergify merges a ready PR to main once verify and exact-head live-gate pass and no review thread is unresolved, and a workflow resolves Unfret's own threads. A PR that touches `.github/` or the Mergify config also waits for Unfret, and workflow changes require operator queueing.
 This port applies the Cursor → Claude Code substitutions in skill bodies. Earlier drafts left them flagged; this revision resolves them. A later pass added a Codex build that shares the same skills; see [Codex port](#codex-port) below.
 
+## 1.21.1 adds selected Cursor backports
+
+- `/reframe` compares plausible interpretations of ambiguous requests, identifies observable signals, and rewrites the request using verified terminology.
+- `/sharpen` asks for experiments to resolve choices that can be tested. `/statechart` handles Windows process cleanup and CRLF in TLC output.
+- The model catalog registers GPT‑6.2 Sol and Astra and retains the previous model IDs for compatibility.
+
+See [UPSTREAM.md](UPSTREAM.md#selected-backports-after-the-sync-point) for the source commits.
+
 ## 1.21.0 adds Grok as a parent harness
 
 Open Pstack 1.21.0 keeps the Cursor pstack 0.15.36 sync. Default roles and panels are unchanged.
